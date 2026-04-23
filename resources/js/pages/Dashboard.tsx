@@ -27,6 +27,8 @@ const kpis = [
 const Dashboard = () => {
   const { props } = usePage();
   const user = props.auth?.user as AuthUser | undefined;
+  const isAdmin = user?.role === 'admin';
+  const isManager = user?.role === 'manager' || user?.role === 'admin';
 
   const handleLogout = () => {
     router.post(route('logout'));
@@ -93,32 +95,76 @@ const Dashboard = () => {
         </header>
 
         <main className="flex-1 p-4 lg:p-6 space-y-4 animate-in fade-in slide-in-from-bottom-1 duration-400 bg-background">
-          {/* KPI Row */}
+          {/* Role-based Information Banner */}
+          {user && (
+            <div className="p-4 rounded-lg bg-accent/10 border border-accent/20">
+              <p className="text-sm font-medium text-foreground">
+                Welcome back, <span className="font-semibold">{user.name}</span>! You are logged in as <span className="capitalize font-semibold text-accent">{user.role}</span>.
+              </p>
+              {isAdmin && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  You have full access to all system features and settings.
+                </p>
+              )}
+              {isManager && !isAdmin && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  You can manage companies, projects, tranches, and blocs.
+                </p>
+              )}
+              {!isManager && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  You can view properties and limited features.
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* KPI Row - Conditionally show admin-only KPIs */}
           <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
-            {kpis.map((k) => <KPICard key={k.label} {...k} />)}
+            {kpis.slice(0, isManager ? 6 : 3).map((k) => <KPICard key={k.label} {...k} />)}
           </div>
 
-          {/* Row 1: Revenue + Charges + Occupancy */}
-          <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr_1fr] gap-4">
-            <RevenueChart />
-            <ChargesChart />
-            <OccupancyGauge />
-          </div>
+          {/* Row 1: Revenue + Charges + Occupancy - only for managers and admins */}
+          {isManager && (
+            <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr_1fr] gap-4">
+              <RevenueChart />
+              <ChargesChart />
+              <OccupancyGauge />
+            </div>
+          )}
 
-          {/* Row 2: Clients + Payments */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <ClientsChart />
-            <PaymentsChart />
-          </div>
+          {/* Row 2: Clients + Payments - only for managers and admins */}
+          {isManager && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <ClientsChart />
+              <PaymentsChart />
+            </div>
+          )}
 
-          {/* Row 3: Orders + Activity */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <OrdersChart />
-            <ActivityFeed />
-          </div>
+          {/* Row 3: Orders + Activity - only for managers and admins */}
+          {isManager && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <OrdersChart />
+              <ActivityFeed />
+            </div>
+          )}
 
-          {/* Row 4: Payments Table */}
-          <PaymentsTable />
+          {/* Row 4: Payments Table - only for managers and admins */}
+          {isManager && (
+            <PaymentsTable />
+          )}
+
+          {/* Regular Users Section */}
+          {!isManager && (
+            <div className="space-y-4">
+              <div className="rounded-lg border border-border bg-card p-6">
+                <h2 className="text-lg font-semibold text-foreground mb-4">Your Properties</h2>
+                <p className="text-sm text-muted-foreground">
+                  You have limited access to view properties. Contact your manager for more features.
+                </p>
+              </div>
+            </div>
+          )}
         </main>
       </div>
     </div>
