@@ -1,8 +1,9 @@
-import { Building2, Users, DollarSign, Wrench, Bell, Search, TrendingUp, ShoppingCart } from "lucide-react";
+import { Building2, Users, DollarSign, Wrench, Bell, Search, TrendingUp, ShoppingCart, LogOut, User } from "lucide-react";
 import { AppBreadcrumb } from "@/components/AppBreadcrumb";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/dashboard/AppSidebar";
 import { Input } from "@/components/ui/input";
+import { Link, router, usePage } from '@inertiajs/react';
 import KPICard from "@/components/dashboard/KPICard";
 import RevenueChart from "@/components/dashboard/RevenueChart";
 import ChargesChart from "@/components/dashboard/ChargesChart";
@@ -12,6 +13,7 @@ import OrdersChart from "@/components/dashboard/OrdersChart";
 import OccupancyGauge from "@/components/dashboard/OccupancyGauge";
 import ActivityFeed from "@/components/dashboard/ActivityFeed";
 import PaymentsTable from "@/components/dashboard/PaymentsTable";
+import { AuthUser } from "@/types/auth";
 
 const kpis = [
   { label: "Total Properties", value: "124", change: "+12%", trend: "up" as const, icon: Building2, accentClass: "bg-blue-500/10 text-blue-500" },
@@ -22,7 +24,19 @@ const kpis = [
   { label: "Open Work Orders", value: "17", change: "-3", trend: "down" as const, icon: Wrench, accentClass: "bg-destructive/10 text-destructive" },
 ];
 
-const Dashboard = () => (
+const Dashboard = () => {
+  const { props } = usePage();
+  const user = props.auth?.user as AuthUser | undefined;
+
+  const handleLogout = () => {
+    router.post(route('logout'));
+  };
+
+  const getUserInitials = (name: string) => {
+    return name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2);
+  };
+
+  return (
   <SidebarProvider>
     <div className="min-h-screen flex w-full">
       <AppSidebar />
@@ -41,8 +55,39 @@ const Dashboard = () => (
               <Bell className="w-4 h-4" />
               <span className="absolute top-1 right-1 w-2 h-2 bg-destructive border-2 border-card rounded-full" />
             </button>
-            <div className="w-7 h-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-[10px] font-bold cursor-pointer">
-              MK
+            
+            {/* User Menu with Logout */}
+            <div className="relative group">
+              <button className="flex items-center gap-2 h-8 px-2 rounded-lg hover:bg-muted transition-colors">
+                <div className="w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-[10px] font-bold">
+                  {user?.name ? getUserInitials(user.name) : 'MK'}
+                </div>
+                <User className="w-4 h-4 text-muted-foreground" />
+              </button>
+              
+              {/* Dropdown Menu */}
+              <div className="absolute right-0 top-full mt-1 w-48 bg-popover border border-border rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+                <div className="p-2 border-b border-border">
+                  <p className="text-sm font-medium text-foreground">
+                    {user?.name || 'User'}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {user?.email || 'user@example.com'}
+                  </p>
+                  <p className="text-xs text-primary mt-1">
+                    Role: {user?.role || 'user'}
+                  </p>
+                </div>
+                <div className="p-1">
+                  <button
+                    onClick={handleLogout}
+                    className="w-full flex items-center gap-2 px-2 py-1.5 text-sm text-muted-foreground hover:bg-muted hover:text-foreground rounded transition-colors"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    Déconnecter
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </header>
@@ -78,6 +123,7 @@ const Dashboard = () => (
       </div>
     </div>
   </SidebarProvider>
-);
+  );
+};
 
 export default Dashboard;
