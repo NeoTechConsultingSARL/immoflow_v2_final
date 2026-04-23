@@ -18,7 +18,9 @@ class User extends Authenticatable
     use HasFactory, Notifiable;
 
     public const ROLE_ADMIN = 'admin';
+
     public const ROLE_MANAGER = 'manager';
+
     public const ROLE_USER = 'user';
 
     public function isAdmin(): bool

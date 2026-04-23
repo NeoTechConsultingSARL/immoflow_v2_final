@@ -1,7 +1,6 @@
 <?php
 
 use App\Http\Controllers\ProfileController;
-use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -82,6 +81,10 @@ Route::middleware('auth')->group(function () {
     Route::get('/news', function () {
         return Inertia::render('NewsArticle');
     })->name('news');
+
+    Route::get('/admin-only', function () {
+        return response('Admin only access', 200);
+    })->name('admin-only')->middleware('role:admin');
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
