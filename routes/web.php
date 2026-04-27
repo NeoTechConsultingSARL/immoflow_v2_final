@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -58,9 +59,21 @@ Route::middleware('auth')->group(function () {
         return Inertia::render('SettingsPropertyTypes');
     })->name('settings.property-types')->middleware('role:admin');
 
-    Route::get('/settings/users', function () {
-        return Inertia::render('SettingsUsers');
-    })->name('settings.users')->middleware('role:admin');
+    Route::get('/settings/users', [UserController::class, 'index'])
+        ->name('settings.users')->middleware('role:admin');
+
+    // User CRUD routes
+    Route::post('/users', [UserController::class, 'store'])
+        ->name('users.store')->middleware('role:admin');
+
+    Route::put('/users/{user}', [UserController::class, 'update'])
+        ->name('users.update')->middleware('role:admin');
+
+    Route::delete('/users/{user}', [UserController::class, 'destroy'])
+        ->name('users.destroy')->middleware('role:admin');
+
+    Route::patch('/users/{user}/toggle-active', [UserController::class, 'toggleActive'])
+        ->name('users.toggle-active')->middleware('role:admin');
 
     Route::get('/settings/profiles', function () {
         return Inertia::render('SettingsProfiles');
