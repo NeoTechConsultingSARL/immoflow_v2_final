@@ -11,4 +11,23 @@ export default defineConfig({
         }),
         react(),
     ],
+    server: {
+        proxy: {
+            '/login': {
+                target: 'http://localhost:8000',
+                changeOrigin: true,
+                secure: false,
+            },
+            '/logout': {
+                target: 'http://localhost:8000',
+                changeOrigin: true,
+                secure: false,
+            },
+            '/dashboard': {
+                target: 'http://localhost:8000',
+                changeOrigin: true,
+                secure: false,
+            },
+        }
+    }
 });

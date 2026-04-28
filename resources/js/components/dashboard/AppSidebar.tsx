@@ -1,6 +1,6 @@
 import { usePage } from "@inertiajs/react";
 import {
-  LayoutDashboard, Settings, HelpCircle, Building2, ShoppingCart, Truck, Wallet, Contact,
+  LayoutDashboard, Settings, HelpCircle, Building2, ShoppingCart, Truck, Wallet, Contact, Home,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import {
@@ -10,38 +10,43 @@ import {
 } from "@/components/ui/sidebar";
 import { Badge } from "@/components/ui/badge";
 import { ThemeToggle } from "@/components/ThemeToggle";
-
-const navSections = [
-  {
-    label: "Overview",
-    items: [
-      { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
-      { title: "Companies", url: "/companies", icon: Building2 },
-    ],
-  },
-  {
-    label: "Management",
-    items: [
-      { title: "Orders", url: "/orders", icon: ShoppingCart },
-      { title: "Deliveries", url: "/deliveries", icon: Truck },
-      { title: "Funds", url: "/funds", icon: Wallet },
-      { title: "Contacts", url: "/contacts", icon: Contact },
-    ],
-  },
-  {
-    label: "System",
-    items: [
-      { title: "Settings", url: "/settings", icon: Settings },
-      { title: "Help & Support", url: "/help", icon: HelpCircle },
-    ],
-  },
-];
+import { AuthUser } from "@/types/auth";
 
 export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
-  const { url } = usePage();
-  const location = { pathname: new URL(url || "/", window.location.origin).pathname };
+  const { url, auth } = usePage().props;
+  const user = auth?.user as AuthUser | undefined;
+  const location = { pathname: new URL((url as string) || "/", window.location.origin).pathname };
+
+  const isAdmin = user?.role === 'admin';
+  const isManager = user?.role === 'manager' || user?.role === 'admin';
+
+  const navSections = [
+    {
+      label: "Overview",
+      items: [
+        { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
+        ...(isManager ? [{ title: "Companies", url: "/companies", icon: Building2 }] : []),
+        { title: "Properties", url: "/properties", icon: Home },
+      ],
+    },
+    ...(isManager ? [{
+      label: "Management",
+      items: [
+        { title: "Projects", url: "/projects", icon: ShoppingCart },
+        { title: "Tranches", url: "/tranches", icon: Truck },
+        { title: "Blocs", url: "/blocs", icon: Building2 },
+      ],
+    }] : []),
+    ...(isAdmin ? [{
+      label: "System",
+      items: [
+        { title: "Settings", url: "/settings", icon: Settings },
+        { title: "Help & Support", url: "/help", icon: HelpCircle },
+      ],
+    }] : []),
+  ];
 
   return (
     <Sidebar collapsible="icon">
@@ -90,12 +95,12 @@ export function AppSidebar() {
       <SidebarFooter className="border-t border-sidebar-border p-3">
         <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-muted/50 cursor-pointer transition-colors">
           <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold shrink-0">
-            MK
+            {user?.name ? user.name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2) : 'MK'}
           </div>
           {!collapsed && (
             <div className="flex-1 min-w-0">
-              <p className="text-[0.8125rem] font-semibold truncate">Max Keller</p>
-              <p className="text-[0.6875rem] text-muted-foreground truncate">max@immoflow.de</p>
+              <p className="text-[0.8125rem] font-semibold truncate">{user?.name || 'User'}</p>
+              <p className="text-[0.6875rem] text-muted-foreground truncate">{user?.role || 'user'}</p>
             </div>
           )}
           {!collapsed && <ThemeToggle />}

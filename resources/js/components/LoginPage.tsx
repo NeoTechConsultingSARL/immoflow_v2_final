@@ -1,15 +1,31 @@
 import { useState } from "react";
 import { Building2, Eye, EyeOff, ArrowRight } from "lucide-react";
+import { router, usePage } from "@inertiajs/react";
 import heroBuilding from "@/assets/hero-building.jpg";
 
+interface FormErrors {
+  [key: string]: string[] | undefined;
+}
+
 const LoginPage = () => {
+  const { errors } = usePage().props as unknown as { errors?: FormErrors };
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [remember, setRemember] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle login
+    setIsLoading(true);
+    
+    router.post(route('login'), {
+      email,
+      password,
+      remember,
+    }, {
+      onFinish: () => setIsLoading(false),
+    });
   };
 
   return (
@@ -74,17 +90,20 @@ const LoginPage = () => {
             <p className="text-muted-foreground font-body">Sign in to your account to continue</p>
           </div>
 
-          <div className="flex items-start gap-3 rounded-lg border border-destructive/30 bg-destructive/5 p-4 mb-1">
-            <svg className="w-5 h-5 text-destructive shrink-0 mt-0.5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="10" />
-              <line x1="12" y1="8" x2="12" y2="12" />
-              <line x1="12" y1="16" x2="12.01" y2="16" />
-            </svg>
-            <div>
-              <p className="text-sm font-semibold text-destructive font-body">Unable to sign in</p>
-              <p className="text-sm text-destructive/80 font-body mt-0.5">Invalid email or password. Please check your credentials and try again.</p>
+          {(errors?.email || errors?.password) && (
+            <div className="flex items-start gap-3 rounded-lg border border-destructive/30 bg-destructive/5 p-4 mb-6">
+              <svg className="w-5 h-5 text-destructive shrink-0 mt-0.5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="8" x2="12" y2="12" />
+                <line x1="12" y1="16" x2="12.01" y2="16" />
+              </svg>
+              <div>
+                <p className="text-sm font-semibold text-destructive font-body">Unable to sign in</p>
+                {errors?.email && <p className="text-sm text-destructive/80 font-body mt-0.5">{errors.email[0]}</p>}
+                {errors?.password && <p className="text-sm text-destructive/80 font-body mt-0.5">{errors.password[0]}</p>}
+              </div>
             </div>
-          </div>
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
@@ -97,9 +116,15 @@ const LoginPage = () => {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="name@company.com"
-                className="w-full h-12 px-4 rounded-lg border border-input bg-card text-foreground placeholder:text-muted-foreground font-body text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent transition-all"
+                className={`w-full h-12 px-4 rounded-lg border bg-card text-foreground placeholder:text-muted-foreground font-body text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent transition-all ${
+                  errors?.email ? 'border-destructive' : 'border-input'
+                }`}
                 required
+                disabled={isLoading}
               />
+              {errors?.email && (
+                <p className="text-xs text-destructive mt-1.5 font-body">{errors.email[0]}</p>
+              )}
             </div>
 
             <div>
@@ -118,24 +143,34 @@ const LoginPage = () => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Enter your password"
-                  className="w-full h-12 px-4 pr-12 rounded-lg border border-input bg-card text-foreground placeholder:text-muted-foreground font-body text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent transition-all"
+                  className={`w-full h-12 px-4 pr-12 rounded-lg border bg-card text-foreground placeholder:text-muted-foreground font-body text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent transition-all ${
+                    errors?.password ? 'border-destructive' : 'border-input'
+                  }`}
                   required
+                  disabled={isLoading}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                  disabled={isLoading}
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
+              {errors?.password && (
+                <p className="text-xs text-destructive mt-1.5 font-body">{errors.password[0]}</p>
+              )}
             </div>
 
             <div className="flex items-center gap-2">
               <input
                 id="remember"
                 type="checkbox"
+                checked={remember}
+                onChange={(e) => setRemember(e.target.checked)}
                 className="w-4 h-4 rounded border-input text-accent focus:ring-ring"
+                disabled={isLoading}
               />
               <label htmlFor="remember" className="text-sm text-muted-foreground font-body">
                 Remember me for 30 days
@@ -144,10 +179,20 @@ const LoginPage = () => {
 
             <button
               type="submit"
-              className="w-full h-12 rounded-lg bg-primary text-primary-foreground font-body font-semibold text-sm flex items-center justify-center gap-2 hover:opacity-90 transition-all active:scale-[0.98] shadow-card"
+              disabled={isLoading}
+              className="w-full h-12 rounded-lg bg-primary text-primary-foreground font-body font-semibold text-sm flex items-center justify-center gap-2 hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-[0.98] shadow-card"
             >
-              Sign in
-              <ArrowRight className="w-4 h-4" />
+              {isLoading ? (
+                <>
+                  <span className="inline-block w-4 h-4 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin" />
+                  Signing in...
+                </>
+              ) : (
+                <>
+                  Sign in
+                  <ArrowRight className="w-4 h-4" />
+                </>
+              )}
             </button>
           </form>
 
