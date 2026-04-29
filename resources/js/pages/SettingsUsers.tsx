@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Plus, UserPlus, Pencil, Trash2, Shield, Eye, EyeOff } from "lucide-react";
 import { AppBreadcrumb } from "@/components/AppBreadcrumb";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
@@ -24,120 +24,135 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { useForm, router } from "@inertiajs/react";
+import { Head } from "@inertiajs/react";
 
 interface User {
   id: string;
-  firstName: string;
-  lastName: string;
-  login: string;
+  name: string;
   email: string;
   role: string;
   active: boolean;
-  createdAt: string;
+  created_at: string;
+}
+
+interface SettingsUsersProps {
+  users: User[];
 }
 
 const availableRoles = [
-  { id: "1", name: "Administrator" },
-  { id: "2", name: "Property Manager" },
-  { id: "3", name: "GCC Accountant" },
+  { value: "admin", label: "Administrator" },
+  { value: "manager", label: "Manager" },
+  { value: "user", label: "User" },
 ];
 
-const initialUsers: User[] = [
-  { id: "1", firstName: "Ahmed", lastName: "Benali", login: "ahmed.benali", email: "ahmed@immoflow.ma", role: "Administrator", active: true, createdAt: "2024-01-10" },
-  { id: "2", firstName: "Sara", lastName: "El Amrani", login: "sara.elamrani", email: "sara@immoflow.ma", role: "Property Manager", active: true, createdAt: "2024-02-15" },
-  { id: "3", firstName: "Youssef", lastName: "Idrissi", login: "youssef.idrissi", email: "", role: "GCC Accountant", active: false, createdAt: "2024-03-20" },
-];
 
-const emptyForm = { firstName: "", lastName: "", login: "", email: "", password: "", role: "" };
 
-const SettingsUsers = () => {
+const SettingsUsers = ({ users: initialUsers }: SettingsUsersProps) => {
   const { toast } = useToast();
   const [users, setUsers] = useState<User[]>(initialUsers);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
-  const [form, setForm] = useState(emptyForm);
   const [showPassword, setShowPassword] = useState(false);
+
+  const createForm = useForm({
+    name: '',
+    email: '',
+    password: '',
+    password_confirmation: '',
+    role: '',
+  });
+
+  const updateForm = useForm({
+    name: '',
+    email: '',
+    password: '',
+    password_confirmation: '',
+    role: '',
+  });
 
   const openCreate = () => {
     setEditingUser(null);
-    setForm(emptyForm);
+    createForm.reset();
     setShowPassword(false);
     setDialogOpen(true);
   };
 
   const openEdit = (user: User) => {
     setEditingUser(user);
-    setForm({
-      firstName: user.firstName,
-      lastName: user.lastName,
-      login: user.login,
+    updateForm.setData({
+      name: user.name,
       email: user.email,
-      password: "",
+      password: '',
+      password_confirmation: '',
       role: user.role,
     });
     setShowPassword(false);
     setDialogOpen(true);
   };
 
-  const handleSave = () => {
-    if (!form.firstName.trim() || !form.lastName.trim() || !form.login.trim() || !form.role) {
-      toast({ title: "First name, last name, login and role are required", variant: "destructive" });
-      return;
-    }
-    if (!editingUser && !form.password.trim()) {
-      toast({ title: "Password is required for new users", variant: "destructive" });
-      return;
-    }
-
-    if (editingUser) {
-      setUsers((prev) =>
-        prev.map((u) =>
-          u.id === editingUser.id
-            ? { ...u, firstName: form.firstName, lastName: form.lastName, login: form.login, email: form.email, role: form.role }
-            : u
-        )
-      );
-      toast({ title: "User updated", description: `${form.firstName} ${form.lastName} has been updated.` });
-    } else {
-      const newUser: User = {
-        id: Date.now().toString(),
-        firstName: form.firstName,
-        lastName: form.lastName,
-        login: form.login,
-        email: form.email,
-        role: form.role,
-        active: true,
-        createdAt: new Date().toISOString().split("T")[0],
-      };
-      setUsers((prev) => [...prev, newUser]);
-      toast({ title: "User created", description: `${newUser.firstName} ${newUser.lastName} added as ${newUser.role}.` });
-    }
-
-    setForm(emptyForm);
-    setEditingUser(null);
-    setDialogOpen(false);
-  };
-
-  const toggleActive = (id: string) => {
-    setUsers((prev) =>
-      prev.map((u) => {
-        if (u.id !== id) return u;
-        const next = { ...u, active: !u.active };
-        toast({
-          title: next.active ? "User activated" : "User deactivated",
-          description: `${u.firstName} ${u.lastName} is now ${next.active ? "active" : "inactive"}.`,
+  const handleCreate = () => {
+    createForm.post(route('users.store'), {
+      onSuccess: (page) => {
+        setDialogOpen(false);
+        createForm.reset();
+        toast({ title: "User created successfully" });
+        // Update users state with the latest data from server
+        setUsers(page.props.users as User[]);
+      },
+      onError: (errors) => {
+        Object.entries(errors).forEach(([field, message]) => {
+          toast({ title: message as string, variant: "destructive" });
         });
-        return next;
-      })
-    );
+      },
+    });
   };
 
-  const handleDelete = (id: string) => {
-    setUsers((prev) => prev.filter((u) => u.id !== id));
+  const handleUpdate = () => {
+    if (!editingUser) return;
+
+    updateForm.put(route('users.update', editingUser.id), {
+      onSuccess: (page) => {
+        setDialogOpen(false);
+        updateForm.reset();
+        setEditingUser(null);
+        toast({ title: "User updated successfully" });
+        // Update users state with the latest data from server
+        setUsers(page.props.users as User[]);
+      },
+      onError: (errors) => {
+        Object.entries(errors).forEach(([field, message]) => {
+          toast({ title: message as string, variant: "destructive" });
+        });
+      },
+    });
+  };
+
+  const toggleActive = (user: User) => {
+    router.patch(route('users.toggle-active', user.id), {}, {
+      onSuccess: (page) => {
+        toast({ title: user.active ? "User deactivated" : "User activated" });
+        // Update users state with the latest data from server
+        setUsers(page.props.users as User[]);
+      },
+    });
+  };
+
+  const handleDelete = (user: User) => {
+    if (confirm(`Are you sure you want to delete ${user.name}?`)) {
+      router.delete(route('users.destroy', user.id), {
+        onSuccess: (page) => {
+          toast({ title: "User deleted successfully" });
+          // Update users state with the latest data from server
+          setUsers(page.props.users as User[]);
+        },
+      });
+    }
   };
 
   return (
     <SidebarProvider>
+      <Head title="Users" />
       <div className="min-h-screen flex w-full">
         <AppSidebar />
         <div className="flex-1 flex flex-col min-w-0">
@@ -167,11 +182,11 @@ const SettingsUsers = () => {
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex items-center gap-3">
                         <div className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold text-sm ${user.active ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"}`}>
-                          {user.firstName[0]}{user.lastName[0]}
+                          {user.name.charAt(0).toUpperCase()}
                         </div>
                         <div>
-                          <h3 className="font-semibold text-base">{user.firstName} {user.lastName}</h3>
-                          <p className="text-xs text-muted-foreground font-mono">@{user.login}</p>
+                          <h3 className="font-semibold text-base">{user.name}</h3>
+                          <p className="text-xs text-muted-foreground font-mono">{user.email}</p>
                         </div>
                       </div>
                       <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -182,25 +197,24 @@ const SettingsUsers = () => {
                           variant="ghost"
                           size="icon"
                           className="h-8 w-8 text-destructive hover:text-destructive"
-                          onClick={() => handleDelete(user.id)}
+                          onClick={() => handleDelete(user)}
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </Button>
                       </div>
                     </div>
-                    {user.email && (
-                      <p className="text-xs text-muted-foreground mb-2">{user.email}</p>
-                    )}
                     <div className="flex items-center gap-2">
                       <Shield className="w-3.5 h-3.5 text-muted-foreground" />
-                      <Badge variant="secondary" className="text-xs">{user.role}</Badge>
+                      <Badge variant="secondary" className="text-xs">
+                        {availableRoles.find(r => r.value === user.role)?.label || user.role}
+                      </Badge>
                       <div className="ml-auto flex items-center gap-2">
                         <Badge variant={user.active ? "default" : "outline"} className="text-xs">
                           {user.active ? "Active" : "Inactive"}
                         </Badge>
                         <Switch
                           checked={user.active}
-                          onCheckedChange={() => toggleActive(user.id)}
+                          onCheckedChange={() => toggleActive(user)}
                           className="scale-75"
                         />
                       </div>
@@ -223,24 +237,38 @@ const SettingsUsers = () => {
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label>First Name <span className="text-destructive">*</span></Label>
-                <Input value={form.firstName} onChange={(e) => setForm({ ...form, firstName: e.target.value })} placeholder="Ahmed" />
-              </div>
-              <div>
-                <Label>Last Name <span className="text-destructive">*</span></Label>
-                <Input value={form.lastName} onChange={(e) => setForm({ ...form, lastName: e.target.value })} placeholder="Benali" />
-              </div>
+            <div>
+              <Label>Name <span className="text-destructive">*</span></Label>
+              <Input 
+                value={editingUser ? updateForm.data.name : createForm.data.name} 
+                onChange={(e) => editingUser 
+                  ? updateForm.setData('name', e.target.value)
+                  : createForm.setData('name', e.target.value)
+                } 
+                placeholder="Name" 
+              />
+              {(editingUser ? updateForm.errors.name : createForm.errors.name) && (
+                <p className="text-sm text-destructive mt-1">
+                  {editingUser ? updateForm.errors.name : createForm.errors.name}
+                </p>
+              )}
             </div>
             <div>
-              <Label>Login <span className="text-destructive">*</span></Label>
-              <Input value={form.login} onChange={(e) => setForm({ ...form, login: e.target.value })} placeholder="ahmed.benali" />
-              <p className="text-xs text-muted-foreground mt-1">Used to sign in to the platform.</p>
-            </div>
-            <div>
-              <Label>Email <span className="text-muted-foreground text-xs">(optional)</span></Label>
-              <Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="ahmed@immoflow.ma" />
+              <Label>Email <span className="text-destructive">*</span></Label>
+              <Input 
+                type="email"
+                value={editingUser ? updateForm.data.email : createForm.data.email} 
+                onChange={(e) => editingUser 
+                  ? updateForm.setData('email', e.target.value)
+                  : createForm.setData('email', e.target.value)
+                } 
+                placeholder="email@example.com" 
+              />
+              {(editingUser ? updateForm.errors.email : createForm.errors.email) && (
+                <p className="text-sm text-destructive mt-1">
+                  {editingUser ? updateForm.errors.email : createForm.errors.email}
+                </p>
+              )}
             </div>
             <div>
               <Label>
@@ -250,8 +278,11 @@ const SettingsUsers = () => {
               <div className="relative">
                 <Input
                   type={showPassword ? "text" : "password"}
-                  value={form.password}
-                  onChange={(e) => setForm({ ...form, password: e.target.value })}
+                  value={editingUser ? updateForm.data.password : createForm.data.password}
+                  onChange={(e) => editingUser 
+                    ? updateForm.setData('password', e.target.value)
+                    : createForm.setData('password', e.target.value)
+                  }
                   placeholder={editingUser ? "••••••••" : "Set initial password"}
                 />
                 <Button
@@ -264,29 +295,70 @@ const SettingsUsers = () => {
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </Button>
               </div>
+              {(editingUser ? updateForm.errors.password : createForm.errors.password) && (
+                <p className="text-sm text-destructive mt-1">
+                  {editingUser ? updateForm.errors.password : createForm.errors.password}
+                </p>
+              )}
               {!editingUser && (
                 <p className="text-xs text-muted-foreground mt-1">The user can change this from their account settings.</p>
               )}
             </div>
             <div>
+              <Label>
+                {editingUser ? "Confirm New Password" : "Confirm Password"} 
+                {(!editingUser || updateForm.data.password) && <span className="text-destructive">*</span>}
+              </Label>
+              <Input
+                type="password"
+                value={editingUser ? updateForm.data.password_confirmation : createForm.data.password_confirmation}
+                onChange={(e) => editingUser 
+                  ? updateForm.setData('password_confirmation', e.target.value)
+                  : createForm.setData('password_confirmation', e.target.value)
+                }
+                placeholder={editingUser ? "Confirm new password" : "Confirm password"}
+              />
+              {(editingUser ? updateForm.errors.password_confirmation : createForm.errors.password_confirmation) && (
+                <p className="text-sm text-destructive mt-1">
+                  {editingUser ? updateForm.errors.password_confirmation : createForm.errors.password_confirmation}
+                </p>
+              )}
+            </div>
+            <div>
               <Label>Assign Role <span className="text-destructive">*</span></Label>
-              <Select value={form.role} onValueChange={(v) => setForm({ ...form, role: v })}>
+              <Select 
+                value={editingUser ? updateForm.data.role : createForm.data.role} 
+                onValueChange={(v) => editingUser 
+                  ? updateForm.setData('role', v)
+                  : createForm.setData('role', v)
+                }
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Select a role..." />
                 </SelectTrigger>
                 <SelectContent>
                   {availableRoles.map((role) => (
-                    <SelectItem key={role.id} value={role.name}>
-                      {role.name}
+                    <SelectItem key={role.value} value={role.value}>
+                      {role.label}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
+              {(editingUser ? updateForm.errors.role : createForm.errors.role) && (
+                <p className="text-sm text-destructive mt-1">
+                  {editingUser ? updateForm.errors.role : createForm.errors.role}
+                </p>
+              )}
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleSave}>{editingUser ? "Save Changes" : "Create User"}</Button>
+            <Button 
+              onClick={editingUser ? handleUpdate : handleCreate}
+              disabled={editingUser ? updateForm.processing : createForm.processing}
+            >
+              {editingUser ? (updateForm.processing ? "Saving..." : "Save Changes") : (createForm.processing ? "Creating..." : "Create User")}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
