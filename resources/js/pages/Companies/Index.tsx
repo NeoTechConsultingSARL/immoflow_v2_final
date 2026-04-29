@@ -22,6 +22,16 @@ interface Company {
 }
 
 interface PageProps {
+  [key: string]: any;
+  auth: {
+    user: {
+      id: number;
+      name: string;
+      email: string;
+      role: string;
+    };
+  };
+  ziggy: any;
   companies: Company[];
   statusOptions: Record<string, string>;
   flash?: {
@@ -170,14 +180,6 @@ const Companies = () => {
                               onClick={() => openEdit(company)}
                             >
                               <Pencil className="w-4 h-4" />
-                            </Button>
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              className="h-8 w-8 text-muted-foreground hover:text-destructive" 
-                              onClick={() => openDelete(company)}
-                            >
-                              <Trash2 className="w-4 h-4" />
                             </Button>
                           </div>
                         </td>

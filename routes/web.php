@@ -17,17 +17,17 @@ Route::middleware('auth')->group(function () {
     })->name('dashboard');
 
     Route::get('/companies', [CompanyController::class, 'index'])
-        ->name('companies')->middleware('activated', 'role:admin,manager');
+        ->name('companies')->middleware('role:admin,manager');
 
     // Company CRUD routes
     Route::post('/companies', [CompanyController::class, 'store'])
-        ->name('companies.store')->middleware('activated', 'role:admin,manager');
+        ->name('companies.store')->middleware('role:admin,manager');
 
     Route::put('/companies/{company}', [CompanyController::class, 'update'])
-        ->name('companies.update')->middleware('activated', 'role:admin,manager');
+        ->name('companies.update')->middleware('role:admin,manager');
 
-    Route::delete('/companies/{company}', [CompanyController::class, 'destroy'])
-        ->name('companies.destroy')->middleware('activated', 'role:admin,manager');
+    // Route::delete('/companies/{company}', [CompanyController::class, 'destroy'])
+    //     ->name('companies.destroy')->middleware('role:admin,manager');
 
     Route::get('/projects', function () {
         return Inertia::render('Projects');

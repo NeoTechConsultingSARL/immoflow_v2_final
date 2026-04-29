@@ -69,22 +69,20 @@ class CompanyController extends Controller
             ->with('success', 'Company updated successfully.');
     }
 
-    /**
-     * Remove the specified company.
-     */
-    public function destroy(Company $company): RedirectResponse
-    {
-        // Check if company has projects before deletion
-        if ($company->projects()->exists()) {
-            return redirect()
-                ->route('companies')
-                ->with('error', 'Cannot delete company with existing projects. Please delete projects first.');
-        }
+    // Delete functionality has been disabled for companies
+    // public function destroy(Company $company): RedirectResponse
+    // {
+    //     // Check if company has projects before deletion
+    //     if ($company->projects()->exists()) {
+    //         return redirect()
+    //             ->route('companies')
+    //             ->with('error', 'Cannot delete company with existing projects. Please delete projects first.');
+    //     }
 
-        $company->delete();
+    //     $company->delete();
 
-        return redirect()
-            ->route('companies')
-            ->with('success', 'Company deleted successfully.');
-    }
+    //     return redirect()
+    //         ->route('companies')
+    //         ->with('success', 'Company deleted successfully.');
+    // }
 }
