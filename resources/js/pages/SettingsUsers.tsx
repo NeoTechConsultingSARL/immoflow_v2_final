@@ -93,12 +93,12 @@ const SettingsUsers = ({ users: initialUsers }: SettingsUsersProps) => {
 
   const handleCreate = () => {
     createForm.post(route('users.store'), {
-      onSuccess: () => {
+      onSuccess: (page) => {
         setDialogOpen(false);
         createForm.reset();
         toast({ title: "User created successfully" });
-        // Reload the page to get updated users list
-        router.reload();
+        // Update users state with the latest data from server
+        setUsers(page.props.users as User[]);
       },
       onError: (errors) => {
         Object.entries(errors).forEach(([field, message]) => {
@@ -112,13 +112,13 @@ const SettingsUsers = ({ users: initialUsers }: SettingsUsersProps) => {
     if (!editingUser) return;
 
     updateForm.put(route('users.update', editingUser.id), {
-      onSuccess: () => {
+      onSuccess: (page) => {
         setDialogOpen(false);
         updateForm.reset();
         setEditingUser(null);
         toast({ title: "User updated successfully" });
-        // Reload the page to get updated users list
-        router.reload();
+        // Update users state with the latest data from server
+        setUsers(page.props.users as User[]);
       },
       onError: (errors) => {
         Object.entries(errors).forEach(([field, message]) => {
@@ -130,9 +130,10 @@ const SettingsUsers = ({ users: initialUsers }: SettingsUsersProps) => {
 
   const toggleActive = (user: User) => {
     router.patch(route('users.toggle-active', user.id), {}, {
-      onSuccess: () => {
+      onSuccess: (page) => {
         toast({ title: user.active ? "User deactivated" : "User activated" });
-        router.reload();
+        // Update users state with the latest data from server
+        setUsers(page.props.users as User[]);
       },
     });
   };
@@ -140,9 +141,10 @@ const SettingsUsers = ({ users: initialUsers }: SettingsUsersProps) => {
   const handleDelete = (user: User) => {
     if (confirm(`Are you sure you want to delete ${user.name}?`)) {
       router.delete(route('users.destroy', user.id), {
-        onSuccess: () => {
+        onSuccess: (page) => {
           toast({ title: "User deleted successfully" });
-          router.reload();
+          // Update users state with the latest data from server
+          setUsers(page.props.users as User[]);
         },
       });
     }

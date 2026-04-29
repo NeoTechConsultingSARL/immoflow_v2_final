@@ -42,7 +42,6 @@ const getNavSections = (user: any) => {
         { title: "Properties", url: "/properties", icon: Building2 },
         { title: "Property Types", url: "/property-types", icon: ShoppingCart },
         { title: "Settings", url: "/settings", icon: Settings },
-        { title: "Users", url: "/settings/users", icon: Contact },
       ],
     });
   }
