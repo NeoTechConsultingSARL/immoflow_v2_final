@@ -42,8 +42,8 @@ interface SettingsUsersProps {
 
 const availableRoles = [
   { value: "admin", label: "Administrator" },
-  { value: "manager", label: "Property Manager" },
-  { value: "user", label: "GCC Accountant" },
+  { value: "manager", label: "Manager" },
+  { value: "user", label: "User" },
 ];
 
 
