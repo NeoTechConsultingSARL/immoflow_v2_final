@@ -1,0 +1,61 @@
+resources/js/App.tsx(5,46): error TS2307: Cannot find module 'react-router-dom' or its corresponding type declarations.
+resources/js/Layouts/AuthenticatedLayout.tsx(3,8): error TS2613: Module '"/home/abdel/workspace/immoflow-release/resources/js/components/NavLink"' has no default export. Did you mean to use 'import { NavLink } from "/home/abdel/workspace/immoflow-release/resources/js/components/NavLink"' instead?
+resources/js/components/AppBreadcrumb.tsx(1,52): error TS2307: Cannot find module 'react-router-dom' or its corresponding type declarations.
+resources/js/components/NavLink.tsx(1,56): error TS2307: Cannot find module 'react-router-dom' or its corresponding type declarations.
+resources/js/components/NavLink.tsx(17,23): error TS7031: Binding element 'isActive' implicitly has an 'any' type.
+resources/js/components/NavLink.tsx(17,33): error TS7031: Binding element 'isPending' implicitly has an 'any' type.
+resources/js/components/dashboard/AppSidebar.tsx(5,29): error TS2307: Cannot find module 'react-router-dom' or its corresponding type declarations.
+resources/js/components/dashboard/ChargesChart.tsx(23,20): error TS2322: Type '(v: number) => string' is not assignable to type 'Formatter<ValueType, NameType> & ((value: ValueType, name: NameType, item: TooltipPayloadEntry, index: number, payload: TooltipPayload) => ReactNode | [...])'.
+  Type '(v: number) => string' is not assignable to type 'Formatter<ValueType, NameType>'.
+    Types of parameters 'v' and 'value' are incompatible.
+      Type 'ValueType | undefined' is not assignable to type 'number'.
+        Type 'undefined' is not assignable to type 'number'.
+resources/js/components/dashboard/MoroccoStockIndex.tsx(101,17): error TS2322: Type '(value: number) => [string, string]' is not assignable to type 'Formatter<ValueType, NameType> & ((value: ValueType, name: NameType, item: TooltipPayloadEntry, index: number, payload: TooltipPayload) => ReactNode | [...])'.
+  Type '(value: number) => [string, string]' is not assignable to type 'Formatter<ValueType, NameType>'.
+    Types of parameters 'value' and 'value' are incompatible.
+      Type 'ValueType | undefined' is not assignable to type 'number'.
+        Type 'undefined' is not assignable to type 'number'.
+resources/js/components/dashboard/NewsSection.tsx(2,29): error TS2307: Cannot find module 'react-router-dom' or its corresponding type declarations.
+resources/js/components/dashboard/PaymentsChart.tsx(42,20): error TS2322: Type '(v: number) => string' is not assignable to type 'Formatter<ValueType, NameType> & ((value: ValueType, name: NameType, item: TooltipPayloadEntry, index: number, payload: TooltipPayload) => ReactNode | [...])'.
+  Type '(v: number) => string' is not assignable to type 'Formatter<ValueType, NameType>'.
+    Types of parameters 'v' and 'value' are incompatible.
+      Type 'ValueType | undefined' is not assignable to type 'number'.
+        Type 'undefined' is not assignable to type 'number'.
+resources/js/components/dashboard/RevenueChart.tsx(29,20): error TS2322: Type '(value: number) => [string, string]' is not assignable to type 'Formatter<ValueType, NameType> & ((value: ValueType, name: NameType, item: TooltipPayloadEntry, index: number, payload: TooltipPayload) => ReactNode | [...])'.
+  Type '(value: number) => [string, string]' is not assignable to type 'Formatter<ValueType, NameType>'.
+    Types of parameters 'value' and 'value' are incompatible.
+      Type 'ValueType | undefined' is not assignable to type 'number'.
+        Type 'undefined' is not assignable to type 'number'.
+resources/js/components/ui/calendar.tsx(45,9): error TS2353: Object literal may only specify known properties, and 'IconLeft' does not exist in type 'Partial<CustomComponents>'.
+resources/js/components/ui/chart.tsx(106,7): error TS2339: Property 'payload' does not exist on type 'Omit<Omit<Props<ValueType, NameType>, PropertiesReadFromContext> & { active?: boolean | undefined; allowEscapeViewBox?: AllowInDimension | undefined; ... 24 more ...; wrapperStyle?: CSSProperties | undefined; } & ClassAttributes<...> & HTMLAttributes<...> & { ...; }, "ref">'.
+resources/js/components/ui/chart.tsx(111,7): error TS2339: Property 'label' does not exist on type 'Omit<Omit<Props<ValueType, NameType>, PropertiesReadFromContext> & { active?: boolean | undefined; allowEscapeViewBox?: AllowInDimension | undefined; ... 24 more ...; wrapperStyle?: CSSProperties | undefined; } & ClassAttributes<...> & HTMLAttributes<...> & { ...; }, "ref">'.
+resources/js/components/ui/chart.tsx(163,25): error TS7006: Parameter 'item' implicitly has an 'any' type.
+resources/js/components/ui/chart.tsx(163,31): error TS7006: Parameter 'index' implicitly has an 'any' type.
+resources/js/components/ui/chart.tsx(233,41): error TS2344: Type '"payload" | "verticalAlign"' does not satisfy the constraint '"string" | "method" | "style" | "clipPath" | "filter" | "mask" | "path" | "key" | "type" | "suppressHydrationWarning" | "className" | "id" | "lang" | "tabIndex" | "role" | "content" | ... 422 more ... | "portal"'.
+  Type '"payload"' is not assignable to type '"string" | "method" | "style" | "clipPath" | "filter" | "mask" | "path" | "key" | "type" | "suppressHydrationWarning" | "className" | "id" | "lang" | "tabIndex" | "role" | "content" | ... 422 more ... | "portal"'.
+resources/js/components/ui/chart.tsx(240,17): error TS2339: Property 'length' does not exist on type '{}'.
+resources/js/components/ui/chart.tsx(249,16): error TS2339: Property 'map' does not exist on type '{}'.
+resources/js/components/ui/chart.tsx(249,21): error TS7006: Parameter 'item' implicitly has an 'any' type.
+resources/js/components/ui/resizable.tsx(6,102): error TS2339: Property 'PanelGroup' does not exist on type 'typeof import("/home/abdel/workspace/immoflow-release/node_modules/react-resizable-panels/dist/react-resizable-panels")'.
+resources/js/components/ui/resizable.tsx(7,23): error TS2339: Property 'PanelGroup' does not exist on type 'typeof import("/home/abdel/workspace/immoflow-release/node_modules/react-resizable-panels/dist/react-resizable-panels")'.
+resources/js/components/ui/resizable.tsx(19,51): error TS2339: Property 'PanelResizeHandle' does not exist on type 'typeof import("/home/abdel/workspace/immoflow-release/node_modules/react-resizable-panels/dist/react-resizable-panels")'.
+resources/js/components/ui/resizable.tsx(22,23): error TS2339: Property 'PanelResizeHandle' does not exist on type 'typeof import("/home/abdel/workspace/immoflow-release/node_modules/react-resizable-panels/dist/react-resizable-panels")'.
+resources/js/components/ui/resizable.tsx(34,24): error TS2339: Property 'PanelResizeHandle' does not exist on type 'typeof import("/home/abdel/workspace/immoflow-release/node_modules/react-resizable-panels/dist/react-resizable-panels")'.
+resources/js/main.tsx(2,17): error TS1149: File name '/home/abdel/workspace/immoflow-release/resources/js/app.tsx' differs from already included file name '/home/abdel/workspace/immoflow-release/resources/js/App.tsx' only in casing.
+  The file is in the program because:
+    Matched by include pattern 'resources/js/**/*.tsx' in '/home/abdel/workspace/immoflow-release/tsconfig.json'
+    Imported via "./App.tsx" from file '/home/abdel/workspace/immoflow-release/resources/js/main.tsx'
+    Matched by include pattern 'resources/js/**/*.tsx' in '/home/abdel/workspace/immoflow-release/tsconfig.json'
+resources/js/main.tsx(2,17): error TS5097: An import path can only end with a '.tsx' extension when 'allowImportingTsExtensions' is enabled.
+resources/js/pages/Companies.tsx(2,29): error TS2307: Cannot find module 'react-router-dom' or its corresponding type declarations.
+resources/js/pages/CreateEditRole.tsx(2,29): error TS2307: Cannot find module 'react-router-dom' or its corresponding type declarations.
+resources/js/pages/History.tsx(2,29): error TS2307: Cannot find module 'react-router-dom' or its corresponding type declarations.
+resources/js/pages/NewsArticle.tsx(1,29): error TS2307: Cannot find module 'react-router-dom' or its corresponding type declarations.
+resources/js/pages/NotFound.tsx(1,29): error TS2307: Cannot find module 'react-router-dom' or its corresponding type declarations.
+resources/js/pages/ProjectManagement.tsx(1,46): error TS2307: Cannot find module 'react-router-dom' or its corresponding type declarations.
+resources/js/pages/Projects.tsx(2,46): error TS2307: Cannot find module 'react-router-dom' or its corresponding type declarations.
+resources/js/pages/Properties.tsx(2,46): error TS2307: Cannot find module 'react-router-dom' or its corresponding type declarations.
+resources/js/pages/PropertyTypes.tsx(2,46): error TS2307: Cannot find module 'react-router-dom' or its corresponding type declarations.
+resources/js/pages/Settings.tsx(1,29): error TS2307: Cannot find module 'react-router-dom' or its corresponding type declarations.
+resources/js/pages/SettingsProfiles.tsx(2,29): error TS2307: Cannot find module 'react-router-dom' or its corresponding type declarations.
+resources/js/pages/SettingsPropertyTypes.tsx(2,29): error TS2307: Cannot find module 'react-router-dom' or its corresponding type declarations.
