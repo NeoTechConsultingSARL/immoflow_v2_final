@@ -235,34 +235,88 @@ const Properties = () => {
 
             {/* Grid View - multi-column cards */}
             {viewMode === "grid" && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                {filtered.map((property) => (
-                  <div key={property.id} className="bg-card border border-border rounded-xl shadow-[var(--shadow-card)] overflow-hidden hover:shadow-[var(--shadow-elevated)] transition-shadow duration-300 flex flex-col">
-                    <div className="p-4 flex-1">
-                      <div className="flex items-start justify-between mb-2">
-                        <span className="text-2xl">{typeIcons[property.type]}</span>
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                {filtered.map((property, index) => (
+                  <div
+                    key={property.id}
+                    className="group bg-card border border-border rounded-xl shadow-[var(--shadow-card)] overflow-hidden hover:shadow-[var(--shadow-elevated)] transition-shadow duration-300 flex flex-col cursor-pointer"
+                    onClick={() => openEdit(property)}
+                  >
+                    <div className="p-6 flex-1">
+                      <div className="flex items-start justify-between mb-3">
+                        <span className={cn("text-[0.6875rem] font-semibold px-2.5 py-1 rounded-full", 
+                          property.status === 'Available' 
+                            ? 'bg-emerald-500/10 text-emerald-600'
+                            : property.status === 'Reserved'
+                            ? 'bg-amber-500/10 text-amber-600'
+                            : 'bg-muted text-muted-foreground'
+                        )}>
+                          {property.status}
+                        </span>
                         <div className="flex items-center gap-1">
-                          <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-foreground" onClick={() => openEdit(property)}>
-                            <Pencil className="w-3 h-3" />
-                          </Button>
-                          <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-destructive" onClick={() => openDelete(property)}>
-                            <Trash2 className="w-3 h-3" />
+                          <Button 
+                            variant="ghost" 
+                            size="icon"
+                            className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                            onClick={(e) => { e.stopPropagation(); openEdit(property); }}
+                          >
+                            <Pencil className="w-3.5 h-3.5" />
                           </Button>
                         </div>
                       </div>
-                      <h3 className="font-display text-base font-bold leading-tight">{property.name}</h3>
-                      <p className="text-xs text-muted-foreground mt-0.5 mb-3">{property.type} · {property.floor} Floor</p>
-                      <div className="flex items-center gap-3 text-xs text-muted-foreground mb-3">
-                        <span className="flex items-center gap-1"><Ruler className="w-3 h-3" />{property.area}</span>
-                        <span className="flex items-center gap-1"><BedDouble className="w-3 h-3" />{property.bedrooms}</span>
-                        <span className="flex items-center gap-1"><Bath className="w-3 h-3" />{property.bathrooms}</span>
+                    </div>
+
+                    <h3 className="font-display text-lg font-bold leading-tight mb-1 px-6">{property.name}</h3>
+                    <p className="text-sm text-muted-foreground line-clamp-2 mb-4 px-6">{property.type} Property</p>
+
+                    <div className="space-y-2 px-6">
+                      <div className="flex items-center gap-2.5 text-sm text-muted-foreground">
+                        <span className="text-2xl shrink-0">{typeIcons[property.type]}</span>
+                        <span className="truncate">{property.type}</span>
+                      </div>
+                      <div className="flex items-center gap-2.5 text-sm text-muted-foreground">
+                        <Ruler className="w-4 h-4 shrink-0" />
+                        <span className="truncate">{property.area}</span>
+                      </div>
+                      {(property.bedrooms > 0 || property.bathrooms > 0) && (
+                        <div className="flex items-center gap-2.5 text-sm text-muted-foreground">
+                          <BedDouble className="w-4 h-4 shrink-0" />
+                          <span>{property.bedrooms} bed{property.bedrooms !== 1 ? 's' : ''}</span>
+                          {property.bathrooms > 0 && (
+                            <>
+                              <span className="text-muted-foreground/60">·</span>
+                              <Bath className="w-4 h-4 shrink-0" />
+                              <span>{property.bathrooms} bath{property.bathrooms !== 1 ? 's' : ''}</span>
+                            </>
+                          )}
+                        </div>
+                      )}
+                      <div className="flex items-center gap-2.5 text-sm text-muted-foreground">
+                        <MapPin className="w-4 h-4 shrink-0" />
+                        <span className="truncate">{property.floor} Floor</span>
                       </div>
                     </div>
-                    <div className="px-4 py-3 border-t border-border bg-muted/30 flex items-center justify-between">
-                      <span className="text-sm font-semibold">{property.price}</span>
-                      <span className={cn("text-[0.625rem] font-semibold px-2 py-0.5 rounded-full", statusStyles[property.status])}>
-                        {property.status}
-                      </span>
+
+                    <div className="relative px-6 py-4 border-t border-border bg-muted/30 group-hover:bg-primary/10 flex items-center justify-between text-sm text-muted-foreground group-hover:text-foreground transition-colors duration-300 overflow-hidden">
+                      <div
+                        className="absolute top-0 left-0 right-0 h-[3px]"
+                        style={{ background: [
+                          'linear-gradient(90deg, hsl(var(--primary)), hsl(var(--accent)))',
+                          'linear-gradient(90deg, hsl(25 80% 55%), hsl(45 90% 55%))',
+                          'linear-gradient(90deg, hsl(160 50% 45%), hsl(190 60% 50%))',
+                          'linear-gradient(90deg, hsl(270 50% 55%), hsl(300 50% 55%))',
+                          'linear-gradient(90deg, hsl(200 60% 50%), hsl(220 55% 55%))',
+                          'linear-gradient(90deg, hsl(340 55% 50%), hsl(10 60% 55%))',
+                        ][index % 6] }}
+                      />
+                      <div className="flex items-center gap-1.5">
+                        <Euro className="w-3.5 h-3.5 text-muted-foreground" />
+                        <span className="font-semibold">{property.price}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <Home className="w-3.5 h-3.5 text-muted-foreground" />
+                        <span className="truncate">{property.name}</span>
+                      </div>
                     </div>
                   </div>
                 ))}
