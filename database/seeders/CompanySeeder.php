@@ -57,6 +57,6 @@ class CompanySeeder extends Seeder
             'properties' => 17,
         ]);
 
-        Company::factory(16)->create();
+
     }
 }
