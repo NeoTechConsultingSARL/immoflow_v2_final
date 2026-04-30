@@ -1,6 +1,6 @@
-import { router, usePage } from "@inertiajs/react";
+import { router, usePage, useForm } from "@inertiajs/react";
 import { PageProps as InertiaPageProps } from "@inertiajs/core";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Building2, Plus, Pencil, MapPin, Phone, Mail, Globe } from "lucide-react";
 import { AppBreadcrumb } from "@/components/AppBreadcrumb";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
@@ -49,7 +49,8 @@ const Companies = () => {
   const { props } = usePage<PageProps>();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Company | null>(null);
-  const [form, setForm] = useState({
+  
+  const { data, setData, post, put, processing, errors, reset, clearErrors } = useForm({
     name: "",
     status: "active",
     description: "",
@@ -62,13 +63,14 @@ const Companies = () => {
 
   const openCreate = () => {
     setEditing(null);
-    setForm({ name: "", status: "active", description: "", email: "", address: "", phone: "", website: "", properties: 0 });
+    reset();
+    clearErrors();
     setDialogOpen(true);
   };
 
   const openEdit = (company: Company) => {
     setEditing(company);
-    setForm({
+    setData({
       name: company.name,
       status: company.status,
       description: company.description || "",
@@ -78,39 +80,32 @@ const Companies = () => {
       website: company.website || "",
       properties: company.properties,
     });
+    clearErrors();
     setDialogOpen(true);
   };
 
-  const handleSave = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSave = (e?: React.FormEvent) => {
+    if (e) {
+      e.preventDefault();
+    }
     
-    if (!form.name.trim()) {
+    if (!data.name.trim()) {
       return;
     }
 
-    const data = {
-      ...form,
-      name: form.name.trim(),
-      status: form.status as "active" | "inactive",
-    };
-
     if (editing) {
-      router.put(`/companies/${editing.id}`, data, {
+      put(`/companies/${editing.id}`, {
         onSuccess: () => {
           setDialogOpen(false);
         },
       });
     } else {
-      router.post("/companies", data, {
+      post("/companies", {
         onSuccess: () => {
           setDialogOpen(false);
         },
       });
     }
-  };
-
-  const updateField = (field: keyof typeof form, value: string | number) => {
-    setForm(prev => ({ ...prev, [field]: value }));
   };
 
   return (
@@ -241,12 +236,20 @@ const Companies = () => {
           <form onSubmit={handleSave} className="grid gap-4 py-4">
             <div className="grid gap-2">
               <Label htmlFor="name">Company Name *</Label>
-              <Input id="name" value={form.name} onChange={e => updateField("name", e.target.value)} placeholder="e.g. Keller Immobilien GmbH" required />
+              <Input 
+                id="name" 
+                value={data.name} 
+                onChange={e => setData("name", e.target.value)} 
+                placeholder="e.g. Keller Immobilien GmbH" 
+                className={cn(errors.name && "border-destructive")}
+                required 
+              />
+              {errors.name && <p className="text-xs text-destructive">{errors.name}</p>}
             </div>
             <div className="grid gap-2">
               <Label htmlFor="status">Status *</Label>
-              <Select value={form.status} onValueChange={(value) => updateField("status", value)}>
-                <SelectTrigger>
+              <Select value={data.status} onValueChange={(value) => setData("status", value)}>
+                <SelectTrigger className={cn(errors.status && "border-destructive")}>
                   <SelectValue placeholder="Select status" />
                 </SelectTrigger>
                 <SelectContent>
@@ -255,44 +258,98 @@ const Companies = () => {
                   ))}
                 </SelectContent>
               </Select>
+              {errors.status && <p className="text-xs text-destructive">{errors.status}</p>}
             </div>
             <div className="grid gap-2">
               <Label htmlFor="description">Description</Label>
-              <Textarea id="description" value={form.description} onChange={e => updateField("description", e.target.value)} placeholder="Brief description of the company" rows={2} />
+              <Textarea 
+                id="description" 
+                value={data.description} 
+                onChange={e => setData("description", e.target.value)} 
+                placeholder="Brief description of the company" 
+                className={cn(errors.description && "border-destructive")}
+                rows={2} 
+              />
+              {errors.description && <p className="text-xs text-destructive">{errors.description}</p>}
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
                 <Label htmlFor="email">Email</Label>
-                <Input id="email" type="email" value={form.email} onChange={e => updateField("email", e.target.value)} placeholder="info@company.de" />
+                <Input 
+                  id="email" 
+                  type="email" 
+                  value={data.email} 
+                  onChange={e => setData("email", e.target.value)} 
+                  placeholder="info@company.de" 
+                  className={cn(errors.email && "border-destructive")}
+                />
+                {errors.email && <p className="text-xs text-destructive">{errors.email}</p>}
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="phone">Phone</Label>
-                <Input id="phone" value={form.phone} onChange={e => updateField("phone", e.target.value)} placeholder="+49 89 123 456" />
+                <Input 
+                  id="phone" 
+                  value={data.phone} 
+                  onChange={e => setData("phone", e.target.value)} 
+                  placeholder="+49 89 123 456" 
+                  className={cn(errors.phone && "border-destructive")}
+                />
+                {errors.phone && <p className="text-xs text-destructive">{errors.phone}</p>}
               </div>
             </div>
             <div className="grid gap-2">
               <Label htmlFor="address">Address</Label>
-              <Input id="address" value={form.address} onChange={e => updateField("address", e.target.value)} placeholder="Street, City, ZIP" />
+              <Input 
+                id="address" 
+                value={data.address} 
+                onChange={e => setData("address", e.target.value)} 
+                placeholder="Street, City, ZIP" 
+                className={cn(errors.address && "border-destructive")}
+              />
+              {errors.address && <p className="text-xs text-destructive">{errors.address}</p>}
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
                 <Label htmlFor="website">Website</Label>
-                <Input id="website" value={form.website} onChange={e => updateField("website", e.target.value)} placeholder="company.de" />
+                <Input 
+                  id="website" 
+                  value={data.website} 
+                  onChange={e => setData("website", e.target.value)} 
+                  placeholder="https://company.de" 
+                  className={cn(errors.website && "border-destructive")}
+                />
+                {errors.website && <p className="text-xs text-destructive">{errors.website}</p>}
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="properties">Properties</Label>
-                <Input id="properties" type="number" value={form.properties} onChange={e => updateField("properties", parseInt(e.target.value) || 0)} min="0" placeholder="0" />
+                <Input 
+                  id="properties" 
+                  type="number" 
+                  value={data.properties} 
+                  onChange={e => setData("properties", parseInt(e.target.value) || 0)} 
+                  min="0" 
+                  placeholder="0" 
+                  className={cn(errors.properties && "border-destructive")}
+                />
+                {errors.properties && <p className="text-xs text-destructive">{errors.properties}</p>}
               </div>
             </div>
+            {/* Submit button inside form for accessibility, hidden or same as footer */}
+            <button type="submit" className="hidden" />
           </form>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleSave} style={{ background: "hsl(var(--accent))", color: "hsl(var(--accent-foreground))" }}>
-              {editing ? "Save Changes" : "Create Company"}
+            <Button 
+              disabled={processing}
+              onClick={() => handleSave()} 
+              style={{ background: "hsl(var(--accent))", color: "hsl(var(--accent-foreground))" }}
+            >
+              {processing ? "Saving..." : (editing ? "Save Changes" : "Create Company")}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
     </SidebarProvider>
   );
 };
