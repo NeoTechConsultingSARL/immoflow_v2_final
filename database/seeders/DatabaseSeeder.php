@@ -24,6 +24,20 @@ class DatabaseSeeder extends Seeder
             'role' => 'admin',
         ]);
 
+        User::factory()->create([
+            'name' => 'Sara El Amrani',
+            'email' => 'sara.elamrani@immoflow.com',
+            'password' => bcrypt('password'),
+            'role' => 'manager',
+        ]);
+
+        User::factory()->create([
+            'name' => 'Youssef Idrissi',
+            'email' => 'youssef.idrissi@immoflow.com',
+            'password' => bcrypt('password'),
+            'role' => 'user',
+        ]);
+
         $this->call([
             CompanySeeder::class,
         ]);
