@@ -27,6 +27,12 @@ class UpdateCompanyRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:255', 'unique:companies,name,'.$company->id],
             'status' => ['required', 'in:active,inactive'],
+            'description' => ['nullable', 'string'],
+            'email' => ['nullable', 'email', 'max:255'],
+            'address' => ['nullable', 'string'],
+            'phone' => ['nullable', 'string', 'max:45'],
+            'website' => ['nullable', 'url', 'max:255'],
+            'properties' => ['nullable', 'integer', 'min:0'],
         ];
     }
 
@@ -44,6 +50,16 @@ class UpdateCompanyRequest extends FormRequest
             'name.unique' => 'A company with this name already exists.',
             'status.required' => 'The status field is required.',
             'status.in' => 'Please select a valid status (active or inactive).',
+            'description.string' => 'The description must be a string.',
+            'email.email' => 'Please enter a valid email address.',
+            'email.max' => 'The email may not be greater than 255 characters.',
+            'address.string' => 'The address must be a string.',
+            'phone.string' => 'The phone number must be a string.',
+            'phone.max' => 'The phone number may not be greater than 45 characters.',
+            'website.url' => 'Please enter a valid website URL.',
+            'website.max' => 'The website may not be greater than 255 characters.',
+            'properties.integer' => 'The properties count must be a number.',
+            'properties.min' => 'The properties count cannot be negative.',
         ];
     }
 }

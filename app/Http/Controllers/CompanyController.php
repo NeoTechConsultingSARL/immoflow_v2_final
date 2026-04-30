@@ -16,7 +16,7 @@ class CompanyController extends Controller
      */
     public function index(): Response
     {
-        $companies = Company::select('id', 'name', 'status', 'created_at')
+        $companies = Company::select('id', 'name', 'status', 'description', 'email', 'address', 'phone', 'website', 'properties', 'created_at')
             ->orderBy('name', 'asc')
             ->get()
             ->map(function ($company) {
@@ -25,6 +25,12 @@ class CompanyController extends Controller
                     'name' => $company->name,
                     'status' => $company->status,
                     'status_label' => $company->isActive() ? 'Active' : 'Inactive',
+                    'description' => $company->description,
+                    'email' => $company->email,
+                    'address' => $company->address,
+                    'phone' => $company->phone,
+                    'website' => $company->website,
+                    'properties' => $company->properties,
                     'created_at' => $company->created_at->format('Y-m-d'),
                 ];
             });
@@ -45,6 +51,12 @@ class CompanyController extends Controller
         Company::create([
             'name' => $validated['name'],
             'status' => $validated['status'],
+            'description' => $validated['description'] ?? null,
+            'email' => $validated['email'] ?? null,
+            'address' => $validated['address'] ?? null,
+            'phone' => $validated['phone'] ?? null,
+            'website' => $validated['website'] ?? null,
+            'properties' => $validated['properties'] ?? 0,
         ]);
 
         return redirect()
@@ -62,6 +74,12 @@ class CompanyController extends Controller
         $company->update([
             'name' => $validated['name'],
             'status' => $validated['status'],
+            'description' => $validated['description'] ?? null,
+            'email' => $validated['email'] ?? null,
+            'address' => $validated['address'] ?? null,
+            'phone' => $validated['phone'] ?? null,
+            'website' => $validated['website'] ?? null,
+            'properties' => $validated['properties'] ?? 0,
         ]);
 
         return redirect()

@@ -1,37 +1,32 @@
-import React from "react";
 import { router, usePage } from "@inertiajs/react";
 import { useState } from "react";
-import { Building2, Plus, Pencil, Trash2 } from "lucide-react";
+import { Building2, Plus, Pencil, MapPin, Phone, Mail, Globe } from "lucide-react";
 import { AppBreadcrumb } from "@/components/AppBreadcrumb";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/dashboard/AppSidebar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { toast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 
 interface Company {
   id: string;
   name: string;
   status: string;
   status_label: string;
+  description?: string;
+  email?: string;
+  address?: string;
+  phone?: string;
+  website?: string;
+  properties: number;
   created_at: string;
 }
 
 interface PageProps {
-  [key: string]: any;
-  auth: {
-    user: {
-      id: number;
-      name: string;
-      email: string;
-      role: string;
-    };
-  };
-  ziggy: any;
   companies: Company[];
   statusOptions: Record<string, string>;
   flash?: {
@@ -40,78 +35,81 @@ interface PageProps {
   };
 }
 
+const logoColors = [
+  "bg-blue-500/10 text-blue-600",
+  "bg-emerald-500/10 text-emerald-600",
+  "bg-amber-500/10 text-amber-600",
+  "bg-rose-500/10 text-rose-600",
+  "bg-violet-500/10 text-violet-600",
+  "bg-cyan-500/10 text-cyan-600",
+];
+
 const Companies = () => {
   const { props } = usePage<PageProps>();
-  const { companies, statusOptions, flash } = props;
-  
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [deleteOpen, setDeleteOpen] = useState(false);
   const [editing, setEditing] = useState<Company | null>(null);
-  const [deleting, setDeleting] = useState<Company | null>(null);
-  const [form, setForm] = useState({ name: '', status: 'active' });
-  const [errors, setErrors] = useState<Record<string, string>>({});
-
-  // Show flash messages
-  React.useEffect(() => {
-    if (flash?.success) {
-      toast({ title: flash.success });
-    }
-    if (flash?.error) {
-      toast({ title: flash.error, variant: "destructive" });
-    }
-  }, [flash]);
+  const [form, setForm] = useState({
+    name: "",
+    status: "active",
+    description: "",
+    email: "",
+    address: "",
+    phone: "",
+    website: "",
+    properties: 0,
+  });
 
   const openCreate = () => {
     setEditing(null);
-    setForm({ name: '', status: 'active' });
-    setErrors({});
+    setForm({ name: "", status: "active", description: "", email: "", address: "", phone: "", website: "", properties: 0 });
     setDialogOpen(true);
   };
 
   const openEdit = (company: Company) => {
     setEditing(company);
-    setForm({ name: company.name, status: company.status });
-    setErrors({});
+    setForm({
+      name: company.name,
+      status: company.status,
+      description: company.description || "",
+      email: company.email || "",
+      address: company.address || "",
+      phone: company.phone || "",
+      website: company.website || "",
+      properties: company.properties,
+    });
     setDialogOpen(true);
   };
 
-  const openDelete = (company: Company) => {
-    setDeleting(company);
-    setDeleteOpen(true);
-  };
-
-  const handleSave = () => {
-    const url = editing ? `/companies/${editing.id}` : '/companies';
-    const method = editing ? 'put' : 'post';
+  const handleSave = (e: React.FormEvent) => {
+    e.preventDefault();
     
-    router[method](url, form, {
-      onSuccess: () => {
-        setDialogOpen(false);
-        setErrors({});
-      },
-      onError: (errors) => {
-        setErrors(errors);
-      },
-    });
-  };
+    if (!form.name.trim()) {
+      return;
+    }
 
-  const handleDelete = () => {
-    if (deleting) {
-      router.delete(`/companies/${deleting.id}`, {
+    const data = {
+      ...form,
+      name: form.name.trim(),
+      status: form.status as "active" | "inactive",
+    };
+
+    if (editing) {
+      router.put(`/companies/${editing.id}`, data, {
         onSuccess: () => {
-          setDeleteOpen(false);
-          setDeleting(null);
+          setDialogOpen(false);
+        },
+      });
+    } else {
+      router.post("/companies", data, {
+        onSuccess: () => {
+          setDialogOpen(false);
         },
       });
     }
   };
 
-  const updateField = (field: keyof typeof form, value: string) => {
+  const updateField = (field: keyof typeof form, value: string | number) => {
     setForm(prev => ({ ...prev, [field]: value }));
-    // Clear error for this field when user starts typing
-    if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: '' }));
-    }
   };
 
   return (
@@ -126,8 +124,7 @@ const Companies = () => {
               <AppBreadcrumb />
             </div>
             <Button onClick={openCreate} className="gap-2" style={{ background: "hsl(var(--accent))", color: "hsl(var(--accent-foreground))" }}>
-              <Plus className="w-4 h-4" />
-              Add Company
+              <Plus className="w-4 h-4" /> Add Company
             </Button>
           </header>
 
@@ -138,105 +135,155 @@ const Companies = () => {
               <p className="text-[0.9375rem] text-muted-foreground">View, create, edit, and remove companies from your portfolio.</p>
             </div>
 
-            {/* Companies Table */}
-            <div className="bg-card border border-border rounded-xl shadow-[var(--shadow-card)] overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-border bg-muted/50">
-                      <th className="text-left p-4 font-semibold text-sm">Name</th>
-                      <th className="text-left p-4 font-semibold text-sm">Status</th>
-                      <th className="text-left p-4 font-semibold text-sm">Created</th>
-                      <th className="text-right p-4 font-semibold text-sm">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {companies.map((company) => (
-                      <tr key={company.id} className="border-b border-border hover:bg-muted/30 transition-colors">
-                        <td className="p-4">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary font-semibold">
-                              {company.name.charAt(0).toUpperCase()}
-                            </div>
-                            <span className="font-medium">{company.name}</span>
-                          </div>
-                        </td>
-                        <td className="p-4">
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            company.status === 'active' 
-                              ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
-                              : 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400'
-                          }`}>
-                            {company.status_label}
-                          </span>
-                        </td>
-                        <td className="p-4 text-sm text-muted-foreground">{company.created_at}</td>
-                        <td className="p-4">
-                          <div className="flex items-center justify-end gap-1">
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              className="h-8 w-8 text-muted-foreground hover:text-foreground" 
-                              onClick={() => openEdit(company)}
-                            >
-                              <Pencil className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+            {/* Company Cards Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {props.companies.map((company, idx) => (
+                <div
+                  key={company.id}
+                  className="group bg-card border border-border rounded-xl shadow-[var(--shadow-card)] overflow-hidden hover:shadow-[var(--shadow-elevated)] transition-shadow duration-300 cursor-pointer"
+                  onClick={() => router.visit(`/projects?company=${company.id}&companyName=${encodeURIComponent(company.name)}`)}
+                >
+                  <div className="p-6">
+                    <div className="flex items-start gap-4 mb-4">
+                      <div className={cn("w-14 h-14 rounded-xl flex items-center justify-center text-lg font-bold shrink-0", logoColors[idx % logoColors.length])}>
+                        {company.name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase()}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-display text-lg font-bold truncate">{company.name}</h3>
+                        <p className="text-sm text-muted-foreground mt-0.5 line-clamp-2">{company.description || 'No description available'}</p>
+                      </div>
+                    </div>
 
-              {companies.length === 0 && (
-                <div className="text-center py-20">
-                  <Building2 className="w-12 h-12 mx-auto text-muted-foreground/40 mb-4" />
-                  <h3 className="font-display text-lg font-bold mb-1">No companies yet</h3>
-                  <p className="text-sm text-muted-foreground mb-4">Add your first company to get started.</p>
-                  <Button onClick={openCreate} className="gap-2" style={{ background: "hsl(var(--accent))", color: "hsl(var(--accent-foreground))" }}>
-                    <Plus className="w-4 h-4" /> Add Company
-                  </Button>
+                    <div className="space-y-2.5 mb-5">
+                      <div className="flex items-center gap-2.5 text-sm text-muted-foreground">
+                        <span className={cn("text-[0.6875rem] font-semibold px-2.5 py-1 rounded-full", 
+                          company.status === 'active' 
+                            ? 'bg-emerald-500/10 text-emerald-600'
+                            : 'bg-muted text-muted-foreground'
+                        )}>
+                          {company.status_label}
+                        </span>
+                      </div>
+                      {company.address && (
+                        <div className="flex items-center gap-2.5 text-sm text-muted-foreground">
+                          <MapPin className="w-4 h-4 shrink-0" />
+                          <span className="truncate">{company.address}</span>
+                        </div>
+                      )}
+                      {company.phone && (
+                        <div className="flex items-center gap-2.5 text-sm text-muted-foreground">
+                          <Phone className="w-4 h-4 shrink-0" />
+                          <span>{company.phone}</span>
+                        </div>
+                      )}
+                      {company.email && (
+                        <div className="flex items-center gap-2.5 text-sm text-muted-foreground">
+                          <Mail className="w-4 h-4 shrink-0" />
+                          <span className="truncate">{company.email}</span>
+                        </div>
+                      )}
+                      {company.website && (
+                        <div className="flex items-center gap-2.5 text-sm text-muted-foreground">
+                          <Globe className="w-4 h-4 shrink-0" />
+                          <span>{company.website}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="relative flex items-center justify-between pt-4 border-t border-border rounded-b-xl -mx-6 px-6 -mb-6 pb-6 group-hover:bg-primary/10 transition-colors duration-300 overflow-hidden">
+                      <div
+                        className="absolute top-0 left-0 right-0 h-[3px]"
+                        style={{ background: [
+                          'linear-gradient(90deg, hsl(var(--primary)), hsl(var(--accent)))',
+                          'linear-gradient(90deg, hsl(25 80% 55%), hsl(45 90% 55%))',
+                          'linear-gradient(90deg, hsl(160 50% 45%), hsl(190 60% 50%))',
+                          'linear-gradient(90deg, hsl(270 50% 55%), hsl(300 50% 55%))',
+                          'linear-gradient(90deg, hsl(200 60% 50%), hsl(220 55% 55%))',
+                          'linear-gradient(90deg, hsl(340 55% 50%), hsl(10 60% 55%))',
+                        ][idx % 6] }}
+                      />
+                      <div className="flex items-center gap-2">
+                        <Building2 className="w-4 h-4 text-muted-foreground" />
+                        <span className="text-sm font-semibold">{company.properties} properties</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground" onClick={(e) => { e.stopPropagation(); openEdit(company); }}>
+                          <Pencil className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              )}
+              ))}
             </div>
+
+            {props.companies.length === 0 && (
+              <div className="text-center py-20">
+                <Building2 className="w-12 h-12 mx-auto text-muted-foreground/40 mb-4" />
+                <h3 className="font-display text-lg font-bold mb-1">No companies yet</h3>
+                <p className="text-sm text-muted-foreground mb-4">Add your first company to get started.</p>
+                <Button onClick={openCreate} className="gap-2" style={{ background: "hsl(var(--accent))", color: "hsl(var(--accent-foreground))" }}>
+                  <Plus className="w-4 h-4" /> Add Company
+                </Button>
+              </div>
+            )}
           </main>
         </div>
       </div>
 
       {/* Create / Edit Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="font-display text-xl">{editing ? "Edit Company" : "New Company"}</DialogTitle>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
+          <form onSubmit={handleSave} className="grid gap-4 py-4">
             <div className="grid gap-2">
               <Label htmlFor="name">Company Name *</Label>
-              <Input 
-                id="name" 
-                value={form.name} 
-                onChange={e => updateField("name", e.target.value)} 
-                placeholder="e.g. Keller Immobilien GmbH" 
-                className={errors.name ? 'border-destructive' : ''}
-              />
-              {errors.name && <p className="text-sm text-destructive">{errors.name}</p>}
+              <Input id="name" value={form.name} onChange={e => updateField("name", e.target.value)} placeholder="e.g. Keller Immobilien GmbH" required />
             </div>
             <div className="grid gap-2">
               <Label htmlFor="status">Status *</Label>
               <Select value={form.status} onValueChange={(value) => updateField("status", value)}>
-                <SelectTrigger className={errors.status ? 'border-destructive' : ''}>
+                <SelectTrigger>
                   <SelectValue placeholder="Select status" />
                 </SelectTrigger>
                 <SelectContent>
-                  {Object.entries(statusOptions).map(([value, label]) => (
+                  {Object.entries(props.statusOptions).map(([value, label]) => (
                     <SelectItem key={value} value={value}>{label}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-              {errors.status && <p className="text-sm text-destructive">{errors.status}</p>}
             </div>
-          </div>
+            <div className="grid gap-2">
+              <Label htmlFor="description">Description</Label>
+              <Textarea id="description" value={form.description} onChange={e => updateField("description", e.target.value)} placeholder="Brief description of the company" rows={2} />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="email">Email</Label>
+                <Input id="email" type="email" value={form.email} onChange={e => updateField("email", e.target.value)} placeholder="info@company.de" />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="phone">Phone</Label>
+                <Input id="phone" value={form.phone} onChange={e => updateField("phone", e.target.value)} placeholder="+49 89 123 456" />
+              </div>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="address">Address</Label>
+              <Input id="address" value={form.address} onChange={e => updateField("address", e.target.value)} placeholder="Street, City, ZIP" />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="website">Website</Label>
+                <Input id="website" value={form.website} onChange={e => updateField("website", e.target.value)} placeholder="company.de" />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="properties">Properties</Label>
+                <Input id="properties" type="number" value={form.properties} onChange={e => updateField("properties", parseInt(e.target.value) || 0)} min="0" placeholder="0" />
+              </div>
+            </div>
+          </form>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
             <Button onClick={handleSave} style={{ background: "hsl(var(--accent))", color: "hsl(var(--accent-foreground))" }}>
@@ -245,22 +292,6 @@ const Companies = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      {/* Delete Confirmation */}
-      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete {deleting?.name}?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This action cannot be undone. The company and all associated data will be permanently removed.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </SidebarProvider>
   );
 };
