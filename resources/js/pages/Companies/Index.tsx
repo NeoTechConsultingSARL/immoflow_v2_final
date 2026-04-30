@@ -1,4 +1,5 @@
 import { router, usePage } from "@inertiajs/react";
+import { PageProps as InertiaPageProps } from "@inertiajs/core";
 import { useState } from "react";
 import { Building2, Plus, Pencil, MapPin, Phone, Mail, Globe } from "lucide-react";
 import { AppBreadcrumb } from "@/components/AppBreadcrumb";
@@ -26,7 +27,7 @@ interface Company {
   created_at: string;
 }
 
-interface PageProps {
+interface PageProps extends InertiaPageProps {
   companies: Company[];
   statusOptions: Record<string, string>;
   flash?: {
@@ -233,7 +234,7 @@ const Companies = () => {
 
       {/* Create / Edit Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-xl fixed left-[calc(50%+var(--sidebar-width,0px)/2)] -translate-x-1/2">
           <DialogHeader>
             <DialogTitle className="font-display text-xl">{editing ? "Edit Company" : "New Company"}</DialogTitle>
           </DialogHeader>
