@@ -1,6 +1,6 @@
 import { router, useForm, usePage } from "@inertiajs/react";
 import { useState, useEffect } from "react";
-import { FolderKanban, Plus, Pencil, Trash2, Building2, MapPin, Calendar, Euro, LayoutGrid, FileText, ClipboardList, X } from "lucide-react";
+import { FolderKanban, Plus, Pencil, Building2, MapPin, Calendar, Euro, LayoutGrid, FileText, ClipboardList, X } from "lucide-react";
 import { AppBreadcrumb } from "@/components/AppBreadcrumb";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/dashboard/AppSidebar";
@@ -58,9 +58,7 @@ const statusStyles: Record<string, string> = {
 const Projects = ({ projects, companies }: ProjectsProps) => {
   const { flash } = usePage().props as any;
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [deleteOpen, setDeleteOpen] = useState(false);
   const [editing, setEditing] = useState<Project | null>(null);
-  const [deleting, setDeleting] = useState<Project | null>(null);
   
   const searchParams = new URLSearchParams(window.location.search);
   const [filterCompany, setFilterCompany] = useState<string>(searchParams.get("company") || "all");
@@ -117,10 +115,7 @@ const Projects = ({ projects, companies }: ProjectsProps) => {
     setDialogOpen(true);
   };
 
-  const openDelete = (p: Project) => {
-    setDeleting(p);
-    setDeleteOpen(true);
-  };
+
 
   useEffect(() => {
     const totalUnits = data.property_allocations.reduce((sum, a) => sum + a.units, 0);
@@ -141,16 +136,7 @@ const Projects = ({ projects, companies }: ProjectsProps) => {
     }
   };
 
-  const handleDelete = () => {
-    if (deleting) {
-      destroy(route('projects.destroy', deleting.id), {
-        onSuccess: () => {
-          setDeleteOpen(false);
-          setDeleting(null);
-        },
-      });
-    }
-  };
+
 
   const usedPropertyTypes = data.property_allocations.map(a => a.propertyType);
   const availablePropertyTypes = propertyTypes.filter(t => !usedPropertyTypes.includes(t));
@@ -252,14 +238,7 @@ const Projects = ({ projects, companies }: ProjectsProps) => {
                             </TooltipTrigger>
                             <TooltipContent>Edit Project</TooltipContent>
                           </Tooltip>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={(e) => { e.stopPropagation(); openDelete(project); }}>
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>Delete Project</TooltipContent>
-                          </Tooltip>
+
                         </TooltipProvider>
                       </div>
                     </div>
@@ -428,18 +407,7 @@ const Projects = ({ projects, companies }: ProjectsProps) => {
         </DialogContent>
       </Dialog>
 
-      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete {deleting?.name}?</AlertDialogTitle>
-            <AlertDialogDescription>This action cannot be undone. The project will be permanently removed.</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={processing}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90" disabled={processing}>Delete</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+
     </SidebarProvider>
   );
 };
