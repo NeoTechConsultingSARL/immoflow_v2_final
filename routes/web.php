@@ -3,6 +3,7 @@
 use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ProjectController;
+use App\Http\Controllers\TrancheController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -50,9 +51,14 @@ Route::middleware('auth')->group(function () {
         return Inertia::render('ProjectManagement');
     })->name('management')->middleware('role:admin,manager');
 
-    Route::get('/tranches', function () {
-        return Inertia::render('Tranches');
-    })->name('tranches')->middleware('role:admin,manager');
+    Route::get('/tranches', [TrancheController::class, 'index'])
+        ->name('tranches')->middleware('role:admin,manager');
+    Route::post('/tranches', [TrancheController::class, 'store'])
+        ->name('tranches.store')->middleware('role:admin,manager');
+    Route::put('/tranches/{tranche}', [TrancheController::class, 'update'])
+        ->name('tranches.update')->middleware('role:admin,manager');
+    Route::delete('/tranches/{tranche}', [TrancheController::class, 'destroy'])
+        ->name('tranches.destroy')->middleware('role:admin,manager');
 
     Route::get('/projects/{project}/blocs', function () {
         return Inertia::render('Blocs');

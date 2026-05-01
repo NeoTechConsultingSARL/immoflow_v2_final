@@ -1,0 +1,21 @@
+<?php
+
+namespace App\Models;
+
+use Database\Factories\BlocFactory;
+use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+
+#[Fillable(['name', 'tranche_id', 'floors', 'units', 'status'])]
+class Bloc extends Model
+{
+    /** @use HasFactory<BlocFactory> */
+    use HasFactory;
+
+    public function tranche(): BelongsTo
+    {
+        return $this->belongsTo(Tranche::class);
+    }
+}
