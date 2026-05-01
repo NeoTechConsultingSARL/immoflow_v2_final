@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { router } from "@inertiajs/react";
+import { useState, useEffect } from "react";
+import { useForm, router } from "@inertiajs/react";
 import { Box, Plus, Pencil, Trash2, ChevronRight } from "lucide-react";
 import { AppBreadcrumb } from "@/components/AppBreadcrumb";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
@@ -10,92 +10,152 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
+
+interface Project {
+  id: string;
+  name: string;
+}
+
+interface Tranche {
+  id: string;
+  name: string;
+  projectId: string;
+}
 
 interface Bloc {
   id: string;
   name: string;
   description: string;
   floors: number;
+  status: string;
+  trancheId: string;
+  trancheName: string;
+  projectId: string;
+  projectName: string;
   unitsCount: number;
 }
 
-const initialBlocs: Record<string, Bloc[]> = {
-  "t1": [
-    { id: "b1", name: "Bloc A1", description: "North wing — ground to 4th floor", floors: 5, unitsCount: 4 },
-    { id: "b2", name: "Bloc A2", description: "North wing — 5th to 8th floor", floors: 4, unitsCount: 4 },
-    { id: "b3", name: "Bloc A3", description: "North wing — penthouse level", floors: 2, unitsCount: 4 },
-  ],
-  "t2": [
-    { id: "b4", name: "Bloc B1", description: "South wing — lower section", floors: 4, unitsCount: 4 },
-    { id: "b5", name: "Bloc B2", description: "South wing — upper section", floors: 4, unitsCount: 4 },
-  ],
-  "t3": [
-    { id: "b6", name: "Bloc C1", description: "Commercial ground floor units", floors: 1, unitsCount: 4 },
-  ],
-  "t4": [
-    { id: "b7", name: "East Wing A", description: "Loft units — east building lower", floors: 3, unitsCount: 5 },
-    { id: "b8", name: "East Wing B", description: "Loft units — east building upper", floors: 3, unitsCount: 5 },
-  ],
-  "t5": [
-    { id: "b9", name: "West Wing A", description: "Loft units — west building lower", floors: 3, unitsCount: 4 },
-    { id: "b10", name: "West Wing B", description: "Loft units — west building upper", floors: 3, unitsCount: 4 },
-  ],
-};
+interface Props {
+  blocs: Bloc[];
+  projects: Project[];
+  tranches: Tranche[];
+  filters: {
+    project: string | null;
+    tranche: string | null;
+  };
+}
 
-const emptyForm = { name: "", description: "", floors: 1 };
-
-const Blocs = () => {
+const Blocs = ({ blocs, projects, tranches, filters }: Props) => {
   const searchParams = new URLSearchParams(window.location.search);
-  const projectId = searchParams.get("project") || "";
-  const projectName = searchParams.get("name") || "Project";
+  const initialProjectId = filters?.project || "";
+  const initialTrancheId = filters?.tranche || "";
   const companyId = searchParams.get("company") || "";
   const companyName = searchParams.get("companyName") || "";
-  const trancheId = searchParams.get("tranche") || "";
-  const trancheName = searchParams.get("trancheName") || "Tranche";
+  const projectName = searchParams.get("name") || "";
+  const trancheName = searchParams.get("trancheName") || "";
 
-  const [blocs, setBlocs] = useState<Bloc[]>(initialBlocs[trancheId] || [
-    { id: "b-default-1", name: "Bloc 1", description: "Default bloc", floors: 3, unitsCount: 6 },
-  ]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [editing, setEditing] = useState<Bloc | null>(null);
   const [deleting, setDeleting] = useState<Bloc | null>(null);
-  const [form, setForm] = useState(emptyForm);
 
-  const companyQuery = companyId ? `&company=${companyId}&companyName=${encodeURIComponent(companyName)}` : "";
-  const projectQuery = `project=${projectId}&name=${encodeURIComponent(projectName)}`;
-  const trancheQuery = `&tranche=${trancheId}&trancheName=${encodeURIComponent(trancheName)}`;
+  const { data, setData, post, put, delete: destroy, processing, errors, reset, clearErrors } = useForm({
+    name: "",
+    description: "",
+    floors: 1,
+    status: "active",
+    project_id: initialProjectId,
+    tranche_id: initialTrancheId,
+  });
 
-  const openCreate = () => { setEditing(null); setForm(emptyForm); setDialogOpen(true); };
+  const availableTranches = tranches?.filter(t => t.projectId === data.project_id) || [];
+
+  useEffect(() => {
+    // If selected project changes, clear tranche_id if it doesn't belong to the new project
+    if (data.project_id && data.tranche_id) {
+      const trancheBelongsToProject = tranches?.some(t => t.id === data.tranche_id && t.projectId === data.project_id);
+      if (!trancheBelongsToProject) {
+        setData("tranche_id", "");
+      }
+    }
+  }, [data.project_id]);
+
+  const openCreate = () => {
+    setEditing(null);
+    reset();
+    clearErrors();
+    setData("project_id", initialProjectId);
+    setData("tranche_id", initialTrancheId);
+    setDialogOpen(true);
+  };
+
   const openEdit = (b: Bloc, e: React.MouseEvent) => {
     e.stopPropagation();
     setEditing(b);
-    setForm({ name: b.name, description: b.description, floors: b.floors });
+    setData({
+      name: b.name,
+      description: b.description || "",
+      floors: b.floors,
+      status: b.status || "active",
+      project_id: b.projectId,
+      tranche_id: b.trancheId,
+    });
+    clearErrors();
     setDialogOpen(true);
   };
-  const openDelete = (b: Bloc, e: React.MouseEvent) => { e.stopPropagation(); setDeleting(b); setDeleteOpen(true); };
+
+  const openDelete = (b: Bloc, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setDeleting(b);
+    setDeleteOpen(true);
+  };
 
   const handleSave = () => {
-    if (!form.name.trim()) { toast({ title: "Name is required", variant: "destructive" }); return; }
     if (editing) {
-      setBlocs(prev => prev.map(b => b.id === editing.id ? { ...b, ...form } : b));
-      toast({ title: "Bloc updated" });
+      put(route("blocs.update", editing.id), {
+        onSuccess: () => {
+          setDialogOpen(false);
+          toast({ title: "Bloc updated successfully" });
+        },
+      });
     } else {
-      setBlocs(prev => [...prev, { ...form, id: crypto.randomUUID(), unitsCount: 0 }]);
-      toast({ title: "Bloc created" });
+      post(route("blocs.store"), {
+        onSuccess: () => {
+          setDialogOpen(false);
+          toast({ title: "Bloc created successfully" });
+        },
+      });
     }
-    setDialogOpen(false);
   };
 
   const handleDelete = () => {
-    if (deleting) { setBlocs(prev => prev.filter(b => b.id !== deleting.id)); toast({ title: "Bloc deleted" }); }
-    setDeleteOpen(false); setDeleting(null);
+    if (deleting) {
+      destroy(route("blocs.destroy", deleting.id), {
+        onSuccess: () => {
+          setDeleteOpen(false);
+          setDeleting(null);
+          toast({ title: "Bloc deleted successfully" });
+        },
+      });
+    }
   };
 
   const handleBlocClick = (bloc: Bloc) => {
-    router.visit(`/management/${projectId}?${projectQuery}${companyQuery}${trancheQuery}&bloc=${bloc.id}&blocName=${encodeURIComponent(bloc.name)}`);
+    const projectQuery = `project=${bloc.projectId}&name=${encodeURIComponent(bloc.projectName)}`;
+    const companyQuery = companyId ? `&company=${companyId}&companyName=${encodeURIComponent(companyName)}` : "";
+    const trancheQuery = `&tranche=${bloc.trancheId}&trancheName=${encodeURIComponent(bloc.trancheName)}`;
+    router.visit(`/management/${bloc.projectId}?${projectQuery}${companyQuery}${trancheQuery}&bloc=${bloc.id}&blocName=${encodeURIComponent(bloc.name)}`);
   };
+
+  // Determine display title
+  let displayTitle = "All Blocs";
+  if (trancheName) {
+    displayTitle = `${decodeURIComponent(trancheName)} — Blocs`;
+  } else if (projectName) {
+    displayTitle = `Project: ${decodeURIComponent(projectName)} — Blocs`;
+  }
 
   return (
     <SidebarProvider>
@@ -114,12 +174,19 @@ const Blocs = () => {
 
           <main className="flex-1 p-6 lg:p-8 max-w-[1400px] animate-in fade-in slide-in-from-bottom-1 duration-400">
             <div className="mb-8">
-              <h2 className="font-display text-[1.75rem] xl:text-[2rem] font-bold">{decodeURIComponent(trancheName)} — Blocs</h2>
-              <p className="text-[0.9375rem] text-muted-foreground">Manage blocs in this tranche. Click a bloc to access project management.</p>
+              <div className="flex items-center gap-2 mb-1">
+                <h2 className="font-display text-[1.75rem] xl:text-[2rem] font-bold">{displayTitle}</h2>
+                {(initialProjectId || initialTrancheId) && (
+                    <Button variant="ghost" size="sm" onClick={() => router.visit('/blocs')} className="text-muted-foreground hover:text-foreground h-7 px-2">
+                        Show All
+                    </Button>
+                )}
+              </div>
+              <p className="text-[0.9375rem] text-muted-foreground">Manage blocs across your project phases. Click a bloc to access project management.</p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-              {blocs.map((bloc, index) => (
+              {blocs?.map((bloc, index) => (
                 <div
                   key={bloc.id}
                   onClick={() => handleBlocClick(bloc)}
@@ -131,7 +198,7 @@ const Blocs = () => {
                       <div className="w-11 h-11 rounded-xl bg-accent/10 flex items-center justify-center">
                         <Box className="w-5 h-5 text-accent-foreground" />
                       </div>
-                      <div className="flex items-center gap-1">
+                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                         <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" onClick={(e) => openEdit(bloc, e)}>
                           <Pencil className="w-3.5 h-3.5" />
                         </Button>
@@ -140,8 +207,20 @@ const Blocs = () => {
                         </Button>
                       </div>
                     </div>
-                    <h3 className="font-display text-lg font-bold leading-tight mb-1">{bloc.name}</h3>
-                    <p className="text-sm text-muted-foreground line-clamp-2 mb-4">{bloc.description}</p>
+                    <div className="mb-2">
+                      <div className="flex items-center gap-2 mb-1">
+                        <h3 className="font-display text-lg font-bold leading-tight">{bloc.name}</h3>
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                          bloc.status === 'active' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400' : 'bg-muted text-muted-foreground'
+                        }`}>
+                          {bloc.status}
+                        </span>
+                      </div>
+                      <div className="text-xs font-medium text-muted-foreground mb-1">
+                         {bloc.projectName} <span className="mx-1 text-border/60">›</span> {bloc.trancheName}
+                      </div>
+                    </div>
+                    <p className="text-sm text-muted-foreground line-clamp-2 mb-4 h-10">{bloc.description || "No description provided."}</p>
                     <div className="flex items-center gap-4 text-sm text-muted-foreground">
                       <span className="font-semibold text-foreground">{bloc.floors} floors</span>
                       <span>·</span>
@@ -167,11 +246,13 @@ const Blocs = () => {
               ))}
             </div>
 
-            {blocs.length === 0 && (
-              <div className="text-center py-20">
-                <Box className="w-12 h-12 mx-auto text-muted-foreground/40 mb-4" />
-                <h3 className="font-display text-lg font-bold mb-1">No blocs yet</h3>
-                <p className="text-sm text-muted-foreground mb-4">Create a bloc to organize this tranche.</p>
+            {(!blocs || blocs.length === 0) && (
+              <div className="text-center py-20 bg-card border border-dashed border-border rounded-2xl animate-in zoom-in-95 duration-500">
+                <div className="w-20 h-20 rounded-full bg-muted/50 flex items-center justify-center mx-auto mb-6">
+                  <Box className="w-10 h-10 text-muted-foreground/40" />
+                </div>
+                <h3 className="font-display text-xl font-bold mb-2">No blocs found</h3>
+                <p className="text-muted-foreground mb-8 max-w-sm mx-auto">Create your first bloc to start organizing this tranche.</p>
                 <Button onClick={openCreate} className="gap-2" style={{ background: "hsl(var(--accent))", color: "hsl(var(--accent-foreground))" }}>
                   <Plus className="w-4 h-4" /> Add Bloc
                 </Button>
@@ -182,40 +263,128 @@ const Blocs = () => {
       </div>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md border-border/60 shadow-2xl">
           <DialogHeader>
-            <DialogTitle className="font-display text-xl">{editing ? "Edit Bloc" : "New Bloc"}</DialogTitle>
+            <DialogTitle className="font-display text-2xl font-bold">{editing ? "Edit Bloc" : "New Bloc"}</DialogTitle>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
+          <div className="grid gap-6 py-6 max-h-[70vh] overflow-y-auto px-1">
             <div className="grid gap-2">
-              <Label htmlFor="bloc-name">Bloc Name *</Label>
-              <Input id="bloc-name" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="e.g. Bloc A1" />
+              <Label htmlFor="project_id" className="text-sm font-semibold">Project *</Label>
+              <Select 
+                value={data.project_id} 
+                onValueChange={value => setData("project_id", value)}
+              >
+                <SelectTrigger className={errors.project_id ? "border-destructive ring-destructive/20" : ""}>
+                  <SelectValue placeholder="Select a project" />
+                </SelectTrigger>
+                <SelectContent>
+                  {projects?.map(p => (
+                    <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {errors.project_id && <p className="text-[12px] font-medium text-destructive mt-1">{errors.project_id}</p>}
             </div>
+
             <div className="grid gap-2">
-              <Label htmlFor="bloc-desc">Description</Label>
-              <Textarea id="bloc-desc" value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} placeholder="Brief description" rows={3} />
+              <Label htmlFor="tranche_id" className="text-sm font-semibold">Tranche *</Label>
+              <Select 
+                value={data.tranche_id} 
+                onValueChange={value => setData("tranche_id", value)}
+                disabled={!data.project_id}
+              >
+                <SelectTrigger className={errors.tranche_id ? "border-destructive ring-destructive/20" : ""}>
+                  <SelectValue placeholder={data.project_id ? "Select a tranche" : "Select a project first"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableTranches.map(t => (
+                    <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                  ))}
+                  {availableTranches.length === 0 && data.project_id && (
+                     <SelectItem value="none" disabled>No tranches in this project</SelectItem>
+                  )}
+                </SelectContent>
+              </Select>
+              {errors.tranche_id && <p className="text-[12px] font-medium text-destructive mt-1">{errors.tranche_id}</p>}
             </div>
+
             <div className="grid gap-2">
-              <Label htmlFor="bloc-floors">Number of Floors</Label>
-              <Input id="bloc-floors" type="number" min={1} value={form.floors} onChange={e => setForm(f => ({ ...f, floors: parseInt(e.target.value) || 1 }))} />
+              <Label htmlFor="bloc-name" className="text-sm font-semibold">Bloc Name *</Label>
+              <Input 
+                id="bloc-name" 
+                value={data.name} 
+                onChange={e => setData("name", e.target.value)} 
+                placeholder="e.g. Bloc A1" 
+                className={errors.name ? "border-destructive ring-destructive/20" : ""}
+              />
+              {errors.name && <p className="text-[12px] font-medium text-destructive mt-1">{errors.name}</p>}
+            </div>
+            
+            <div className="grid gap-2">
+              <Label htmlFor="bloc-floors" className="text-sm font-semibold">Number of Floors</Label>
+              <Input 
+                id="bloc-floors" 
+                type="number" 
+                min={1} 
+                value={data.floors} 
+                onChange={e => setData("floors", parseInt(e.target.value) || 1)} 
+                className={errors.floors ? "border-destructive ring-destructive/20" : ""}
+              />
+              {errors.floors && <p className="text-[12px] font-medium text-destructive mt-1">{errors.floors}</p>}
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="status" className="text-sm font-semibold">Status</Label>
+              <Select value={data.status} onValueChange={value => setData("status", value)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="inactive">Inactive</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="bloc-desc" className="text-sm font-semibold">Description</Label>
+              <Textarea 
+                id="bloc-desc" 
+                value={data.description} 
+                onChange={e => setData("description", e.target.value)} 
+                placeholder="Brief description" 
+                rows={3} 
+                className={errors.description ? "border-destructive ring-destructive/20" : ""}
+              />
+              {errors.description && <p className="text-[12px] font-medium text-destructive mt-1">{errors.description}</p>}
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleSave} style={{ background: "hsl(var(--accent))", color: "hsl(var(--accent-foreground))" }}>{editing ? "Save Changes" : "Create Bloc"}</Button>
+          <DialogFooter className="gap-2 sm:gap-0 pt-2 border-t border-border/40 mt-2">
+            <Button variant="ghost" onClick={() => setDialogOpen(false)} disabled={processing}>Cancel</Button>
+            <Button onClick={handleSave} disabled={processing} className="px-8 shadow-sm" style={{ background: "hsl(var(--accent))", color: "hsl(var(--accent-foreground))" }}>
+              {processing ? "Saving..." : editing ? "Save Changes" : "Create Bloc"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
-        <AlertDialogContent>
+        <AlertDialogContent className="border-border/60 shadow-2xl">
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete "{deleting?.name}"?</AlertDialogTitle>
-            <AlertDialogDescription>This action cannot be undone.</AlertDialogDescription>
+            <AlertDialogTitle className="font-display text-xl font-bold">Delete "{deleting?.name}"?</AlertDialogTitle>
+            <AlertDialogDescription className="text-muted-foreground pt-2">
+              This action cannot be undone. All units and associated data within this bloc will also be permanently removed.
+            </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction>
+          <AlertDialogFooter className="pt-4">
+            <AlertDialogCancel disabled={processing}>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDelete} 
+              disabled={processing}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 shadow-sm"
+            >
+              {processing ? "Deleting..." : "Delete Bloc"}
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
