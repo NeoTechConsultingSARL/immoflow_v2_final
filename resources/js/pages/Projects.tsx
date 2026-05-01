@@ -1,5 +1,5 @@
-import { router } from "@inertiajs/react";
-import { useState } from "react";
+import { router, useForm, usePage } from "@inertiajs/react";
+import { useState, useEffect } from "react";
 import { FolderKanban, Plus, Pencil, Trash2, Building2, MapPin, Calendar, Euro, LayoutGrid, FileText, ClipboardList, X } from "lucide-react";
 import { AppBreadcrumb } from "@/components/AppBreadcrumb";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
@@ -34,24 +34,18 @@ interface Project {
   propertyAllocations: PropertyTypeAllocation[];
 }
 
+interface Company {
+  id: string;
+  name: string;
+}
+
+interface ProjectsProps {
+  projects: Project[];
+  companies: Company[];
+}
+
 const propertyTypes = [
   "Apartments", "Villas", "Offices", "Retail Spaces", "Warehouses", "Parking Lots", "Land Plots", "Other"
-];
-
-const companies = [
-  { id: "1", name: "Keller Immobilien GmbH" },
-  { id: "2", name: "BerlinWohnen AG" },
-  { id: "3", name: "Hanseatische Hausverwaltung" },
-  { id: "4", name: "Rhein-Main Properties" },
-];
-
-const initialProjects: Project[] = [
-  { id: "1", name: "Residenz am Englischen Garten", companyId: "1", companyName: "Keller Immobilien GmbH", address: "Lerchenfeldstraße 11, Munich", description: "Luxury residential complex with 24 units, underground parking, and rooftop terrace.", status: "In Progress", budget: "€12.5M", startDate: "Jan 2025", units: 24, propertyAllocations: [{ propertyType: "Apartments", units: 20 }, { propertyType: "Parking Lots", units: 4 }] },
-  { id: "2", name: "Spree Lofts", companyId: "2", companyName: "BerlinWohnen AG", address: "Köpenicker Str. 40, Berlin", description: "Industrial loft conversion into modern living spaces along the Spree river.", status: "Planning", budget: "€8.2M", startDate: "Apr 2026", units: 18, propertyAllocations: [{ propertyType: "Apartments", units: 18 }] },
-  { id: "3", name: "Alster Terrassen", companyId: "3", companyName: "Hanseatische Hausverwaltung", address: "An der Alster 28, Hamburg", description: "Waterfront apartments with panoramic views of the Alster lake.", status: "Completed", budget: "€15.0M", startDate: "Mar 2023", units: 36, propertyAllocations: [{ propertyType: "Apartments", units: 30 }, { propertyType: "Villas", units: 6 }] },
-  { id: "4", name: "Maintor Quartier", companyId: "4", companyName: "Rhein-Main Properties", address: "Mainzer Landstraße 78, Frankfurt", description: "Mixed-use development combining office and residential space in the financial district.", status: "In Progress", budget: "€22.0M", startDate: "Sep 2024", units: 42, propertyAllocations: [{ propertyType: "Offices", units: 20 }, { propertyType: "Apartments", units: 22 }] },
-  { id: "5", name: "Viktualien Höfe", companyId: "1", companyName: "Keller Immobilien GmbH", address: "Frauenstraße 9, Munich", description: "Boutique residential project near the Viktualienmarkt with traditional Bavarian charm.", status: "On Hold", budget: "€6.8M", startDate: "Jul 2025", units: 12, propertyAllocations: [{ propertyType: "Apartments", units: 12 }] },
-  { id: "6", name: "Prenzlauer Berg Studios", companyId: "2", companyName: "BerlinWohnen AG", address: "Schönhauser Allee 55, Berlin", description: "Compact studio apartments designed for young professionals and creatives.", status: "Planning", budget: "€4.1M", startDate: "Jun 2026", units: 30, propertyAllocations: [{ propertyType: "Apartments", units: 30 }] },
 ];
 
 const statusStyles: Record<string, string> = {
@@ -61,82 +55,124 @@ const statusStyles: Record<string, string> = {
   "On Hold": "bg-muted text-muted-foreground",
 };
 
-const emptyForm: { name: string; companyId: string; address: string; description: string; status: Project["status"]; budget: string; startDate: string; units: number; propertyAllocations: PropertyTypeAllocation[] } = { name: "", companyId: "", address: "", description: "", status: "Planning", budget: "", startDate: "", units: 0, propertyAllocations: [] };
-
-const Projects = () => {
-  const [projects, setProjects] = useState<Project[]>(initialProjects);
+const Projects = ({ projects, companies }: ProjectsProps) => {
+  const { flash } = usePage().props as any;
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [editing, setEditing] = useState<Project | null>(null);
   const [deleting, setDeleting] = useState<Project | null>(null);
-  const [form, setForm] = useState(emptyForm);
+  
   const searchParams = new URLSearchParams(window.location.search);
   const [filterCompany, setFilterCompany] = useState<string>(searchParams.get("company") || "all");
-  const companyName = searchParams.get("companyName") || "";
-  const companyId = searchParams.get("company") || "";
-  
 
-  const openCreate = () => { setEditing(null); setForm(emptyForm); setDialogOpen(true); };
+  const { data, setData, post, put, delete: destroy, processing, errors, reset, clearErrors } = useForm({
+    name: "",
+    company_id: "",
+    address: "",
+    description: "",
+    status: "Planning" as Project["status"],
+    budget: "",
+    start_date: "",
+    units: 0,
+    property_allocations: [] as PropertyTypeAllocation[]
+  });
 
-  const openEdit = (p: Project) => {
-    setEditing(p);
-    setForm({ name: p.name, companyId: p.companyId, address: p.address, description: p.description, status: p.status, budget: p.budget, startDate: p.startDate, units: p.units, propertyAllocations: p.propertyAllocations || [] });
+  useEffect(() => {
+    if (flash?.success) {
+      toast({ title: flash.success });
+    }
+    if (flash?.error) {
+      toast({ title: flash.error, variant: "destructive" });
+    }
+  }, [flash]);
+
+  const openCreate = () => {
+    setEditing(null);
+    reset();
+    clearErrors();
+    
+    // Pre-select company if present in query params
+    const companyIdFromUrl = searchParams.get("company");
+    if (companyIdFromUrl && companyIdFromUrl !== "all") {
+        setData("company_id", companyIdFromUrl);
+    }
+    
     setDialogOpen(true);
   };
 
-  const openDelete = (p: Project) => { setDeleting(p); setDeleteOpen(true); };
+  const openEdit = (p: Project) => {
+    setEditing(p);
+    clearErrors();
+    setData({
+      name: p.name,
+      company_id: p.companyId,
+      address: p.address,
+      description: p.description,
+      status: p.status,
+      budget: p.budget,
+      start_date: p.startDate,
+      units: p.units,
+      property_allocations: p.propertyAllocations || []
+    });
+    setDialogOpen(true);
+  };
+
+  const openDelete = (p: Project) => {
+    setDeleting(p);
+    setDeleteOpen(true);
+  };
+
+  useEffect(() => {
+    const totalUnits = data.property_allocations.reduce((sum, a) => sum + a.units, 0);
+    if (data.units !== totalUnits) {
+        setData('units', totalUnits);
+    }
+  }, [data.property_allocations]);
 
   const handleSave = () => {
-    if (!form.name.trim() || !form.companyId) {
-      toast({ title: "Name and company are required", variant: "destructive" });
-      return;
-    }
-    const companyName = companies.find(c => c.id === form.companyId)?.name || "";
-    const totalUnits = form.propertyAllocations.reduce((sum, a) => sum + a.units, 0);
-    const saveData = { ...form, units: totalUnits };
     if (editing) {
-      setProjects(prev => prev.map(p => p.id === editing.id ? { ...p, ...saveData, companyName } : p));
-      toast({ title: "Project updated" });
+      put(route('projects.update', editing.id), {
+        onSuccess: () => setDialogOpen(false),
+      });
     } else {
-      setProjects(prev => [...prev, { ...saveData, companyName, id: crypto.randomUUID() }]);
-      toast({ title: "Project created" });
+      post(route('projects.store'), {
+        onSuccess: () => setDialogOpen(false),
+      });
     }
-    setDialogOpen(false);
   };
 
   const handleDelete = () => {
-    if (deleting) { setProjects(prev => prev.filter(p => p.id !== deleting.id)); toast({ title: "Project deleted" }); }
-    setDeleteOpen(false); setDeleting(null);
+    if (deleting) {
+      destroy(route('projects.destroy', deleting.id), {
+        onSuccess: () => {
+          setDeleteOpen(false);
+          setDeleting(null);
+        },
+      });
+    }
   };
 
-  const updateField = (field: keyof typeof form, value: string | number | PropertyTypeAllocation[]) => setForm(prev => ({ ...prev, [field]: value }));
-
-  const usedPropertyTypes = form.propertyAllocations.map(a => a.propertyType);
+  const usedPropertyTypes = data.property_allocations.map(a => a.propertyType);
   const availablePropertyTypes = propertyTypes.filter(t => !usedPropertyTypes.includes(t));
 
   const addAllocation = () => {
     if (availablePropertyTypes.length === 0) return;
-    setForm(prev => ({
-      ...prev,
-      propertyAllocations: [...prev.propertyAllocations, { propertyType: "", units: 1 }]
-    }));
+    setData('property_allocations', [...data.property_allocations, { propertyType: "", units: 1 }]);
   };
 
   const updateAllocation = (index: number, field: keyof PropertyTypeAllocation, value: string | number) => {
-    setForm(prev => ({
-      ...prev,
-      propertyAllocations: prev.propertyAllocations.map((a, i) => i === index ? { ...a, [field]: value } : a)
-    }));
+    const newAllocations = [...data.property_allocations];
+    newAllocations[index] = { ...newAllocations[index], [field]: value };
+    setData('property_allocations', newAllocations);
   };
 
   const removeAllocation = (index: number) => {
-    setForm(prev => ({
-      ...prev,
-      propertyAllocations: prev.propertyAllocations.filter((_, i) => i !== index)
-    }));
+    setData('property_allocations', data.property_allocations.filter((_, i) => i !== index));
   };
 
   const filtered = filterCompany === "all" ? projects : projects.filter(p => p.companyId === filterCompany);
+
+  const route = (window as any).route;
 
   return (
     <SidebarProvider>
@@ -294,25 +330,28 @@ const Projects = () => {
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
               <Label htmlFor="name">Project Name *</Label>
-              <Input id="name" value={form.name} onChange={e => updateField("name", e.target.value)} placeholder="e.g. Residenz am Park" />
+              <Input id="name" value={data.name} onChange={e => setData("name", e.target.value)} placeholder="e.g. Residenz am Park" />
+              {errors.name && <p className="text-xs text-destructive">{errors.name}</p>}
             </div>
             <div className="grid gap-2">
               <Label>Company *</Label>
-              <Select value={form.companyId} onValueChange={v => updateField("companyId", v)}>
+              <Select value={data.company_id} onValueChange={v => setData("company_id", v)}>
                 <SelectTrigger><SelectValue placeholder="Select a company" /></SelectTrigger>
                 <SelectContent>
                   {companies.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
                 </SelectContent>
               </Select>
+              {errors.company_id && <p className="text-xs text-destructive">{errors.company_id}</p>}
             </div>
             <div className="grid gap-2">
               <Label htmlFor="desc">Description</Label>
-              <Textarea id="desc" value={form.description} onChange={e => updateField("description", e.target.value)} placeholder="Brief project description" rows={2} />
+              <Textarea id="desc" value={data.description} onChange={e => setData("description", e.target.value)} placeholder="Brief project description" rows={2} />
+              {errors.description && <p className="text-xs text-destructive">{errors.description}</p>}
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
                 <Label>Status</Label>
-                <Select value={form.status} onValueChange={v => updateField("status", v)}>
+                <Select value={data.status} onValueChange={v => setData("status", v as Project["status"])}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Planning">Planning</SelectItem>
@@ -321,31 +360,35 @@ const Projects = () => {
                     <SelectItem value="On Hold">On Hold</SelectItem>
                   </SelectContent>
                 </Select>
+                {errors.status && <p className="text-xs text-destructive">{errors.status}</p>}
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="budget">Budget</Label>
-                <Input id="budget" value={form.budget} onChange={e => updateField("budget", e.target.value)} placeholder="€10M" />
+                <Input id="budget" value={data.budget} onChange={e => setData("budget", e.target.value)} placeholder="€10M" />
+                {errors.budget && <p className="text-xs text-destructive">{errors.budget}</p>}
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
                 <Label htmlFor="address">Address</Label>
-                <Input id="address" value={form.address} onChange={e => updateField("address", e.target.value)} placeholder="Street, City" />
+                <Input id="address" value={data.address} onChange={e => setData("address", e.target.value)} placeholder="Street, City" />
+                {errors.address && <p className="text-xs text-destructive">{errors.address}</p>}
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="startDate">Start Date</Label>
-                <Input id="startDate" value={form.startDate} onChange={e => updateField("startDate", e.target.value)} placeholder="Jan 2026" />
+                <Label htmlFor="start_date">Start Date</Label>
+                <Input id="start_date" value={data.start_date} onChange={e => setData("start_date", e.target.value)} placeholder="Jan 2026" />
+                {errors.start_date && <p className="text-xs text-destructive">{errors.start_date}</p>}
               </div>
             </div>
             <div className="grid gap-3">
               <div className="flex items-center justify-between">
                 <Label>Property Types</Label>
-                {(availablePropertyTypes.length > 0 || form.propertyAllocations.some(a => !a.propertyType)) ? null : (
+                {(availablePropertyTypes.length > 0 || data.property_allocations.some(a => !a.propertyType)) ? null : (
                   <span className="text-xs text-muted-foreground">All types assigned</span>
                 )}
               </div>
-              {form.propertyAllocations.map((allocation, index) => {
-                const otherUsed = form.propertyAllocations.filter((_, i) => i !== index).map(a => a.propertyType).filter(Boolean);
+              {data.property_allocations.map((allocation, index) => {
+                const otherUsed = data.property_allocations.filter((_, i) => i !== index).map(a => a.propertyType).filter(Boolean);
                 const optionsForThis = propertyTypes.filter(t => !otherUsed.includes(t));
                 return (
                   <div key={index} className="flex items-center gap-2">
@@ -369,7 +412,7 @@ const Projects = () => {
                   </div>
                 );
               })}
-              {(availablePropertyTypes.length > 0 || form.propertyAllocations.some(a => !a.propertyType)) && (
+              {(availablePropertyTypes.length > 0 || data.property_allocations.some(a => !a.propertyType)) && (
                 <Button type="button" variant="outline" size="sm" className="gap-1.5 w-fit" onClick={addAllocation}>
                   <Plus className="w-3.5 h-3.5" /> Add Property Type
                 </Button>
@@ -377,8 +420,8 @@ const Projects = () => {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleSave} style={{ background: "hsl(var(--accent))", color: "hsl(var(--accent-foreground))" }}>
+            <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={processing}>Cancel</Button>
+            <Button onClick={handleSave} style={{ background: "hsl(var(--accent))", color: "hsl(var(--accent-foreground))" }} disabled={processing}>
               {editing ? "Save Changes" : "Create Project"}
             </Button>
           </DialogFooter>
@@ -392,8 +435,8 @@ const Projects = () => {
             <AlertDialogDescription>This action cannot be undone. The project will be permanently removed.</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction>
+            <AlertDialogCancel disabled={processing}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90" disabled={processing}>Delete</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -29,9 +30,17 @@ Route::middleware('auth')->group(function () {
     // Route::delete('/companies/{company}', [CompanyController::class, 'destroy'])
     //     ->name('companies.destroy')->middleware('role:admin,manager');
 
-    Route::get('/projects', function () {
-        return Inertia::render('Projects');
-    })->name('projects')->middleware('role:admin,manager');
+    Route::get('/projects', [ProjectController::class, 'index'])
+        ->name('projects')->middleware('role:admin,manager');
+
+    Route::post('/projects', [ProjectController::class, 'store'])
+        ->name('projects.store')->middleware('role:admin,manager');
+
+    Route::put('/projects/{project}', [ProjectController::class, 'update'])
+        ->name('projects.update')->middleware('role:admin,manager');
+
+    Route::delete('/projects/{project}', [ProjectController::class, 'destroy'])
+        ->name('projects.destroy')->middleware('role:admin,manager');
 
     Route::get('/project-management', function () {
         return Inertia::render('ProjectManagement');

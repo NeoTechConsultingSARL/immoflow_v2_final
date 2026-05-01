@@ -7,12 +7,17 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-#[Fillable(['name', 'status', 'company_id'])]
+#[Fillable(['name', 'description', 'address', 'budget', 'start_date', 'units', 'status', 'company_id', 'property_allocations'])]
 class Project extends Model
 {
     use HasFactory;
 
+    protected $casts = [
+        'property_allocations' => 'array',
+    ];
+
     public const STATUS_ACTIVE = 'active';
+
     public const STATUS_INACTIVE = 'inactive';
 
     protected $attributes = [
