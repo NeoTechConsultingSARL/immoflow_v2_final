@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Schema;
 
 class DatabaseSeeder extends Seeder
 {
@@ -15,11 +16,42 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // User::factory(10)->create();
+        Schema::disableForeignKeyConstraints();
 
-        User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
+        User::updateOrCreate(
+            ['email' => 'ahmed.benali@immoflow.com'],
+            [
+                'name' => 'Ahmed Benali',
+                'password' => bcrypt('password'),
+                'role' => 'admin',
+            ]
+        );
+
+        User::updateOrCreate(
+            ['email' => 'sara.elamrani@immoflow.com'],
+            [
+                'name' => 'Sara El Amrani',
+                'password' => bcrypt('password'),
+                'role' => 'manager',
+            ]
+        );
+
+        User::updateOrCreate(
+            ['email' => 'youssef.idrissi@immoflow.com'],
+            [
+                'name' => 'Youssef Idrissi',
+                'password' => bcrypt('password'),
+                'role' => 'user',
+            ]
+        );
+
+        $this->call([
+            CompanySeeder::class,
+            ProjectSeeder::class,
+            TrancheSeeder::class,
+            BlocSeeder::class,
         ]);
+
+        Schema::enableForeignKeyConstraints();
     }
 }
