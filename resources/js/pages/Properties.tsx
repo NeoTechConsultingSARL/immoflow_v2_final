@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Home, Plus, Pencil, Trash2, MapPin, BedDouble, Bath, Ruler, Euro, LayoutGrid, Rows3, Table as TableIcon } from "lucide-react";
+import { router, useForm } from "@inertiajs/react";
+import { Building2, Home, Landmark, Store, Briefcase, LayoutGrid, Warehouse, Hotel, Factory, TreePine, Castle, Tent, School, Church, Hospital, Plus, Pencil, Trash2, MapPin, Euro, Rows3, Table as TableIcon, LucideIcon, Layers } from "lucide-react";
 import { AppBreadcrumb } from "@/components/AppBreadcrumb";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/dashboard/AppSidebar";
@@ -16,151 +17,192 @@ import { toast } from "@/hooks/use-toast";
 
 interface Property {
   id: string;
-  projectId: string;
-  projectName: string;
   name: string;
-  type: "Apartment" | "Penthouse" | "Studio" | "Duplex" | "Villa" | "Land" | "Store" | "Office";
-  floor: string;
-  area: string;
-  bedrooms: number;
-  bathrooms: number;
-  price: string;
-  status: "Available" | "Reserved" | "Sold";
+  blocId: string;
+  blocName: string;
+  trancheName: string;
+  projectName: string;
+  propertyTypeId: string;
+  propertyTypeName: string;
+  propertyTypeIcon: string | null;
+  price: number;
+  status: string;
 }
 
-const projects = [
-  { id: "1", name: "Residenz am Englischen Garten" },
-  { id: "2", name: "Spree Lofts" },
-  { id: "3", name: "Alster Terrassen" },
-  { id: "4", name: "Maintor Quartier" },
-  { id: "5", name: "Viktualien Höfe" },
-  { id: "6", name: "Prenzlauer Berg Studios" },
-];
+interface Bloc {
+  id: string;
+  name: string;
+  trancheName: string;
+  projectName: string;
+}
 
-const initialProperties: Property[] = [
-  // Apartments (5)
-  { id: "1", projectId: "1", projectName: "Residenz am Englischen Garten", name: "Unit A1", type: "Apartment", floor: "1st", area: "92 m²", bedrooms: 3, bathrooms: 2, price: "€485,000", status: "Sold" },
-  { id: "5", projectId: "2", projectName: "Spree Lofts", name: "Loft 101", type: "Apartment", floor: "1st", area: "78 m²", bedrooms: 2, bathrooms: 1, price: "€390,000", status: "Available" },
-  { id: "8", projectId: "3", projectName: "Alster Terrassen", name: "Unit 302", type: "Apartment", floor: "3rd", area: "88 m²", bedrooms: 2, bathrooms: 2, price: "€520,000", status: "Available" },
-  { id: "9", projectId: "4", projectName: "Maintor Quartier", name: "Skyline A1", type: "Apartment", floor: "12th", area: "105 m²", bedrooms: 3, bathrooms: 2, price: "€680,000", status: "Available" },
-  { id: "11", projectId: "1", projectName: "Residenz am Englischen Garten", name: "Unit C3", type: "Apartment", floor: "2nd", area: "74 m²", bedrooms: 2, bathrooms: 1, price: "€395,000", status: "Reserved" },
-  // Villas (5)
-  { id: "12", projectId: "1", projectName: "Residenz am Englischen Garten", name: "Villa Rosengarten", type: "Villa", floor: "Ground", area: "320 m²", bedrooms: 5, bathrooms: 4, price: "€2,100,000", status: "Available" },
-  { id: "13", projectId: "2", projectName: "Spree Lofts", name: "Villa am Ufer", type: "Villa", floor: "Ground", area: "280 m²", bedrooms: 4, bathrooms: 3, price: "€1,850,000", status: "Reserved" },
-  { id: "14", projectId: "3", projectName: "Alster Terrassen", name: "Alster Villa", type: "Villa", floor: "Ground", area: "350 m²", bedrooms: 6, bathrooms: 4, price: "€2,500,000", status: "Sold" },
-  { id: "15", projectId: "4", projectName: "Maintor Quartier", name: "Main Villa", type: "Villa", floor: "Ground", area: "290 m²", bedrooms: 4, bathrooms: 3, price: "€1,950,000", status: "Available" },
-  { id: "16", projectId: "1", projectName: "Residenz am Englischen Garten", name: "Villa Sonnenhof", type: "Villa", floor: "Ground", area: "310 m²", bedrooms: 5, bathrooms: 4, price: "€2,250,000", status: "Available" },
-  // Land (5)
-  { id: "17", projectId: "1", projectName: "Residenz am Englischen Garten", name: "Plot A-12", type: "Land", floor: "—", area: "500 m²", bedrooms: 0, bathrooms: 0, price: "€320,000", status: "Available" },
-  { id: "18", projectId: "2", projectName: "Spree Lofts", name: "Plot B-7", type: "Land", floor: "—", area: "750 m²", bedrooms: 0, bathrooms: 0, price: "€480,000", status: "Sold" },
-  { id: "19", projectId: "3", projectName: "Alster Terrassen", name: "Waterfront Plot", type: "Land", floor: "—", area: "1,200 m²", bedrooms: 0, bathrooms: 0, price: "€890,000", status: "Reserved" },
-  { id: "20", projectId: "4", projectName: "Maintor Quartier", name: "Corner Plot C3", type: "Land", floor: "—", area: "600 m²", bedrooms: 0, bathrooms: 0, price: "€410,000", status: "Available" },
-  { id: "21", projectId: "1", projectName: "Residenz am Englischen Garten", name: "Garden Plot D1", type: "Land", floor: "—", area: "450 m²", bedrooms: 0, bathrooms: 0, price: "€290,000", status: "Available" },
-  // Duplexes (5)
-  { id: "4", projectId: "1", projectName: "Residenz am Englischen Garten", name: "Unit B2", type: "Duplex", floor: "4th-5th", area: "135 m²", bedrooms: 3, bathrooms: 2, price: "€720,000", status: "Available" },
-  { id: "10", projectId: "4", projectName: "Maintor Quartier", name: "Skyline B3", type: "Duplex", floor: "10th-11th", area: "155 m²", bedrooms: 4, bathrooms: 3, price: "€950,000", status: "Sold" },
-  { id: "22", projectId: "2", projectName: "Spree Lofts", name: "Spree Duplex 1", type: "Duplex", floor: "3rd-4th", area: "140 m²", bedrooms: 3, bathrooms: 2, price: "€680,000", status: "Available" },
-  { id: "23", projectId: "3", projectName: "Alster Terrassen", name: "Terrace Duplex", type: "Duplex", floor: "5th-6th", area: "160 m²", bedrooms: 4, bathrooms: 3, price: "€820,000", status: "Reserved" },
-  { id: "24", projectId: "1", projectName: "Residenz am Englischen Garten", name: "Garden Duplex", type: "Duplex", floor: "1st-2nd", area: "125 m²", bedrooms: 3, bathrooms: 2, price: "€650,000", status: "Available" },
-  // Stores (5)
-  { id: "25", projectId: "1", projectName: "Residenz am Englischen Garten", name: "Shop A1", type: "Store", floor: "Ground", area: "65 m²", bedrooms: 0, bathrooms: 1, price: "€280,000", status: "Available" },
-  { id: "26", projectId: "2", projectName: "Spree Lofts", name: "Retail Space 1", type: "Store", floor: "Ground", area: "120 m²", bedrooms: 0, bathrooms: 1, price: "€520,000", status: "Sold" },
-  { id: "27", projectId: "3", projectName: "Alster Terrassen", name: "Corner Shop", type: "Store", floor: "Ground", area: "85 m²", bedrooms: 0, bathrooms: 1, price: "€350,000", status: "Available" },
-  { id: "28", projectId: "4", projectName: "Maintor Quartier", name: "Main Street Shop", type: "Store", floor: "Ground", area: "95 m²", bedrooms: 0, bathrooms: 1, price: "€410,000", status: "Reserved" },
-  { id: "29", projectId: "1", projectName: "Residenz am Englischen Garten", name: "Boutique B2", type: "Store", floor: "Ground", area: "55 m²", bedrooms: 0, bathrooms: 1, price: "€220,000", status: "Available" },
-  // Offices (5)
-  { id: "30", projectId: "1", projectName: "Residenz am Englischen Garten", name: "Office 101", type: "Office", floor: "1st", area: "110 m²", bedrooms: 0, bathrooms: 1, price: "€450,000", status: "Available" },
-  { id: "31", projectId: "2", projectName: "Spree Lofts", name: "Co-Working Suite", type: "Office", floor: "3rd", area: "200 m²", bedrooms: 0, bathrooms: 2, price: "€780,000", status: "Reserved" },
-  { id: "32", projectId: "3", projectName: "Alster Terrassen", name: "Executive Office", type: "Office", floor: "7th", area: "150 m²", bedrooms: 0, bathrooms: 2, price: "€620,000", status: "Sold" },
-  { id: "33", projectId: "4", projectName: "Maintor Quartier", name: "Skyline Office", type: "Office", floor: "15th", area: "180 m²", bedrooms: 0, bathrooms: 2, price: "€850,000", status: "Available" },
-  { id: "34", projectId: "1", projectName: "Residenz am Englischen Garten", name: "Studio Office", type: "Office", floor: "2nd", area: "75 m²", bedrooms: 0, bathrooms: 1, price: "€320,000", status: "Available" },
-  // Penthouses (5)
-  { id: "3", projectId: "1", projectName: "Residenz am Englischen Garten", name: "Unit B1", type: "Penthouse", floor: "6th", area: "180 m²", bedrooms: 4, bathrooms: 3, price: "€1,250,000", status: "Reserved" },
-  { id: "7", projectId: "3", projectName: "Alster Terrassen", name: "Terrace Suite 1", type: "Penthouse", floor: "8th", area: "210 m²", bedrooms: 5, bathrooms: 3, price: "€1,800,000", status: "Reserved" },
-  { id: "35", projectId: "2", projectName: "Spree Lofts", name: "Sky Penthouse", type: "Penthouse", floor: "10th", area: "195 m²", bedrooms: 4, bathrooms: 3, price: "€1,450,000", status: "Available" },
-  { id: "36", projectId: "4", projectName: "Maintor Quartier", name: "Main Penthouse", type: "Penthouse", floor: "20th", area: "240 m²", bedrooms: 5, bathrooms: 4, price: "€2,200,000", status: "Sold" },
-  { id: "37", projectId: "1", projectName: "Residenz am Englischen Garten", name: "Garden Penthouse", type: "Penthouse", floor: "7th", area: "200 m²", bedrooms: 4, bathrooms: 3, price: "€1,380,000", status: "Available" },
-  // Studios (5)
-  { id: "2", projectId: "1", projectName: "Residenz am Englischen Garten", name: "Unit A2", type: "Studio", floor: "1st", area: "45 m²", bedrooms: 1, bathrooms: 1, price: "€245,000", status: "Available" },
-  { id: "6", projectId: "2", projectName: "Spree Lofts", name: "Loft 201", type: "Studio", floor: "2nd", area: "55 m²", bedrooms: 1, bathrooms: 1, price: "€275,000", status: "Sold" },
-  { id: "38", projectId: "3", projectName: "Alster Terrassen", name: "Compact Studio", type: "Studio", floor: "4th", area: "38 m²", bedrooms: 1, bathrooms: 1, price: "€195,000", status: "Available" },
-  { id: "39", projectId: "4", projectName: "Maintor Quartier", name: "City Studio", type: "Studio", floor: "6th", area: "42 m²", bedrooms: 1, bathrooms: 1, price: "€230,000", status: "Reserved" },
-  { id: "40", projectId: "1", projectName: "Residenz am Englischen Garten", name: "Garden Studio", type: "Studio", floor: "Ground", area: "48 m²", bedrooms: 1, bathrooms: 1, price: "€260,000", status: "Available" },
-];
+interface PropertyType {
+  id: string;
+  name: string;
+  icon: string | null;
+}
+
+interface Props {
+  properties: Property[];
+  blocs: Bloc[];
+  propertyTypes: PropertyType[];
+  filters: {
+    bloc?: string;
+    project?: string;
+    tranche?: string;
+    blocName?: string;
+    type?: string;
+  };
+}
 
 const statusStyles: Record<string, string> = {
-  Available: "bg-emerald-500/10 text-emerald-600",
-  Reserved: "bg-amber-500/10 text-amber-600",
-  Sold: "bg-muted text-muted-foreground",
+  available: "bg-emerald-500/10 text-emerald-600",
+  reserved: "bg-amber-500/10 text-amber-600",
+  sold: "bg-muted text-muted-foreground",
 };
 
-const typeIcons: Record<string, string> = {
-  Apartment: "🏢",
-  Penthouse: "🌆",
-  Studio: "🏠",
-  Duplex: "🏘️",
-  Villa: "🏡",
-  Land: "🌍",
-  Store: "🏪",
-  Office: "💼",
+const iconColors = [
+  "text-blue-600 dark:text-blue-400 bg-blue-500/10",
+  "text-emerald-600 dark:text-emerald-400 bg-emerald-500/10",
+  "text-amber-600 dark:text-amber-400 bg-amber-500/10",
+  "text-violet-600 dark:text-violet-400 bg-violet-500/10",
+  "text-rose-600 dark:text-rose-400 bg-rose-500/10",
+  "text-cyan-600 dark:text-cyan-400 bg-cyan-500/10",
+  "text-indigo-600 dark:text-indigo-400 bg-indigo-500/10",
+  "text-teal-600 dark:text-teal-400 bg-teal-500/10",
+  "text-orange-600 dark:text-orange-400 bg-orange-500/10",
+  "text-pink-600 dark:text-pink-400 bg-pink-500/10",
+];
+
+const getIconComponent = (iconName: string | null, typeName?: string): LucideIcon => {
+  // Direct mapping by type name for consistency
+  if (typeName === "Apartment") return Building2;
+  if (typeName === "Duplex") return Layers;
+  if (typeName === "Land") return Landmark;
+  if (typeName === "Office") return Briefcase;
+  if (typeName === "Penthouse") return Hotel;
+  if (typeName === "Store") return Store;
+  if (typeName === "Studio") return Home;
+  if (typeName === "Villa") return Castle;
+
+  const iconMap: Record<string, LucideIcon> = {
+    Building: Building2,
+    Home: Home,
+    MapPin: Landmark,
+    Building2: Building2,
+    Store: Store,
+    Briefcase: Briefcase,
+    Layout: LayoutGrid,
+    Warehouse: Warehouse,
+    Hotel: Hotel,
+    Factory: Factory,
+    Tree: TreePine,
+    Castle: Castle,
+    Tent: Tent,
+    School: School,
+    Church: Church,
+    Hospital: Hospital,
+    Layers: Layers,
+  };
+  return iconMap[iconName || "Building"] || Building2;
+};
+
+const getColorByType = (typeName: string, allTypes: PropertyType[]) => {
+  const index = allTypes.findIndex(t => t.name === typeName);
+  return iconColors[index % iconColors.length] || iconColors[0];
 };
 
 type ViewMode = "card" | "grid" | "table";
 
-const emptyForm = { name: "", projectId: "", type: "Apartment" as Property["type"], floor: "", area: "", bedrooms: 0, bathrooms: 0, price: "", status: "Available" as Property["status"] };
-
-const Properties = () => {
-  const [properties, setProperties] = useState<Property[]>(initialProperties);
+const Properties = ({ properties: initialProperties, blocs, propertyTypes, filters }: Props) => {
   const [viewMode, setViewMode] = useState<ViewMode>("card");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [editing, setEditing] = useState<Property | null>(null);
   const [deleting, setDeleting] = useState<Property | null>(null);
-  const [form, setForm] = useState(emptyForm);
-  const searchParams = new URLSearchParams(window.location.search);
-  
-  const filterProject = searchParams.get("project") || "all";
-  const filterType = searchParams.get("type") || "all";
 
-  const currentProject = projects.find(p => p.id === filterProject);
+  const { data, setData, post, put, delete: destroy, processing, errors, reset, clearErrors } = useForm({
+    name: "",
+    bloc_id: "",
+    property_type_id: "",
+    price: "",
+    status: "available",
+  });
 
-  const openCreate = () => { setEditing(null); setForm({ ...emptyForm, projectId: filterProject !== "all" ? filterProject : "" }); setDialogOpen(true); };
-
-  const openEdit = (p: Property) => {
-    setEditing(p);
-    setForm({ name: p.name, projectId: p.projectId, type: p.type, floor: p.floor, area: p.area, bedrooms: p.bedrooms, bathrooms: p.bathrooms, price: p.price, status: p.status });
+  const openCreate = () => {
+    setEditing(null);
+    reset();
+    clearErrors();
+    if (filters.bloc) setData("bloc_id", filters.bloc);
     setDialogOpen(true);
   };
 
-  const openDelete = (p: Property) => { setDeleting(p); setDeleteOpen(true); };
+  const openEdit = (property: Property) => {
+    setEditing(property);
+    setData({
+      name: property.name,
+      bloc_id: property.blocId,
+      property_type_id: property.propertyTypeId,
+      price: property.price.toString(),
+      status: property.status,
+    });
+    clearErrors();
+    setDialogOpen(true);
+  };
+
+  const openDelete = (property: Property) => {
+    setDeleting(property);
+    setDeleteOpen(true);
+  };
 
   const handleSave = () => {
-    if (!form.name.trim() || !form.projectId) {
-      toast({ title: "Name and project are required", variant: "destructive" });
-      return;
-    }
-    const projectName = projects.find(p => p.id === form.projectId)?.name || "";
     if (editing) {
-      setProperties(prev => prev.map(p => p.id === editing.id ? { ...p, ...form, projectName } : p));
-      toast({ title: "Property updated" });
+      put(route("properties.update", editing.id), {
+        onSuccess: () => {
+          setDialogOpen(false);
+          toast({ title: "Property updated successfully" });
+          router.reload();
+        },
+        onError: (errors) => {
+          console.error("Update errors:", errors);
+          toast({ title: "Error updating property", variant: "destructive" });
+        },
+      });
     } else {
-      setProperties(prev => [...prev, { ...form, projectName, id: crypto.randomUUID() }]);
-      toast({ title: "Property created" });
+      post(route("properties.store"), {
+        onSuccess: () => {
+          setDialogOpen(false);
+          toast({ title: "Property created successfully" });
+          router.reload();
+        },
+        onError: (errors) => {
+          console.error("Create errors:", errors);
+          toast({ title: "Error creating property", variant: "destructive" });
+        },
+      });
     }
-    setDialogOpen(false);
   };
 
   const handleDelete = () => {
-    if (deleting) { setProperties(prev => prev.filter(p => p.id !== deleting.id)); toast({ title: "Property deleted" }); }
-    setDeleteOpen(false); setDeleting(null);
+    if (deleting) {
+      destroy(route("properties.destroy", deleting.id), {
+        onSuccess: () => {
+          setDeleteOpen(false);
+          setDeleting(null);
+          toast({ title: "Property deleted successfully" });
+          router.reload();
+        },
+      });
+    }
   };
 
-  const updateField = (field: keyof typeof form, value: string | number) => setForm(prev => ({ ...prev, [field]: value }));
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat("fr-MA", { style: "currency", currency: "MAD" }).format(price);
+  };
 
-  let filtered = filterProject === "all" ? properties : properties.filter(p => p.projectId === filterProject);
-  if (filterType !== "all") {
-    filtered = filtered.filter(p => p.type === filterType);
-  }
+  const capitalizeStatus = (status: string) => {
+    return status.charAt(0).toUpperCase() + status.slice(1);
+  };
 
   return (
     <SidebarProvider>
@@ -182,10 +224,10 @@ const Properties = () => {
             <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-6">
               <div>
                 <h2 className="font-display text-[1.75rem] xl:text-[2rem] font-bold">
-                  {filterType !== "all" ? `${filterType}s` : currentProject ? currentProject.name : "All Properties"}
+                  {filters.project ? filters.project : filters.blocName ? filters.blocName : "All Properties"}
                 </h2>
                 <p className="text-[0.9375rem] text-muted-foreground">
-                  {filterType !== "all" ? `Showing all ${filterType.toLowerCase()} properties` : currentProject ? "Properties in this project" : "Browse all properties across projects."}
+                  {filters.project ? `Properties in ${filters.project}` : filters.blocName ? `Properties in ${filters.blocName}` : "Browse all properties across projects."}
                 </p>
               </div>
               <ToggleGroup type="single" value={viewMode} onValueChange={(v) => v && setViewMode(v as ViewMode)} className="bg-muted rounded-lg p-0.5">
@@ -204,39 +246,40 @@ const Properties = () => {
             {/* Card View - single column */}
             {viewMode === "card" && (
               <div className="flex flex-col gap-3">
-                {filtered.map((property) => (
-                  <div key={property.id} className="bg-card border border-border rounded-xl shadow-[var(--shadow-card)] overflow-hidden hover:shadow-[var(--shadow-elevated)] transition-shadow duration-300 flex items-center gap-4 p-4">
-                    <span className="text-2xl shrink-0">{typeIcons[property.type]}</span>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-display text-sm font-bold leading-tight truncate">{property.name}</h3>
-                      <p className="text-xs text-muted-foreground mt-0.5">{property.type} · {property.floor} Floor</p>
+                {initialProperties.map((property) => {
+                  const Icon = getIconComponent(property.propertyTypeIcon, property.propertyTypeName);
+                  const colorClass = getColorByType(property.propertyTypeName, propertyTypes);
+                  return (
+                    <div key={property.id} className="bg-card border border-border rounded-xl shadow-[var(--shadow-card)] overflow-hidden hover:shadow-[var(--shadow-elevated)] transition-shadow duration-300 flex items-center gap-4 p-4">
+                      <div className={cn("w-10 h-10 rounded-lg flex items-center justify-center shrink-0 shadow-sm", colorClass)}>
+                        <Icon className="w-5 h-5" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-display text-sm font-bold leading-tight truncate">{property.name}</h3>
+                        <p className="text-xs text-muted-foreground mt-0.5">{property.propertyTypeName} · {property.blocName}</p>
+                      </div>
+                      <span className="text-sm font-semibold shrink-0">{formatPrice(property.price)}</span>
+                      <span className={cn("text-[0.625rem] font-semibold px-2 py-0.5 rounded-full shrink-0", statusStyles[property.status] || "bg-muted text-muted-foreground")}>
+                        {capitalizeStatus(property.status)}
+                      </span>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" onClick={() => openEdit(property)}>
+                          <Pencil className="w-3.5 h-3.5" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={() => openDelete(property)}>
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </Button>
+                      </div>
                     </div>
-                    <div className="hidden sm:flex items-center gap-3 text-xs text-muted-foreground shrink-0">
-                      <span className="flex items-center gap-1"><Ruler className="w-3 h-3" />{property.area}</span>
-                      <span className="flex items-center gap-1"><BedDouble className="w-3 h-3" />{property.bedrooms}</span>
-                      <span className="flex items-center gap-1"><Bath className="w-3 h-3" />{property.bathrooms}</span>
-                    </div>
-                    <span className="text-sm font-semibold shrink-0">{property.price}</span>
-                    <span className={cn("text-[0.625rem] font-semibold px-2 py-0.5 rounded-full shrink-0", statusStyles[property.status])}>
-                      {property.status}
-                    </span>
-                    <div className="flex items-center gap-1 shrink-0">
-                      <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" onClick={() => openEdit(property)}>
-                        <Pencil className="w-3.5 h-3.5" />
-                      </Button>
-                      <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={() => openDelete(property)}>
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
 
             {/* Grid View - multi-column cards */}
             {viewMode === "grid" && (
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                {filtered.map((property, index) => (
+                {initialProperties.map((property, index) => (
                   <div
                     key={property.id}
                     className="group bg-card border border-border rounded-xl shadow-[var(--shadow-card)] overflow-hidden hover:shadow-[var(--shadow-elevated)] transition-shadow duration-300 flex flex-col cursor-pointer"
@@ -245,13 +288,13 @@ const Properties = () => {
                     <div className="p-6 flex-1">
                       <div className="flex items-start justify-between mb-3">
                         <span className={cn("text-[0.6875rem] font-semibold px-2.5 py-1 rounded-full", 
-                          property.status === 'Available' 
+                          property.status === 'available' 
                             ? 'bg-emerald-500/10 text-emerald-600'
-                            : property.status === 'Reserved'
+                            : property.status === 'reserved'
                             ? 'bg-amber-500/10 text-amber-600'
                             : 'bg-muted text-muted-foreground'
                         )}>
-                          {property.status}
+                          {capitalizeStatus(property.status)}
                         </span>
                         <div className="flex items-center gap-1">
                           <Button 
@@ -267,33 +310,21 @@ const Properties = () => {
                     </div>
 
                     <h3 className="font-display text-lg font-bold leading-tight mb-1 px-6">{property.name}</h3>
-                    <p className="text-sm text-muted-foreground line-clamp-2 mb-4 px-6">{property.type} Property</p>
+                    <p className="text-sm text-muted-foreground line-clamp-2 mb-4 px-6">{property.propertyTypeName} Property</p>
 
                     <div className="space-y-2 px-6">
                       <div className="flex items-center gap-2.5 text-sm text-muted-foreground">
-                        <span className="text-2xl shrink-0">{typeIcons[property.type]}</span>
-                        <span className="truncate">{property.type}</span>
-                      </div>
-                      <div className="flex items-center gap-2.5 text-sm text-muted-foreground">
-                        <Ruler className="w-4 h-4 shrink-0" />
-                        <span className="truncate">{property.area}</span>
-                      </div>
-                      {(property.bedrooms > 0 || property.bathrooms > 0) && (
-                        <div className="flex items-center gap-2.5 text-sm text-muted-foreground">
-                          <BedDouble className="w-4 h-4 shrink-0" />
-                          <span>{property.bedrooms} bed{property.bedrooms !== 1 ? 's' : ''}</span>
-                          {property.bathrooms > 0 && (
-                            <>
-                              <span className="text-muted-foreground/60">·</span>
-                              <Bath className="w-4 h-4 shrink-0" />
-                              <span>{property.bathrooms} bath{property.bathrooms !== 1 ? 's' : ''}</span>
-                            </>
-                          )}
+                        <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center shrink-0 shadow-sm", getColorByType(property.propertyTypeName, propertyTypes))}>
+                          {(() => {
+                            const Icon = getIconComponent(property.propertyTypeIcon, property.propertyTypeName);
+                            return <Icon className="w-4 h-4" />;
+                          })()}
                         </div>
-                      )}
+                        <span className="truncate">{property.propertyTypeName}</span>
+                      </div>
                       <div className="flex items-center gap-2.5 text-sm text-muted-foreground">
                         <MapPin className="w-4 h-4 shrink-0" />
-                        <span className="truncate">{property.floor} Floor</span>
+                        <span className="truncate">{property.projectName} - {property.trancheName} - {property.blocName}</span>
                       </div>
                     </div>
 
@@ -311,7 +342,7 @@ const Properties = () => {
                       />
                       <div className="flex items-center gap-1.5">
                         <Euro className="w-3.5 h-3.5 text-muted-foreground" />
-                        <span className="font-semibold">{property.price}</span>
+                        <span className="font-semibold">{formatPrice(property.price)}</span>
                       </div>
                       <div className="flex items-center gap-1.5">
                         <Home className="w-3.5 h-3.5 text-muted-foreground" />
@@ -331,28 +362,36 @@ const Properties = () => {
                     <TableRow>
                       <TableHead>Name</TableHead>
                       <TableHead>Type</TableHead>
-                      <TableHead>Floor</TableHead>
-                      <TableHead>Area</TableHead>
-                      <TableHead className="text-center">Beds</TableHead>
-                      <TableHead className="text-center">Baths</TableHead>
+                      <TableHead>Project</TableHead>
+                      <TableHead>Tranche</TableHead>
+                      <TableHead>Bloc</TableHead>
                       <TableHead>Price</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead className="w-[80px]"></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filtered.map((property) => (
+                    {initialProperties.map((property) => (
                       <TableRow key={property.id}>
                         <TableCell className="font-semibold">{property.name}</TableCell>
-                        <TableCell><span className="mr-1.5">{typeIcons[property.type]}</span>{property.type}</TableCell>
-                        <TableCell>{property.floor}</TableCell>
-                        <TableCell>{property.area}</TableCell>
-                        <TableCell className="text-center">{property.bedrooms}</TableCell>
-                        <TableCell className="text-center">{property.bathrooms}</TableCell>
-                        <TableCell className="font-semibold">{property.price}</TableCell>
                         <TableCell>
-                          <span className={cn("text-[0.625rem] font-semibold px-2 py-0.5 rounded-full", statusStyles[property.status])}>
-                            {property.status}
+                          <div className="flex items-center gap-2">
+                            <div className={cn("w-7 h-7 rounded flex items-center justify-center shrink-0 shadow-sm", getColorByType(property.propertyTypeName, propertyTypes))}>
+                              {(() => {
+                                const Icon = getIconComponent(property.propertyTypeIcon, property.propertyTypeName);
+                                return <Icon className="w-3.5 h-3.5" />;
+                              })()}
+                            </div>
+                            <span>{property.propertyTypeName}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>{property.projectName}</TableCell>
+                        <TableCell>{property.trancheName}</TableCell>
+                        <TableCell>{property.blocName}</TableCell>
+                        <TableCell className="font-semibold">{formatPrice(property.price)}</TableCell>
+                        <TableCell>
+                          <span className={cn("text-[0.625rem] font-semibold px-2 py-0.5 rounded-full", statusStyles[property.status] || "bg-muted text-muted-foreground")}>
+                            {capitalizeStatus(property.status)}
                           </span>
                         </TableCell>
                         <TableCell>
@@ -372,7 +411,7 @@ const Properties = () => {
               </div>
             )}
 
-            {filtered.length === 0 && (
+            {initialProperties.length === 0 && (
               <div className="text-center py-20">
                 <Home className="w-12 h-12 mx-auto text-muted-foreground/40 mb-4" />
                 <h3 className="font-display text-lg font-bold mb-1">No properties found</h3>
@@ -392,79 +431,81 @@ const Properties = () => {
             <DialogTitle className="font-display text-xl">{editing ? "Edit Property" : "New Property"}</DialogTitle>
           </DialogHeader>
           <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="name">Name *</Label>
-                <Input id="name" value={form.name} onChange={e => updateField("name", e.target.value)} placeholder="Unit A1" />
-              </div>
-              <div className="grid gap-2">
-                <Label>Project *</Label>
-                <Select value={form.projectId} onValueChange={v => updateField("projectId", v)}>
-                  <SelectTrigger><SelectValue placeholder="Select project" /></SelectTrigger>
-                  <SelectContent>
-                    {projects.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
+            <div className="grid gap-2">
+              <Label htmlFor="name">Name *</Label>
+              <Input 
+                id="name" 
+                value={data.name} 
+                onChange={e => setData("name", e.target.value)} 
+                placeholder="Unit A1" 
+                className={errors.name ? "border-destructive ring-destructive/20" : ""}
+              />
+              {errors.name && <p className="text-[12px] font-medium text-destructive mt-1">{errors.name}</p>}
+            </div>
+            <div className="grid gap-2">
+              <Label>Bloc *</Label>
+              <Select value={data.bloc_id} onValueChange={value => setData("bloc_id", value)}>
+                <SelectTrigger className={errors.bloc_id ? "border-destructive ring-destructive/20" : ""}>
+                  <SelectValue placeholder="Select bloc" />
+                </SelectTrigger>
+                <SelectContent>
+                  {blocs.map(bloc => (
+                    <SelectItem key={bloc.id} value={bloc.id}>
+                      {bloc.name} ({bloc.projectName} - {bloc.trancheName})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {errors.bloc_id && <p className="text-[12px] font-medium text-destructive mt-1">{errors.bloc_id}</p>}
+            </div>
+            <div className="grid gap-2">
+              <Label>Property Type *</Label>
+              <Select value={data.property_type_id} onValueChange={value => setData("property_type_id", value)}>
+                <SelectTrigger className={errors.property_type_id ? "border-destructive ring-destructive/20" : ""}>
+                  <SelectValue placeholder="Select type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {propertyTypes.map(type => (
+                    <SelectItem key={type.id} value={type.id}>{type.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {errors.property_type_id && <p className="text-[12px] font-medium text-destructive mt-1">{errors.property_type_id}</p>}
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
-                <Label>Type</Label>
-                <Select value={form.type} onValueChange={v => updateField("type", v)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                <Label htmlFor="price">Price *</Label>
+                <Input 
+                  id="price" 
+                  type="number" 
+                  step="0.01"
+                  value={data.price} 
+                  onChange={e => setData("price", e.target.value)} 
+                  placeholder="485000" 
+                  className={errors.price ? "border-destructive ring-destructive/20" : ""}
+                />
+                {errors.price && <p className="text-[12px] font-medium text-destructive mt-1">{errors.price}</p>}
+              </div>
+              <div className="grid gap-2">
+                <Label>Status *</Label>
+                <Select value={data.status} onValueChange={value => setData("status", value)}>
+                  <SelectTrigger className={errors.status ? "border-destructive ring-destructive/20" : ""}>
+                    <SelectValue />
+                  </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Apartment">Apartment</SelectItem>
-                    <SelectItem value="Villa">Villa</SelectItem>
-                    <SelectItem value="Penthouse">Penthouse</SelectItem>
-                    <SelectItem value="Studio">Studio</SelectItem>
-                    <SelectItem value="Duplex">Duplex</SelectItem>
-                    <SelectItem value="Land">Land</SelectItem>
-                    <SelectItem value="Store">Store</SelectItem>
-                    <SelectItem value="Office">Office</SelectItem>
+                    <SelectItem value="available">Available</SelectItem>
+                    <SelectItem value="reserved">Reserved</SelectItem>
+                    <SelectItem value="sold">Sold</SelectItem>
                   </SelectContent>
                 </Select>
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="floor">Floor</Label>
-                <Input id="floor" value={form.floor} onChange={e => updateField("floor", e.target.value)} placeholder="1st" />
-              </div>
-            </div>
-            <div className="grid grid-cols-3 gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="area">Area</Label>
-                <Input id="area" value={form.area} onChange={e => updateField("area", e.target.value)} placeholder="92 m²" />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="bedrooms">Bedrooms</Label>
-                <Input id="bedrooms" type="number" value={form.bedrooms} onChange={e => updateField("bedrooms", parseInt(e.target.value) || 0)} />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="bathrooms">Bathrooms</Label>
-                <Input id="bathrooms" type="number" value={form.bathrooms} onChange={e => updateField("bathrooms", parseInt(e.target.value) || 0)} />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="price">Price</Label>
-                <Input id="price" value={form.price} onChange={e => updateField("price", e.target.value)} placeholder="€485,000" />
-              </div>
-              <div className="grid gap-2">
-                <Label>Status</Label>
-                <Select value={form.status} onValueChange={v => updateField("status", v)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Available">Available</SelectItem>
-                    <SelectItem value="Reserved">Reserved</SelectItem>
-                    <SelectItem value="Sold">Sold</SelectItem>
-                  </SelectContent>
-                </Select>
+                {errors.status && <p className="text-[12px] font-medium text-destructive mt-1">{errors.status}</p>}
               </div>
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleSave} style={{ background: "hsl(var(--accent))", color: "hsl(var(--accent-foreground))" }}>
-              {editing ? "Save Changes" : "Create Property"}
+            <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={processing}>Cancel</Button>
+            <Button onClick={handleSave} disabled={processing} style={{ background: "hsl(var(--accent))", color: "hsl(var(--accent-foreground))" }}>
+              {processing ? "Saving..." : editing ? "Save Changes" : "Create Property"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -477,8 +518,10 @@ const Properties = () => {
             <AlertDialogDescription>This action cannot be undone.</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction>
+            <AlertDialogCancel disabled={processing}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} disabled={processing} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {processing ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

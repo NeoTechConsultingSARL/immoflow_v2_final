@@ -46,10 +46,12 @@ class DatabaseSeeder extends Seeder
         );
 
         $this->call([
+            PropertyTypeSeeder::class,
             CompanySeeder::class,
             ProjectSeeder::class,
             TrancheSeeder::class,
             BlocSeeder::class,
+            PropertySeeder::class,
         ]);
 
         Schema::enableForeignKeyConstraints();

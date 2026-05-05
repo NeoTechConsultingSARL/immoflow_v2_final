@@ -1,6 +1,6 @@
 import { router, useForm, usePage } from "@inertiajs/react";
 import { useState, useEffect } from "react";
-import { FolderKanban, Plus, Pencil, Building2, MapPin, Calendar, Euro, LayoutGrid, FileText, ClipboardList, X } from "lucide-react";
+import { FolderKanban, Plus, Pencil, Building2, MapPin, Calendar, Euro, LayoutGrid, FileText, ClipboardList, X, Rows3, Table as TableIcon } from "lucide-react";
 import { AppBreadcrumb } from "@/components/AppBreadcrumb";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/dashboard/AppSidebar";
@@ -12,6 +12,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
 
@@ -49,14 +51,26 @@ const propertyTypes = [
 ];
 
 const statusStyles: Record<string, string> = {
-  "Planning": "bg-blue-500/10 text-blue-600",
-  "In Progress": "bg-amber-500/10 text-amber-600",
-  "Completed": "bg-emerald-500/10 text-emerald-600",
-  "On Hold": "bg-muted text-muted-foreground",
+  "Planning": "bg-blue-500/10 text-blue-600 border-blue-200 dark:border-blue-800",
+  "In Progress": "bg-amber-500/10 text-amber-600 border-amber-200 dark:border-amber-800",
+  "Completed": "bg-emerald-500/10 text-emerald-600 border-emerald-200 dark:border-emerald-800",
+  "On Hold": "bg-muted text-muted-foreground border-border",
 };
+
+const gradientColors = [
+  "from-blue-500/10 to-blue-600/5 hover:from-blue-500/20 hover:to-blue-600/10",
+  "from-emerald-500/10 to-emerald-600/5 hover:from-emerald-500/20 hover:to-emerald-600/10",
+  "from-amber-500/10 to-amber-600/5 hover:from-amber-500/20 hover:to-amber-600/10",
+  "from-violet-500/10 to-violet-600/5 hover:from-violet-500/20 hover:to-violet-600/10",
+  "from-rose-500/10 to-rose-600/5 hover:from-rose-500/20 hover:to-rose-600/10",
+  "from-cyan-500/10 to-cyan-600/5 hover:from-cyan-500/20 hover:to-cyan-600/10",
+];
+
+type ViewMode = "card" | "grid" | "table";
 
 const Projects = ({ projects, companies }: ProjectsProps) => {
   const { flash } = usePage().props as any;
+  const [viewMode, setViewMode] = useState<ViewMode>("grid");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Project | null>(null);
   
@@ -181,111 +195,189 @@ const Projects = ({ projects, companies }: ProjectsProps) => {
                 <h2 className="font-display text-[1.75rem] xl:text-[2rem] font-bold">All Projects</h2>
                 <p className="text-[0.9375rem] text-muted-foreground">Track development projects across your companies.</p>
               </div>
-              <Select value={filterCompany} onValueChange={setFilterCompany}>
-                <SelectTrigger className="w-[220px]">
-                  <SelectValue placeholder="Filter by company" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Companies</SelectItem>
-                  {companies.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
+              <div className="flex items-center gap-3 self-start sm:self-auto">
+                <Select value={filterCompany} onValueChange={setFilterCompany}>
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Filter by company" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Companies</SelectItem>
+                    {companies.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                <ToggleGroup type="single" value={viewMode} onValueChange={(v) => v && setViewMode(v as ViewMode)} className="bg-muted rounded-lg p-0.5">
+                  <ToggleGroupItem value="card" aria-label="Card view" className="px-2.5 py-1.5 data-[state=on]:bg-background data-[state=on]:shadow-sm rounded-md">
+                    <Rows3 className="w-4 h-4" />
+                  </ToggleGroupItem>
+                  <ToggleGroupItem value="grid" aria-label="Grid view" className="px-2.5 py-1.5 data-[state=on]:bg-background data-[state=on]:shadow-sm rounded-md">
+                    <LayoutGrid className="w-4 h-4" />
+                  </ToggleGroupItem>
+                  <ToggleGroupItem value="table" aria-label="Table view" className="px-2.5 py-1.5 data-[state=on]:bg-background data-[state=on]:shadow-sm rounded-md">
+                    <TableIcon className="w-4 h-4" />
+                  </ToggleGroupItem>
+                </ToggleGroup>
+              </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-              {filtered.map((project, index) => (
-                <div
-                  key={project.id}
-                  className="group bg-card border border-border rounded-xl shadow-[var(--shadow-card)] overflow-hidden hover:shadow-[var(--shadow-elevated)] transition-shadow duration-300 flex flex-col cursor-pointer"
-                  onClick={() => router.visit(`/tranches?project=${project.id}&name=${encodeURIComponent(project.name)}&company=${project.companyId}&companyName=${encodeURIComponent(project.companyName)}`)}
-                >
-                  <div className="p-6 flex-1">
-                    <div className="flex items-start justify-between mb-3">
-                      <span className={cn("text-[0.6875rem] font-semibold px-2.5 py-1 rounded-full", statusStyles[project.status])}>
-                        {project.status}
-                      </span>
-                      <div className="flex items-center gap-1">
-                        <TooltipProvider delayDuration={300}>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" onClick={(e) => { e.stopPropagation(); router.visit(`/tranches?project=${project.id}&name=${encodeURIComponent(project.name)}&company=${project.companyId}&companyName=${encodeURIComponent(project.companyName)}`); }}>
-                                <LayoutGrid className="w-3.5 h-3.5" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>Project Management</TooltipContent>
-                          </Tooltip>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" onClick={(e) => { e.stopPropagation(); toast({ title: "Printing construction contract..." }); }}>
-                                <FileText className="w-3.5 h-3.5" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>Print Construction Contract</TooltipContent>
-                          </Tooltip>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" onClick={(e) => { e.stopPropagation(); toast({ title: "Printing project technical sheet..." }); }}>
-                                <ClipboardList className="w-3.5 h-3.5" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>Print Project Technical Sheet</TooltipContent>
-                          </Tooltip>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" onClick={(e) => { e.stopPropagation(); openEdit(project); }}>
-                                <Pencil className="w-3.5 h-3.5" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>Edit Project</TooltipContent>
-                          </Tooltip>
+            {/* Card View - single column */}
+            {viewMode === "card" && (
+              <div className="flex flex-col gap-3">
+                {filtered.map((project) => (
+                  <div key={project.id} className="bg-card border border-border rounded-xl shadow-[var(--shadow-card)] overflow-hidden hover:shadow-[var(--shadow-elevated)] transition-shadow duration-300 flex items-center gap-4 p-4 cursor-pointer" onClick={() => router.visit(`/tranches?project=${project.id}`)}>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-display text-sm font-bold leading-tight truncate">{project.name}</h3>
+                      <p className="text-xs text-muted-foreground mt-0.5 truncate">{project.companyName} · {project.address}</p>
+                    </div>
+                    <span className={cn("text-[0.625rem] font-semibold px-2 py-0.5 rounded-full shrink-0", statusStyles[project.status])}>
+                      {project.status}
+                    </span>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" onClick={(e) => { e.stopPropagation(); openEdit(project); }}>
+                        <Pencil className="w-3.5 h-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
 
-                        </TooltipProvider>
+            {/* Grid View */}
+            {viewMode === "grid" && (
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                {filtered.map((project, index) => (
+                  <div
+                    key={project.id}
+                    className="group bg-card border border-border rounded-xl shadow-[var(--shadow-card)] overflow-hidden hover:shadow-[var(--shadow-elevated)] transition-shadow duration-300 flex flex-col cursor-pointer"
+                    onClick={() => router.visit(`/tranches?project=${project.id}&name=${encodeURIComponent(project.name)}&company=${project.companyId}&companyName=${encodeURIComponent(project.companyName)}`)}
+                  >
+                    <div className="p-6 flex-1">
+                      <div className="flex items-start justify-between mb-3">
+                        <span className={cn("text-[0.6875rem] font-semibold px-2.5 py-1 rounded-full", statusStyles[project.status])}>
+                          {project.status}
+                        </span>
+                        <div className="flex items-center gap-1">
+                          <TooltipProvider delayDuration={300}>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" onClick={(e) => { e.stopPropagation(); router.visit(`/tranches?project=${project.id}&name=${encodeURIComponent(project.name)}&company=${project.companyId}&companyName=${encodeURIComponent(project.companyName)}`); }}>
+                                  <LayoutGrid className="w-3.5 h-3.5" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Project Management</TooltipContent>
+                            </Tooltip>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" onClick={(e) => { e.stopPropagation(); toast({ title: "Printing construction contract..." }); }}>
+                                  <FileText className="w-3.5 h-3.5" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Print Construction Contract</TooltipContent>
+                            </Tooltip>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" onClick={(e) => { e.stopPropagation(); toast({ title: "Printing project technical sheet..." }); }}>
+                                  <ClipboardList className="w-3.5 h-3.5" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Print Project Technical Sheet</TooltipContent>
+                            </Tooltip>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" onClick={(e) => { e.stopPropagation(); openEdit(project); }}>
+                                  <Pencil className="w-3.5 h-3.5" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Edit Project</TooltipContent>
+                            </Tooltip>
+
+                          </TooltipProvider>
+                        </div>
+                      </div>
+
+                      <h3 className="font-display text-lg font-bold leading-tight mb-1">{project.name}</h3>
+                      <p className="text-sm text-muted-foreground line-clamp-2 mb-4">{project.description}</p>
+
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2.5 text-sm text-muted-foreground">
+                          <Building2 className="w-4 h-4 shrink-0" />
+                          <span className="truncate">{project.companyName}</span>
+                        </div>
+                        <div className="flex items-center gap-2.5 text-sm text-muted-foreground">
+                          <MapPin className="w-4 h-4 shrink-0" />
+                          <span className="truncate">{project.address}</span>
+                        </div>
                       </div>
                     </div>
 
-                    <h3 className="font-display text-lg font-bold leading-tight mb-1">{project.name}</h3>
-                    <p className="text-sm text-muted-foreground line-clamp-2 mb-4">{project.description}</p>
-
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2.5 text-sm text-muted-foreground">
-                        <Building2 className="w-4 h-4 shrink-0" />
-                        <span className="truncate">{project.companyName}</span>
+                    <div className="relative px-6 py-4 border-t border-border bg-muted/30 group-hover:bg-primary/10 flex items-center justify-between text-sm text-muted-foreground group-hover:text-foreground transition-colors duration-300 overflow-hidden">
+                      <div
+                        className="absolute top-0 left-0 right-0 h-[3px]"
+                        style={{ background: [
+                          'linear-gradient(90deg, hsl(var(--primary)), hsl(var(--accent)))',
+                          'linear-gradient(90deg, hsl(25 80% 55%), hsl(45 90% 55%))',
+                          'linear-gradient(90deg, hsl(160 50% 45%), hsl(190 60% 50%))',
+                          'linear-gradient(90deg, hsl(270 50% 55%), hsl(300 50% 55%))',
+                          'linear-gradient(90deg, hsl(200 60% 50%), hsl(220 55% 55%))',
+                          'linear-gradient(90deg, hsl(340 55% 50%), hsl(10 60% 55%))',
+                        ][index % 6] }}
+                      />
+                      <div className="flex items-center gap-1.5">
+                        <Euro className="w-3.5 h-3.5 text-muted-foreground" />
+                        <span className="font-semibold">{project.budget}</span>
                       </div>
-                      <div className="flex items-center gap-2.5 text-sm text-muted-foreground">
-                        <MapPin className="w-4 h-4 shrink-0" />
-                        <span className="truncate">{project.address}</span>
+                      <div className="flex items-center gap-1.5">
+                        <Calendar className="w-3.5 h-3.5 text-muted-foreground" />
+                        <span>{project.startDate}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <FolderKanban className="w-3.5 h-3.5 text-muted-foreground" />
+                        <span>{project.units} units</span>
                       </div>
                     </div>
                   </div>
+                ))}
+              </div>
+            )}
 
-                  <div className="relative px-6 py-4 border-t border-border bg-muted/30 group-hover:bg-primary/10 flex items-center justify-between text-sm text-muted-foreground group-hover:text-foreground transition-colors duration-300 overflow-hidden">
-                    <div
-                      className="absolute top-0 left-0 right-0 h-[3px]"
-                      style={{ background: [
-                        'linear-gradient(90deg, hsl(var(--primary)), hsl(var(--accent)))',
-                        'linear-gradient(90deg, hsl(25 80% 55%), hsl(45 90% 55%))',
-                        'linear-gradient(90deg, hsl(160 50% 45%), hsl(190 60% 50%))',
-                        'linear-gradient(90deg, hsl(270 50% 55%), hsl(300 50% 55%))',
-                        'linear-gradient(90deg, hsl(200 60% 50%), hsl(220 55% 55%))',
-                        'linear-gradient(90deg, hsl(340 55% 50%), hsl(10 60% 55%))',
-                      ][index % 6] }}
-                    />
-                    <div className="flex items-center gap-1.5">
-                      <Euro className="w-3.5 h-3.5 text-muted-foreground" />
-                      <span className="font-semibold">{project.budget}</span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <Calendar className="w-3.5 h-3.5 text-muted-foreground" />
-                      <span>{project.startDate}</span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <FolderKanban className="w-3.5 h-3.5 text-muted-foreground" />
-                      <span>{project.units} units</span>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
+            {/* Table View */}
+            {viewMode === "table" && (
+              <div className="bg-card border border-border rounded-xl shadow-[var(--shadow-card)] overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Project</TableHead>
+                      <TableHead>Company</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Budget</TableHead>
+                      <TableHead>Units</TableHead>
+                      <TableHead className="w-[100px]"></TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filtered.map((project) => (
+                      <TableRow key={project.id} className="cursor-pointer" onClick={() => router.visit(`/tranches?project=${project.id}`)}>
+                        <TableCell className="font-semibold">{project.name}</TableCell>
+                        <TableCell className="text-muted-foreground">{project.companyName}</TableCell>
+                        <TableCell>
+                          <span className={cn("text-[0.6875rem] font-semibold px-2.5 py-1 rounded-full", statusStyles[project.status])}>
+                            {project.status}
+                          </span>
+                        </TableCell>
+                        <TableCell>{project.budget}</TableCell>
+                        <TableCell>{project.units}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-1">
+                            <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" onClick={(e) => { e.stopPropagation(); openEdit(project); }}>
+                              <Pencil className="w-3.5 h-3.5" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
 
             {filtered.length === 0 && (
               <div className="text-center py-20">

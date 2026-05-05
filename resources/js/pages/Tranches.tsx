@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useForm, router } from "@inertiajs/react";
-import { Layers, Plus, Pencil, Trash2, ChevronRight, LayoutGrid } from "lucide-react";
+import { Layers, Plus, Pencil, Trash2, ChevronRight, LayoutGrid, Rows3, Table as TableIcon } from "lucide-react";
 import { AppBreadcrumb } from "@/components/AppBreadcrumb";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/dashboard/AppSidebar";
@@ -10,6 +10,9 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
 
 interface Project {
@@ -35,12 +38,15 @@ interface Props {
   };
 }
 
+type ViewMode = "card" | "grid" | "table";
+
 const Tranches = ({ tranches, projects, filters }: Props) => {
   const searchParams = new URLSearchParams(window.location.search);
   const initialProjectId = filters.project || "";
   const projectName = searchParams.get("name") || "";
 
 
+  const [viewMode, setViewMode] = useState<ViewMode>("grid");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [editing, setEditing] = useState<Tranche | null>(null);
@@ -128,88 +134,171 @@ const Tranches = ({ tranches, projects, filters }: Props) => {
           </header>
 
           <main className="flex-1 p-6 lg:p-8 max-w-[1400px] mx-auto w-full animate-in fade-in slide-in-from-bottom-1 duration-400">
-            <div className="mb-8">
-              <div className="flex items-center gap-2 mb-1">
-                <h2 className="font-display text-[1.75rem] xl:text-[2rem] font-bold text-foreground">
-                  {projectName ? `Project: ${projectName}` : "All Tranches"}
-                </h2>
-                {projectName && (
-                    <Button variant="ghost" size="sm" onClick={() => router.visit('/tranches')} className="text-muted-foreground hover:text-foreground h-7 px-2">
-                        Show All
-                    </Button>
-                )}
+            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8">
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <h2 className="font-display text-[1.75rem] xl:text-[2rem] font-bold text-foreground">
+                    {projectName ? `Project: ${projectName}` : "All Tranches"}
+                  </h2>
+                  {projectName && (
+                      <Button variant="ghost" size="sm" onClick={() => router.visit('/tranches')} className="text-muted-foreground hover:text-foreground h-7 px-2">
+                          Show All
+                      </Button>
+                  )}
+                </div>
+                <p className="text-[0.9375rem] text-muted-foreground">
+                  {projectName ? `Viewing phases for ${projectName}.` : "Manage project phases and sections across all projects."} Click a tranche to manage its blocs.
+                </p>
               </div>
-              <p className="text-[0.9375rem] text-muted-foreground">
-                {projectName ? `Viewing phases for ${projectName}.` : "Manage project phases and sections across all projects."} Click a tranche to manage its blocs.
-              </p>
+              <ToggleGroup type="single" value={viewMode} onValueChange={(v) => v && setViewMode(v as ViewMode)} className="bg-muted rounded-lg p-0.5">
+                <ToggleGroupItem value="card" aria-label="Card view" className="px-2.5 py-1.5 data-[state=on]:bg-background data-[state=on]:shadow-sm rounded-md">
+                  <Rows3 className="w-4 h-4" />
+                </ToggleGroupItem>
+                <ToggleGroupItem value="grid" aria-label="Grid view" className="px-2.5 py-1.5 data-[state=on]:bg-background data-[state=on]:shadow-sm rounded-md">
+                  <LayoutGrid className="w-4 h-4" />
+                </ToggleGroupItem>
+                <ToggleGroupItem value="table" aria-label="Table view" className="px-2.5 py-1.5 data-[state=on]:bg-background data-[state=on]:shadow-sm rounded-md">
+                  <TableIcon className="w-4 h-4" />
+                </ToggleGroupItem>
+              </ToggleGroup>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-              {tranches.map((tranche, index) => (
-                <div
-                  key={tranche.id}
-                  onClick={() => handleTrancheClick(tranche)}
-                  className="group bg-card border border-border/60 rounded-xl shadow-[0_2px_10px_-4px_rgba(0,0,0,0.1)] hover:shadow-[0_8px_30px_-10px_rgba(0,0,0,0.12)] hover:-translate-y-1 transition-all duration-300 cursor-pointer overflow-hidden"
-                  style={{ animationDelay: `${index * 50}ms` }}
-                >
-                  <div className="p-6">
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary group-hover:scale-110 transition-transform duration-300">
-                        <Layers className="w-6 h-6" />
-                      </div>
-                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted" onClick={(e) => openEdit(tranche, e)}>
-                          <Pencil className="w-4 h-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10" onClick={(e) => openDelete(tranche, e)}>
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
+            {/* Card View - single column */}
+            {viewMode === "card" && (
+              <div className="flex flex-col gap-3">
+                {tranches.map((tranche) => (
+                  <div key={tranche.id} className="bg-card border border-border rounded-xl shadow-[var(--shadow-card)] overflow-hidden hover:shadow-[var(--shadow-elevated)] transition-shadow duration-300 flex items-center gap-4 p-4 cursor-pointer" onClick={() => handleTrancheClick(tranche)}>
+                    <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary shrink-0">
+                      <Layers className="w-5 h-5" />
                     </div>
-                    <div className="mb-4">
-                      <div className="flex items-center gap-2 mb-1">
-                        <h3 className="font-display text-lg font-bold leading-tight text-foreground">{tranche.name}</h3>
-                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                          tranche.status === 'active' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400' : 'bg-muted text-muted-foreground'
-                        }`}>
-                          {tranche.status}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                        <LayoutGrid className="w-3.5 h-3.5" />
-                        <span>{tranche.projectName}</span>
-                      </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-display text-sm font-bold leading-tight truncate">{tranche.name}</h3>
+                      <p className="text-xs text-muted-foreground mt-0.5 truncate">{tranche.projectName}</p>
                     </div>
-                    
-                    <div className="flex items-center gap-4 py-3 border-t border-border/40">
-                      <div className="flex flex-col">
-                        <span className="text-xs text-muted-foreground uppercase tracking-tight">Blocs</span>
-                        <span className="text-sm font-semibold">{tranche.blocsCount}</span>
-                      </div>
-                      <div className="w-px h-8 bg-border/40" />
-                      <div className="flex flex-col">
-                        <span className="text-xs text-muted-foreground uppercase tracking-tight">Units</span>
-                        <span className="text-sm font-semibold">{tranche.unitsCount}</span>
-                      </div>
+                    <div className="flex items-center gap-2 px-3 py-1 bg-muted/50 rounded-lg shrink-0 text-xs font-semibold">
+                      {tranche.blocsCount} Blocs
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" onClick={(e) => openEdit(tranche, e)}>
+                        <Pencil className="w-3.5 h-3.5" />
+                      </Button>
                     </div>
                   </div>
-                  <div className="relative px-6 py-3 border-t border-border/40 bg-muted/20 group-hover:bg-primary/5 flex items-center justify-between text-sm font-medium text-muted-foreground group-hover:text-primary transition-colors duration-300">
-                    <div
-                      className="absolute top-0 left-0 right-0 h-[2px]"
-                      style={{ background: [
-                        'linear-gradient(90deg, #3b82f6, #8b5cf6)',
-                        'linear-gradient(90deg, #f59e0b, #ef4444)',
-                        'linear-gradient(90deg, #10b981, #3b82f6)',
-                        'linear-gradient(90deg, #8b5cf6, #ec4899)',
-                        'linear-gradient(90deg, #06b6d4, #3b82f6)',
-                      ][index % 5] }}
-                    />
-                    <span>Manage phase</span>
-                    <ChevronRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
+                ))}
+              </div>
+            )}
+
+            {/* Grid View */}
+            {viewMode === "grid" && (
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                {tranches.map((tranche, index) => (
+                  <div
+                    key={tranche.id}
+                    onClick={() => handleTrancheClick(tranche)}
+                    className="group bg-card border border-border/60 rounded-xl shadow-[0_2px_10px_-4px_rgba(0,0,0,0.1)] hover:shadow-[0_8px_30px_-10px_rgba(0,0,0,0.12)] hover:-translate-y-1 transition-all duration-300 cursor-pointer overflow-hidden"
+                    style={{ animationDelay: `${index * 50}ms` }}
+                  >
+                    <div className="p-6">
+                      <div className="flex items-start justify-between mb-4">
+                        <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary group-hover:scale-110 transition-transform duration-300">
+                          <Layers className="w-6 h-6" />
+                        </div>
+                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted" onClick={(e) => openEdit(tranche, e)}>
+                            <Pencil className="w-4 h-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10" onClick={(e) => openDelete(tranche, e)}>
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+                      <div className="mb-4">
+                        <div className="flex items-center gap-2 mb-1">
+                          <h3 className="font-display text-lg font-bold leading-tight text-foreground">{tranche.name}</h3>
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                            tranche.status === 'active' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400' : 'bg-muted text-muted-foreground'
+                          }`}>
+                            {tranche.status}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                          <LayoutGrid className="w-3.5 h-3.5" />
+                          <span>{tranche.projectName}</span>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center gap-4 py-3 border-t border-border/40">
+                        <div className="flex flex-col">
+                          <span className="text-xs text-muted-foreground uppercase tracking-tight">Blocs</span>
+                          <span className="text-sm font-semibold">{tranche.blocsCount}</span>
+                        </div>
+                        <div className="w-px h-8 bg-border/40" />
+                        <div className="flex flex-col">
+                          <span className="text-xs text-muted-foreground uppercase tracking-tight">Units</span>
+                          <span className="text-sm font-semibold">{tranche.unitsCount}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="relative px-6 py-3 border-t border-border/40 bg-muted/20 group-hover:bg-primary/5 flex items-center justify-between text-sm font-medium text-muted-foreground group-hover:text-primary transition-colors duration-300">
+                      <div
+                        className="absolute top-0 left-0 right-0 h-[2px]"
+                        style={{ background: [
+                          'linear-gradient(90deg, #3b82f6, #8b5cf6)',
+                          'linear-gradient(90deg, #f59e0b, #ef4444)',
+                          'linear-gradient(90deg, #10b981, #3b82f6)',
+                          'linear-gradient(90deg, #8b5cf6, #ec4899)',
+                          'linear-gradient(90deg, #06b6d4, #3b82f6)',
+                        ][index % 5] }}
+                      />
+                      <span>Manage phase</span>
+                      <ChevronRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
+
+            {/* Table View */}
+            {viewMode === "table" && (
+              <div className="bg-card border border-border rounded-xl shadow-[var(--shadow-card)] overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Tranche</TableHead>
+                      <TableHead>Project</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Blocs</TableHead>
+                      <TableHead>Units</TableHead>
+                      <TableHead className="w-[100px]"></TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {tranches.map((tranche) => (
+                      <TableRow key={tranche.id} className="cursor-pointer" onClick={() => handleTrancheClick(tranche)}>
+                        <TableCell className="font-semibold">{tranche.name}</TableCell>
+                        <TableCell className="text-muted-foreground">{tranche.projectName}</TableCell>
+                        <TableCell>
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                            tranche.status === 'active' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400' : 'bg-muted text-muted-foreground'
+                          }`}>
+                            {tranche.status}
+                          </span>
+                        </TableCell>
+                        <TableCell>{tranche.blocsCount}</TableCell>
+                        <TableCell>{tranche.unitsCount}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-1">
+                            <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" onClick={(e) => openEdit(tranche, e)}>
+                              <Pencil className="w-3.5 h-3.5" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
 
             {tranches.length === 0 && (
               <div className="text-center py-24 bg-card border border-dashed border-border rounded-2xl animate-in zoom-in-95 duration-500">

@@ -20,7 +20,7 @@ const tiles = [
 
 const ProjectManagement = () => {
   const searchParams = new URLSearchParams(window.location.search);
-  
+
   const projectId = searchParams.get("project") || "";
   const projectName = searchParams.get("name") || "Project";
   const companyId = searchParams.get("company") || "";

@@ -1,6 +1,6 @@
-import { usePage } from "@inertiajs/react";
+import { router, usePage } from "@inertiajs/react";
 import {
-  LayoutDashboard, Settings, HelpCircle, Building2, ShoppingCart, Truck, Wallet, Contact,
+  LayoutDashboard, Settings, HelpCircle, Building2, ShoppingCart, Truck, Wallet, Contact, LogOut,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import {
@@ -10,6 +10,14 @@ import {
 } from "@/components/ui/sidebar";
 import { Badge } from "@/components/ui/badge";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const getNavSections = (user: any) => {
   const sections = [
@@ -109,18 +117,59 @@ export function AppSidebar() {
         ))}
       </SidebarContent>
 
-      <SidebarFooter className="border-t border-sidebar-border p-3">
-        <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-muted/50 cursor-pointer transition-colors">
-          <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold shrink-0">
-            MK
-          </div>
+      <SidebarFooter className="p-4 border-t border-sidebar-border/50">
+        <div className="flex items-center gap-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <div className="flex-1 flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-sidebar-accent/50 cursor-pointer transition-all duration-300 group border border-transparent hover:border-sidebar-border/50 shadow-sm hover:shadow-md min-w-0">
+                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-primary to-accent text-primary-foreground flex items-center justify-center text-xs font-bold shrink-0 shadow-inner">
+                  {user?.name?.split(' ').map((n: string) => n[0]).join('').toUpperCase() || 'U'}
+                </div>
+                {!collapsed && (
+                  <div className="flex-1 min-w-0 flex items-center justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="text-[0.875rem] font-bold truncate text-sidebar-foreground group-hover:text-primary transition-colors">{user?.name || 'User'}</p>
+                      <p className="text-[0.625rem] text-sidebar-foreground/60 truncate font-medium">{user?.email || ''}</p>
+                    </div>
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        router.post(route('logout'));
+                      }}
+                      className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg bg-destructive/10 text-destructive hover:bg-destructive hover:text-white transition-all duration-200"
+                      title="Se déconnecter"
+                    >
+                      <LogOut className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                )}
+              </div>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" side="right" className="w-64 p-2 rounded-xl border-sidebar-border/50 bg-background/95 backdrop-blur-md shadow-xl animate-in zoom-in-95 duration-200">
+              <DropdownMenuLabel className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Mon Compte</DropdownMenuLabel>
+              <DropdownMenuSeparator className="bg-sidebar-border/50" />
+              <div className="px-3 py-3 mb-1">
+                <p className="text-sm font-bold text-foreground">{user?.name}</p>
+                <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
+              </div>
+              <DropdownMenuSeparator className="bg-sidebar-border/50" />
+              <DropdownMenuItem 
+                onClick={() => router.post(route('logout'))} 
+                className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-destructive focus:bg-destructive/10 focus:text-destructive cursor-pointer transition-colors"
+              >
+                <div className="w-8 h-8 rounded-lg bg-destructive/10 flex items-center justify-center">
+                  <LogOut className="w-4 h-4" />
+                </div>
+                <span className="font-semibold">Se déconnecter</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          
           {!collapsed && (
-            <div className="flex-1 min-w-0">
-              <p className="text-[0.8125rem] font-semibold truncate">Max Keller</p>
-              <p className="text-[0.6875rem] text-muted-foreground truncate">max@immoflow.de</p>
+            <div className="shrink-0 flex items-center justify-center w-10 h-10 rounded-xl hover:bg-sidebar-accent/50 transition-colors border border-transparent hover:border-sidebar-border/50">
+              <ThemeToggle />
             </div>
           )}
-          {!collapsed && <ThemeToggle />}
         </div>
       </SidebarFooter>
     </Sidebar>

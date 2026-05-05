@@ -44,7 +44,7 @@ class BlocController extends Controller
                     'trancheName' => $bloc->tranche->name ?? 'N/A',
                     'projectId' => (string) ($bloc->tranche->project_id ?? ''),
                     'projectName' => $bloc->tranche->project->name ?? 'N/A',
-                    'unitsCount' => 0, // Placeholder, update later if units are added
+                    'unitsCount' => (int) $bloc->units,
                 ];
             });
 
@@ -80,7 +80,7 @@ class BlocController extends Controller
     public function store(StoreBlocRequest $request): RedirectResponse
     {
         $validated = $request->validated();
-        
+
         // Remove project_id as it doesn't belong in the blocs table
         unset($validated['project_id']);
 
@@ -97,7 +97,7 @@ class BlocController extends Controller
     public function update(UpdateBlocRequest $request, Bloc $bloc): RedirectResponse
     {
         $validated = $request->validated();
-        
+
         // Remove project_id as it doesn't belong in the blocs table
         unset($validated['project_id']);
 
