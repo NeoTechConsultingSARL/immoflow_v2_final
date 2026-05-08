@@ -8,12 +8,13 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 #[Fillable(['name', 'project_id', 'status'])]
 class Tranche extends Model
 {
     /** @use HasFactory<TrancheFactory> */
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
     public function project(): BelongsTo
     {
