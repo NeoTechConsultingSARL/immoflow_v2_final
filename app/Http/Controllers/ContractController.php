@@ -12,6 +12,8 @@ use App\Models\Client;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\DB;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Support\Str;
 
 class ContractController extends Controller
 {
@@ -127,6 +129,17 @@ class ContractController extends Controller
     {
         $contract->delete(); // Soft delete
         return redirect()->route('contracts.index')->with('success', 'Contract deleted successfully.');
+    }
+
+    public function generatePdf(Contract $contract)
+    {
+        $contract->load(['client', 'property.bloc.tranche.project.company']);
+        
+        $pdf = Pdf::loadView('contracts.pdf', compact('contract'));
+        
+        $fileName = 'Contract_' . $contract->id . '_' . Str::slug($contract->client->full_name) . '.pdf';
+        
+        return $pdf->download($fileName);
     }
 
     // API endpoints for cascading dropdowns

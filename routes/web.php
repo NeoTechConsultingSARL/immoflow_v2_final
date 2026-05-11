@@ -25,6 +25,7 @@ Route::middleware('auth')->group(function () {
 
     // Contracts
     Route::resource('contracts', ContractController::class);
+    Route::get('/contracts/{contract}/pdf', [ContractController::class, 'generatePdf'])->name('contracts.pdf');
     Route::get('/api/companies/{company}/projects', [ContractController::class, 'getProjects'])->name('api.companies.projects');
     Route::get('/api/projects/{project}/tranches', [ContractController::class, 'getTranches'])->name('api.projects.tranches');
     Route::get('/api/tranches/{tranche}/blocs', [ContractController::class, 'getBlocs'])->name('api.tranches.blocs');
