@@ -2,14 +2,13 @@
 
 namespace App\Models;
 
+use App\Enums\ClientType;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Client extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory;
 
     protected $fillable = [
         'full_name',
@@ -20,8 +19,7 @@ class Client extends Model
         'type',
     ];
 
-    public function contracts(): HasMany
-    {
-        return $this->hasMany(Contract::class);
-    }
+    protected $casts = [
+        'type' => ClientType::class,
+    ];
 }

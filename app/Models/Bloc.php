@@ -15,6 +15,7 @@ class Bloc extends Model
 {
     /** @use HasFactory<BlocFactory> */
     use HasFactory, SoftDeletes;
+    use HasFactory;
 
     public function tranche(): BelongsTo
     {

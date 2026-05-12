@@ -52,7 +52,11 @@ class DatabaseSeeder extends Seeder
             TrancheSeeder::class,
             BlocSeeder::class,
             PropertySeeder::class,
+
             ClientContractSeeder::class,
+
+
+            ClientSeeder::class,
         ]);
 
         Schema::enableForeignKeyConstraints();
