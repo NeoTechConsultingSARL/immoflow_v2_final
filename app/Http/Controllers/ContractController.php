@@ -33,6 +33,8 @@ class ContractController extends Controller
 
         return Inertia::render('Contracts/Index', [
             'contracts' => $contracts,
+            'companies' => Company::all(),
+            'clients' => Client::all(),
         ]);
     }
 

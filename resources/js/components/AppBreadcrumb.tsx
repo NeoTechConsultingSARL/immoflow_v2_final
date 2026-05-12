@@ -46,9 +46,25 @@ export function AppBreadcrumb() {
   const pmHref = `/project-management?${projectQuery}${companyQueryAmp}${trancheQuery}${blocQuery}`;
 
   if (path === "/dashboard") {
+    crumbs.push({ label: "Home", href: "/" });
     crumbs.push({ label: "Dashboard" });
   } else if (path === "/companies") {
+    crumbs.push({ label: "Home", href: "/" });
     crumbs.push({ label: "Companies" });
+  } else if (path.match(/^\/clients\/\d+$/)) {
+    crumbs.push({ label: "Home", href: "/" });
+    crumbs.push({ label: "Clients", href: "/clients" });
+    crumbs.push({ label: "Details" });
+  } else if (path === "/clients") {
+    crumbs.push({ label: "Home", href: "/" });
+    crumbs.push({ label: "Clients" });
+  } else if (path.match(/^\/contracts\/\d+$/)) {
+    crumbs.push({ label: "Home", href: "/" });
+    crumbs.push({ label: "Contracts", href: "/contracts" });
+    crumbs.push({ label: "Details" });
+  } else if (path === "/contracts") {
+    crumbs.push({ label: "Home", href: "/" });
+    crumbs.push({ label: "Contracts" });
   } else if (path === "/projects") {
     crumbs.push({ label: "Companies", href: "/companies" });
     if (companyName && companyId) {
@@ -63,7 +79,7 @@ export function AppBreadcrumb() {
     } else {
       crumbs.push({ label: "Projects", href: "/projects" });
     }
-    crumbs.push({ label: decodeURIComponent(projectName) });
+    crumbs.push({ label: "Tranches" });
   } else if (path === "/blocs" || path.match(/^\/projects\/[^/]+\/blocs/)) {
     crumbs.push({ label: "Companies", href: "/companies" });
     if (companyId) {
@@ -71,8 +87,8 @@ export function AppBreadcrumb() {
     } else {
       crumbs.push({ label: "Projects", href: "/projects" });
     }
-    crumbs.push({ label: decodeURIComponent(projectName), href: tranchesHref });
-    crumbs.push({ label: decodeURIComponent(trancheName) });
+    crumbs.push({ label: "Tranches", href: tranchesHref });
+    crumbs.push({ label: "Blocs" });
   } else if (path === "/project-management" || path.startsWith("/management/")) {
     crumbs.push({ label: "Companies", href: "/companies" });
     if (companyId) {

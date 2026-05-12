@@ -1,5 +1,5 @@
 import { router, usePage, Link } from "@inertiajs/react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Users, Plus, Pencil, Phone, Mail, Building2, MapPin, Search, Filter, Eye, LayoutGrid, Table as TableIcon, Rows3 } from "lucide-react";
 import { AppBreadcrumb } from "@/components/AppBreadcrumb";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
@@ -11,6 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
+import ClientFormModal from "@/components/ClientFormModal";
 
 interface Client {
   id: number;
@@ -52,6 +53,8 @@ const Index = ({ clients, filters }: ClientsProps) => {
   const [viewMode, setViewMode] = useState<"card" | "table">("table");
   const [searchTerm, setSearchTerm] = useState(filters.search || "");
   const [typeFilter, setTypeFilter] = useState(filters.type || "");
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editingClient, setEditingClient] = useState<any>(null);
 
   useEffect(() => {
     if (flash?.success) {
@@ -62,7 +65,7 @@ const Index = ({ clients, filters }: ClientsProps) => {
     }
   }, [flash]);
 
-  const handleSearch = () => {
+  const handleSearch = useCallback(() => {
     const params = new URLSearchParams();
     if (searchTerm) params.append('search', searchTerm);
     if (typeFilter && typeFilter !== 'all') params.append('type', typeFilter);
@@ -71,25 +74,41 @@ const Index = ({ clients, filters }: ClientsProps) => {
       preserveScroll: true,
       preserveState: true,
     });
+  }, [searchTerm, typeFilter]);
+
+  // Debounced search for input
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      handleSearch();
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchTerm, handleSearch]);
+
+  // Trigger search immediately when filter changes
+  const handleTypeFilterChange = (value: string) => {
+    setTypeFilter(value);
   };
 
+  useEffect(() => {
+    if (typeFilter) {
+      handleSearch();
+    }
+  }, [typeFilter, handleSearch]);
+
   const openCreate = () => {
-    router.visit(route('clients.create'));
+    setEditingClient(null);
+    setModalOpen(true);
   };
 
   const openEdit = (client: Client) => {
-    router.visit(route('clients.edit', client.id));
+    setEditingClient(client);
+    setModalOpen(true);
   };
 
   const openShow = (client: Client) => {
     router.visit(route('clients.show', client.id));
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      handleSearch();
-    }
-  };
 
   return (
     <SidebarProvider>
@@ -109,7 +128,7 @@ const Index = ({ clients, filters }: ClientsProps) => {
           <main className="flex-1 p-6 lg:p-8 max-w-[1400px] animate-in fade-in slide-in-from-bottom-1 duration-400">
             <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-6">
               <div>
-                <h2 className="font-display text-[1.75rem] xl:text-[2rem] font-bold">Clients</h2>
+                <h2 className="font-display text-[1.75rem] xl:text-[2rem] font-bold">Manage Clients</h2>
                 <p className="text-[0.9375rem] text-muted-foreground">Manage your client directory and contact information.</p>
               </div>
               <div className="flex items-center gap-3 self-start sm:self-auto">
@@ -133,15 +152,14 @@ const Index = ({ clients, filters }: ClientsProps) => {
                     placeholder="Search clients..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    onKeyPress={handleKeyPress}
                     className="pl-10"
                   />
                 </div>
               </div>
               <div className="sm:w-48">
-                <Select value={typeFilter} onValueChange={setTypeFilter}>
+                <Select value={typeFilter} onValueChange={handleTypeFilterChange}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Filter by type" />
+                    <SelectValue placeholder="All Types" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Types</SelectItem>
@@ -151,9 +169,6 @@ const Index = ({ clients, filters }: ClientsProps) => {
                   </SelectContent>
                 </Select>
               </div>
-              <Button onClick={handleSearch} variant="outline" className="gap-2">
-                <Filter className="w-4 h-4" /> Filter
-              </Button>
             </div>
 
             {viewMode === "card" && (
@@ -268,6 +283,13 @@ const Index = ({ clients, filters }: ClientsProps) => {
           </main>
         </div>
       </div>
+
+      <ClientFormModal
+        open={modalOpen}
+        onOpenChange={setModalOpen}
+        client={editingClient}
+        onSuccess={() => router.reload()}
+      />
     </SidebarProvider>
   );
 };

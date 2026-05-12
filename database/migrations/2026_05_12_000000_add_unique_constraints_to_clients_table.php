@@ -12,13 +12,9 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('clients', function (Blueprint $table) {
-            // Drop existing unique indexes before redefining (they already exist from create_clients_table)
-            $table->dropUnique(['email']);
-            $table->dropUnique(['identity_number']);
-
-            // Redefine as nullable with unique constraints
-            $table->string('email')->nullable()->unique()->change();
-            $table->string('identity_number')->nullable()->unique()->change();
+            // Add unique constraints to nullable fields
+            $table->unique('email');
+            $table->unique('identity_number');
 
             // Change type to enum with specific values
             $table->enum('type', ['individual', 'company', 'lead', 'prospect', 'owner'])->default('individual')->change();

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "@inertiajs/react";
 import { Users, Plus, Pencil, MapPin, Phone, Mail, IdCard, LayoutGrid, Rows3, Table as TableIcon } from "lucide-react";
 import { AppBreadcrumb } from "@/components/AppBreadcrumb";
@@ -62,17 +62,29 @@ const Clients = ({ clients }: Props) => {
   const openEdit = (client: Client, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
     setEditing(client);
-    setData({
-      full_name: client.full_name,
-      email: client.email,
-      phone: client.phone || "",
-      identity_number: client.identity_number,
-      address: client.address || "",
-      type: client.type,
-    });
     clearErrors();
     setDialogOpen(true);
   };
+
+  // Update form data when editing client changes
+  useEffect(() => {
+    if (editing) {
+      setData('full_name', editing.full_name);
+      setData('email', editing.email);
+      setData('phone', editing.phone || "");
+      setData('identity_number', editing.identity_number);
+      setData('address', editing.address || "");
+      setData('type', editing.type);
+    } else if (!dialogOpen) {
+      // Reset form when dialog is closed and not editing
+      setData('full_name', "");
+      setData('email', "");
+      setData('phone', "");
+      setData('identity_number', "");
+      setData('address', "");
+      setData('type', "Lead");
+    }
+  }, [editing, dialogOpen]);
 
   const handleSave = () => {
     if (editing) {

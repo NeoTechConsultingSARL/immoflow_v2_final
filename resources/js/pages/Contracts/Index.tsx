@@ -11,6 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
+import ContractFormModal from "@/components/ContractFormModal";
 
 interface Contract {
   id: number;
@@ -40,6 +41,8 @@ interface Contract {
 
 interface ContractsProps {
   contracts: { data: Contract[]; current_page: number; last_page: number; };
+  companies: any[];
+  clients: any[];
 }
 
 const statusStyles: Record<string, string> = {
@@ -49,9 +52,11 @@ const statusStyles: Record<string, string> = {
   "draft": "bg-amber-500/10 text-amber-600 border-amber-200 dark:border-amber-800",
 };
 
-const Index = ({ contracts }: ContractsProps) => {
+const Index = ({ contracts, companies, clients }: ContractsProps) => {
   const { flash } = usePage().props as any;
   const [viewMode, setViewMode] = useState<"card" | "table">("table");
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editingContract, setEditingContract] = useState<any>(null);
 
   useEffect(() => {
     if (flash?.success) {
@@ -63,7 +68,13 @@ const Index = ({ contracts }: ContractsProps) => {
   }, [flash]);
 
   const openCreate = () => {
-    router.visit(route('contracts.create'));
+    setEditingContract(null);
+    setModalOpen(true);
+  };
+
+  const openEdit = (contract: Contract) => {
+    setEditingContract(contract);
+    setModalOpen(true);
   };
 
   const getFullPropertyPath = (property: Contract['property']) => {
@@ -95,7 +106,7 @@ const Index = ({ contracts }: ContractsProps) => {
           <main className="flex-1 p-6 lg:p-8 max-w-[1400px] animate-in fade-in slide-in-from-bottom-1 duration-400">
             <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-6">
               <div>
-                <h2 className="font-display text-[1.75rem] xl:text-[2rem] font-bold">Contracts</h2>
+                <h2 className="font-display text-[1.75rem] xl:text-[2rem] font-bold">Manage Contracts</h2>
                 <p className="text-[0.9375rem] text-muted-foreground">Manage client contracts and property reservations.</p>
               </div>
               <div className="flex items-center gap-3 self-start sm:self-auto">
@@ -123,7 +134,7 @@ const Index = ({ contracts }: ContractsProps) => {
                       {contract.status}
                     </span>
                     <div className="flex items-center gap-1 shrink-0">
-                      <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" onClick={(e) => { e.stopPropagation(); router.visit(route('contracts.edit', contract.id)); }}>
+                      <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" onClick={(e) => { e.stopPropagation(); openEdit(contract); }}>
                         <Pencil className="w-3.5 h-3.5" />
                       </Button>
                     </div>
@@ -161,7 +172,7 @@ const Index = ({ contracts }: ContractsProps) => {
                         <TableCell>{contract.date}</TableCell>
                         <TableCell>
                           <div className="flex items-center gap-1">
-                            <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" onClick={(e) => { e.stopPropagation(); router.visit(route('contracts.edit', contract.id)); }}>
+                            <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" onClick={(e) => { e.stopPropagation(); openEdit(contract); }}>
                               <Pencil className="w-3.5 h-3.5" />
                             </Button>
 
@@ -196,6 +207,15 @@ const Index = ({ contracts }: ContractsProps) => {
           </main>
         </div>
       </div>
+
+      <ContractFormModal
+        open={modalOpen}
+        onOpenChange={setModalOpen}
+        companies={companies}
+        clients={clients}
+        contract={editingContract}
+        onSuccess={() => router.reload()}
+      />
     </SidebarProvider>
   );
 };

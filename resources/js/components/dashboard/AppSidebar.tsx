@@ -35,15 +35,11 @@ const getNavSections = (user: any) => {
       label: "Management",
       items: [
         { title: "Companies", url: "/companies", icon: Building2 },
-
         { title: "Projects", url: "/projects", icon: ShoppingCart },
-        { title: "Contracts", url: "/contracts", icon: FileText },
-
-        { title: "Clients", url: "/clients", icon: Users },
-        { title: "Projects", url: "/projects", icon: ShoppingCart },
-
         { title: "Tranches", url: "/tranches", icon: Truck },
         { title: "Blocs", url: "/blocs", icon: Wallet },
+        { title: "Contracts", url: "/contracts", icon: FileText },
+        { title: "Clients", url: "/clients", icon: Users },
       ],
     });
   }
@@ -64,10 +60,6 @@ const getNavSections = (user: any) => {
   sections.push({
     label: "General",
     items: [
-
-
-      { title: "Clients", url: "/clients", icon: Users },
-
       { title: "History", url: "/history", icon: ShoppingCart },
       { title: "News", url: "/news", icon: Contact },
     ],
