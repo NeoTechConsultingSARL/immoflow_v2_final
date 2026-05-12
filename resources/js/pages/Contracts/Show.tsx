@@ -1,5 +1,5 @@
 import { router } from "@inertiajs/react";
-import { ArrowLeft, Building2, MapPin, Euro, Calendar, CheckCircle2, ChevronRight } from "lucide-react";
+import { ArrowLeft, Building2, MapPin, Euro, Calendar, CheckCircle2, ChevronRight, FileText } from "lucide-react";
 import { AppBreadcrumb } from "@/components/AppBreadcrumb";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/dashboard/AppSidebar";
@@ -34,6 +34,9 @@ const Show = ({ contract, path }: ContractProps) => {
             <div className="flex items-center gap-2">
                 <Button variant="outline" onClick={() => router.visit(route('contracts.index'))} className="gap-2">
                     <ArrowLeft className="w-4 h-4" /> Back to Contracts
+                </Button>
+                <Button variant="outline" onClick={() => window.open(route('contracts.pdf', contract.id), '_blank')} className="gap-2 border-primary text-primary hover:bg-primary hover:text-primary-foreground">
+                    <FileText className="w-4 h-4" /> Generate PDF
                 </Button>
                 <Button onClick={() => router.visit(route('contracts.edit', contract.id))} className="gap-2" style={{ background: "hsl(var(--accent))", color: "hsl(var(--accent-foreground))" }}>
                     Edit Contract

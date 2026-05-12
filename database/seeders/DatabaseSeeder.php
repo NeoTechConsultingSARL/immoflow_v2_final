@@ -53,6 +53,9 @@ class DatabaseSeeder extends Seeder
             BlocSeeder::class,
             PropertySeeder::class,
 
+            ClientContractSeeder::class,
+
+
             ClientSeeder::class,
         ]);
 
