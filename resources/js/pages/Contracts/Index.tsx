@@ -1,6 +1,10 @@
 import { router, usePage, Link } from "@inertiajs/react";
 import { useState, useEffect } from "react";
+
 import { FolderKanban, Plus, Pencil, Building2, MapPin, Calendar, Euro, LayoutGrid, FileText, ClipboardList, X, Rows3, Table as TableIcon, Eye, Trash } from "lucide-react";
+
+import { FolderKanban, Plus, Pencil, Building2, MapPin, Calendar, Euro, LayoutGrid, FileText, ClipboardList, X, Rows3, Table as TableIcon, Eye } from "lucide-react";
+
 import { AppBreadcrumb } from "@/components/AppBreadcrumb";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/dashboard/AppSidebar";
@@ -162,6 +166,7 @@ const Index = ({ contracts }: ContractsProps) => {
                             <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" onClick={(e) => { e.stopPropagation(); router.visit(route('contracts.edit', contract.id)); }}>
                               <Pencil className="w-3.5 h-3.5" />
                             </Button>
+
                             <Button variant="ghost" size="icon" className="h-7 w-7 text-rose-500 hover:text-rose-600 hover:bg-rose-50" onClick={(e) => { 
                               e.stopPropagation(); 
                               if(confirm('Are you sure you want to delete this contract?')) {
@@ -170,6 +175,7 @@ const Index = ({ contracts }: ContractsProps) => {
                             }}>
                               <Trash className="w-3.5 h-3.5" />
                             </Button>
+
                           </div>
                         </TableCell>
                       </TableRow>

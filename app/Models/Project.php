@@ -12,7 +12,9 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 #[Fillable(['name', 'description', 'address', 'budget', 'start_date', 'units', 'status', 'company_id', 'property_allocations'])]
 class Project extends Model
 {
-    use HasFactory, SoftDeletes;
+        use HasFactory, SoftDeletes;
+
+    use HasFactory;
 
     protected $casts = [
         'property_allocations' => 'array',
