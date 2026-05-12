@@ -73,11 +73,6 @@ class ClientController extends Controller
      */
     public function show(Client $client)
     {
-        $client->load(['contracts' => function ($query) {
-            $query->with(['property.bloc.tranche.project.company'])
-                ->latest();
-        }]);
-
         return Inertia::render('Clients/Show', [
             'client' => $client,
         ]);
