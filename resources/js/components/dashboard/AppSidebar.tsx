@@ -1,9 +1,6 @@
 import { router, usePage } from "@inertiajs/react";
 import {
-  LayoutDashboard, Settings, HelpCircle, Building2, ShoppingCart, Truck, Wallet, Contact, LogOut, FileText,
-
   LayoutDashboard, Settings, HelpCircle, Building2, ShoppingCart, Truck, Wallet, Contact, LogOut, FileText, Users,
-
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import {

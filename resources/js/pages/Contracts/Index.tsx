@@ -3,8 +3,6 @@ import { useState, useEffect } from "react";
 
 import { FolderKanban, Plus, Pencil, Building2, MapPin, Calendar, Euro, LayoutGrid, FileText, ClipboardList, X, Rows3, Table as TableIcon, Eye, Trash } from "lucide-react";
 
-import { FolderKanban, Plus, Pencil, Building2, MapPin, Calendar, Euro, LayoutGrid, FileText, ClipboardList, X, Rows3, Table as TableIcon, Eye } from "lucide-react";
-
 import { AppBreadcrumb } from "@/components/AppBreadcrumb";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/dashboard/AppSidebar";
