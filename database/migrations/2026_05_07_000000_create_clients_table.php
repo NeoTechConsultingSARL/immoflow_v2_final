@@ -6,12 +6,9 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-<<<<<<< Updated upstream
     /**
      * Run the migrations.
      */
-=======
->>>>>>> Stashed changes
     public function up(): void
     {
         Schema::create('clients', function (Blueprint $table) {
@@ -23,19 +20,12 @@ return new class extends Migration
             $table->text('address')->nullable();
             $table->string('type')->default('individual');
             $table->timestamps();
-<<<<<<< Updated upstream
-            $table->softDeletes();
         });
     }
 
     /**
      * Reverse the migrations.
      */
-=======
-        });
-    }
-
->>>>>>> Stashed changes
     public function down(): void
     {
         Schema::dropIfExists('clients');
