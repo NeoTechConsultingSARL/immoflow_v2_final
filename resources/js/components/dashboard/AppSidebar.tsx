@@ -1,6 +1,10 @@
 import { router, usePage } from "@inertiajs/react";
 import {
+<<<<<<< Updated upstream
   LayoutDashboard, Settings, HelpCircle, Building2, ShoppingCart, Truck, Wallet, Contact, LogOut, Users,
+=======
+  LayoutDashboard, Settings, HelpCircle, Building2, ShoppingCart, Truck, Wallet, Contact, LogOut, FileText, Users,
+>>>>>>> Stashed changes
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import {
@@ -59,6 +63,7 @@ const getNavSections = (user: any) => {
   sections.push({
     label: "General",
     items: [
+      { title: "Clients", url: "/clients", icon: Users },
       { title: "History", url: "/history", icon: ShoppingCart },
       { title: "News", url: "/news", icon: Contact },
     ],

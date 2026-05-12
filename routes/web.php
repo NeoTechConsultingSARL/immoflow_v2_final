@@ -22,6 +22,20 @@ Route::middleware('auth')->group(function () {
         return Inertia::render('Dashboard');
     })->name('dashboard');
 
+<<<<<<< Updated upstream
+=======
+    // Clients
+    Route::resource('clients', ClientController::class)->except(['destroy']);
+
+    // Contracts
+    Route::resource('contracts', ContractController::class)->except(['destroy']);
+    Route::get('/contracts/{contract}/pdf', [ContractController::class, 'generatePdf'])->name('contracts.pdf');
+    Route::get('/api/companies/{company}/projects', [ContractController::class, 'getProjects'])->name('api.companies.projects');
+    Route::get('/api/projects/{project}/tranches', [ContractController::class, 'getTranches'])->name('api.projects.tranches');
+    Route::get('/api/tranches/{tranche}/blocs', [ContractController::class, 'getBlocs'])->name('api.tranches.blocs');
+    Route::get('/api/blocs/{bloc}/properties', [ContractController::class, 'getProperties'])->name('api.blocs.properties');
+
+>>>>>>> Stashed changes
     Route::get('/companies', [CompanyController::class, 'index'])
         ->name('companies')->middleware('role:admin,manager');
 
