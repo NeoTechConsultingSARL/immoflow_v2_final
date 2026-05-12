@@ -1,10 +1,6 @@
 import { router, usePage } from "@inertiajs/react";
 import {
-<<<<<<< Updated upstream
-  LayoutDashboard, Settings, HelpCircle, Building2, ShoppingCart, Truck, Wallet, Contact, LogOut, Users,
-=======
   LayoutDashboard, Settings, HelpCircle, Building2, ShoppingCart, Truck, Wallet, Contact, LogOut, FileText, Users,
->>>>>>> Stashed changes
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import {

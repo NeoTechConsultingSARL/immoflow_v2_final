@@ -67,7 +67,7 @@ const Index = ({ clients, filters }: ClientsProps) => {
     if (searchTerm) params.append('search', searchTerm);
     if (typeFilter) params.append('type', typeFilter);
     
-    router.get(route('clients.index'), params.toString(), {
+    router.get(route('clients.index') + '?' + params.toString(), {}, {
       preserveScroll: true,
       preserveState: true,
     });

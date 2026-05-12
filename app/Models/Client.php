@@ -5,10 +5,7 @@ namespace App\Models;
 use App\Enums\ClientType;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-<<<<<<< Updated upstream
-=======
 use Illuminate\Database\Eloquent\Relations\HasMany;
->>>>>>> Stashed changes
 
 class Client extends Model
 {
@@ -22,8 +19,6 @@ class Client extends Model
         'address',
         'type',
     ];
-<<<<<<< Updated upstream
-=======
 
     protected $casts = [
         'type' => ClientType::class,
@@ -33,5 +28,4 @@ class Client extends Model
     {
         return $this->hasMany(Contract::class);
     }
->>>>>>> Stashed changes
 }
