@@ -2,32 +2,14 @@
 
 namespace App\Http\Controllers;
 
-<<<<<<< Updated upstream
-use App\Http\Requests\ClientRequest;
-use App\Models\Client;
-use Illuminate\Http\RedirectResponse;
-use Inertia\Inertia;
-use Inertia\Response;
-=======
 use App\Models\Client;
 use Illuminate\Http\Request;
-use Inertia\Inertia;
 use Illuminate\Validation\Rule;
->>>>>>> Stashed changes
+use Inertia\Inertia;
 
 class ClientController extends Controller
 {
     /**
-<<<<<<< Updated upstream
-     * Display a listing of clients.
-     */
-    public function index(): Response
-    {
-        $clients = Client::orderBy('full_name', 'asc')->get();
-
-        return Inertia::render('Clients', [
-            'clients' => $clients,
-=======
      * Display a listing of the resource.
      */
     public function index(Request $request)
@@ -39,9 +21,9 @@ class ClientController extends Controller
             $search = $request->get('search');
             $query->where(function ($q) use ($search) {
                 $q->where('full_name', 'like', "%{$search}%")
-                  ->orWhere('email', 'like', "%{$search}%")
-                  ->orWhere('phone', 'like', "%{$search}%")
-                  ->orWhere('identity_number', 'like', "%{$search}%");
+                    ->orWhere('email', 'like', "%{$search}%")
+                    ->orWhere('phone', 'like', "%{$search}%")
+                    ->orWhere('identity_number', 'like', "%{$search}%");
             });
         }
 
@@ -55,21 +37,10 @@ class ClientController extends Controller
         return Inertia::render('Clients/Index', [
             'clients' => $clients,
             'filters' => $request->only(['search', 'type']),
->>>>>>> Stashed changes
         ]);
     }
 
     /**
-<<<<<<< Updated upstream
-     * Store a newly created client.
-     */
-    public function store(ClientRequest $request): RedirectResponse
-    {
-        Client::create($request->validated());
-
-        return redirect()
-            ->route('clients')
-=======
      * Show the form for creating a new resource.
      */
     public function create()
@@ -94,30 +65,17 @@ class ClientController extends Controller
         Client::create($validated);
 
         return redirect()->route('clients.index')
->>>>>>> Stashed changes
             ->with('success', 'Client created successfully.');
     }
 
     /**
-<<<<<<< Updated upstream
-     * Update the specified client.
-     */
-    public function update(ClientRequest $request, Client $client): RedirectResponse
-    {
-        $client->update($request->validated());
-
-        return redirect()
-            ->route('clients')
-            ->with('success', 'Client updated successfully.');
-    }
-=======
      * Display the specified resource.
      */
     public function show(Client $client)
     {
         $client->load(['contracts' => function ($query) {
             $query->with(['property.bloc.tranche.project.company'])
-                  ->latest();
+                ->latest();
         }]);
 
         return Inertia::render('Clients/Show', [
@@ -165,13 +123,4 @@ class ClientController extends Controller
             ->with('success', 'Client updated successfully.');
     }
 
-    /**
-     * Remove the specified resource from storage.
-     * NOTE: Destroy method is intentionally not implemented as per requirements
-     */
-    // public function destroy(Client $client)
-    // {
-    //     // No delete functionality allowed
-    // }
->>>>>>> Stashed changes
 }

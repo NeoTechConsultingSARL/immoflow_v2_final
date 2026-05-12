@@ -27,7 +27,7 @@ class ClientFactory extends Factory
             'phone' => $this->faker->phoneNumber(),
             'identity_number' => strtoupper($this->faker->unique()->bothify('??######')),
             'address' => $this->faker->address(),
-            'type' => $this->faker->randomElement(['Lead', 'Prospect', 'Owner']),
+            'type' => $this->faker->randomElement(['lead', 'prospect', 'owner']),
         ];
     }
 }

@@ -65,7 +65,7 @@ const Index = ({ clients, filters }: ClientsProps) => {
   const handleSearch = () => {
     const params = new URLSearchParams();
     if (searchTerm) params.append('search', searchTerm);
-    if (typeFilter) params.append('type', typeFilter);
+    if (typeFilter && typeFilter !== 'all') params.append('type', typeFilter);
     
     router.get(route('clients.index') + '?' + params.toString(), {}, {
       preserveScroll: true,
@@ -144,7 +144,7 @@ const Index = ({ clients, filters }: ClientsProps) => {
                     <SelectValue placeholder="Filter by type" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All Types</SelectItem>
+                    <SelectItem value="all">All Types</SelectItem>
                     {Object.entries(typeLabels).map(([value, label]) => (
                       <SelectItem key={value} value={value}>{label}</SelectItem>
                     ))}
