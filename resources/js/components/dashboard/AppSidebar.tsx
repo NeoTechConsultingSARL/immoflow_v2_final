@@ -38,7 +38,6 @@ const getNavSections = (user: any) => {
         { title: "Projects", url: "/projects", icon: ShoppingCart },
         { title: "Tranches", url: "/tranches", icon: Truck },
         { title: "Blocs", url: "/blocs", icon: Wallet },
-        { title: "Contracts", url: "/contracts", icon: FileText },
         { title: "Clients", url: "/clients", icon: Users },
       ],
     });

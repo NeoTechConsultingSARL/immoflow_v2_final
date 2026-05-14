@@ -3,6 +3,7 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/dashboard/AppSidebar";
 import { Home, DollarSign, Users, XCircle, Briefcase, BarChart3, Building, Car, GitBranch, HardHat, FileText, ChevronRight } from "lucide-react";
 import { AppBreadcrumb } from "@/components/AppBreadcrumb";
+import { toast } from "@/hooks/use-toast";
 
 const tiles = [
   { id: "properties", label: "List Properties", description: "Browse and manage all property units", icon: Home, bg: "bg-card", hoverBg: "hover:bg-gradient-to-br hover:from-emerald-500/80 hover:to-emerald-700/80", iconColor: "text-emerald-600", hoverIconColor: "group-hover:text-white", textColor: "text-foreground", hoverTextColor: "group-hover:text-white/90", subTextColor: "text-muted-foreground", hoverSubTextColor: "group-hover:text-white/60", iconWrapBg: "bg-emerald-500/10", hoverIconWrapBg: "group-hover:bg-white/10" },
@@ -37,6 +38,12 @@ const ProjectManagement = () => {
   const handleTileClick = (tileId: string) => {
     if (tileId === "properties") {
       router.visit(`/property-types?project=${projectId}&name=${encodeURIComponent(projectName)}${companyQuery}${trancheQuery}${blocQuery}`);
+    } else if (tileId === "clients") {
+      if (blocId) {
+        router.visit(`/blocs/${blocId}/contracts?project=${projectId}&name=${encodeURIComponent(projectName)}${companyQuery}${trancheQuery}&bloc=${blocId}&blocName=${encodeURIComponent(blocName)}`);
+      } else {
+        toast({ title: "Please select a bloc first to manage contracts", variant: "destructive" });
+      }
     }
     // Other tiles can be wired up later
   };

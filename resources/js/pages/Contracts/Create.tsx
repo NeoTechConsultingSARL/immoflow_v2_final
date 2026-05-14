@@ -13,11 +13,12 @@ interface CreateProps {
   companies: any[];
   clients: any[];
   contract?: any;
+  bloc?: any;
 }
 
-const Create = ({ companies, clients, contract }: CreateProps) => {
+const Create = ({ companies, clients, contract, bloc }: CreateProps) => {
   const isEditing = !!contract;
-  
+
   const { data, setData, post, put, processing, errors } = useForm({
     client_id: contract?.client_id?.toString() || "",
     property_id: contract?.property_id?.toString() || "",
@@ -25,10 +26,10 @@ const Create = ({ companies, clients, contract }: CreateProps) => {
     price: contract?.price || "",
     date: contract?.date || "",
     // temporary states for cascading
-    company_id: contract?.property?.bloc?.tranche?.project?.company_id?.toString() || "",
-    project_id: contract?.property?.bloc?.tranche?.project_id?.toString() || "",
-    tranche_id: contract?.property?.bloc?.tranche_id?.toString() || "",
-    bloc_id: contract?.property?.bloc_id?.toString() || "",
+    company_id: contract?.property?.bloc?.tranche?.project?.company_id?.toString() || bloc?.tranche?.project?.company_id?.toString() || "",
+    project_id: contract?.property?.bloc?.tranche?.project_id?.toString() || bloc?.tranche?.project_id?.toString() || "",
+    tranche_id: contract?.property?.bloc?.tranche_id?.toString() || bloc?.tranche_id?.toString() || "",
+    bloc_id: contract?.property?.bloc_id?.toString() || bloc?.id?.toString() || "",
   });
 
   const [projects, setProjects] = useState<any[]>([]);
@@ -83,9 +84,9 @@ const Create = ({ companies, clients, contract }: CreateProps) => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (isEditing) {
-      put(route('contracts.update', contract.id));
+      put(route('blocs.contracts.update', [bloc.id, contract.id]));
     } else {
-      post(route('contracts.store'));
+      post(route('blocs.contracts.store', bloc.id));
     }
   };
 
@@ -206,7 +207,7 @@ const Create = ({ companies, clients, contract }: CreateProps) => {
               </div>
 
               <div className="flex justify-end gap-3 pt-4 border-t">
-                <Button type="button" variant="outline" onClick={() => router.visit(route('contracts.index'))}>Cancel</Button>
+                <Button type="button" variant="outline" onClick={() => router.visit(route('blocs.contracts.index', bloc.id))}>Cancel</Button>
                 <Button type="submit" disabled={processing} style={{ background: "hsl(var(--accent))", color: "hsl(var(--accent-foreground))" }}>
                   {isEditing ? "Update Contract" : "Create Contract"}
                 </Button>
