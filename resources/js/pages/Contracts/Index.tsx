@@ -43,6 +43,19 @@ interface ContractsProps {
   contracts: { data: Contract[]; current_page: number; last_page: number; };
   companies: any[];
   clients: any[];
+  bloc: {
+    id: string;
+    name: string;
+    tranche?: {
+      name: string;
+      project?: {
+        name: string;
+        company?: {
+          name: string;
+        }
+      }
+    }
+  };
 }
 
 const statusStyles: Record<string, string> = {
@@ -52,7 +65,7 @@ const statusStyles: Record<string, string> = {
   "draft": "bg-amber-500/10 text-amber-600 border-amber-200 dark:border-amber-800",
 };
 
-const Index = ({ contracts, companies, clients }: ContractsProps) => {
+const Index = ({ contracts, companies, clients, bloc }: ContractsProps) => {
   const { flash } = usePage().props as any;
   const [viewMode, setViewMode] = useState<"card" | "table">("table");
   const [modalOpen, setModalOpen] = useState(false);
@@ -106,8 +119,8 @@ const Index = ({ contracts, companies, clients }: ContractsProps) => {
           <main className="flex-1 p-6 lg:p-8 max-w-[1400px] animate-in fade-in slide-in-from-bottom-1 duration-400">
             <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-6">
               <div>
-                <h2 className="font-display text-[1.75rem] xl:text-[2rem] font-bold">Manage Contracts</h2>
-                <p className="text-[0.9375rem] text-muted-foreground">Manage client contracts and property reservations.</p>
+                <h2 className="font-display text-[1.75rem] xl:text-[2rem] font-bold">Contracts - {bloc?.name}</h2>
+                <p className="text-[0.9375rem] text-muted-foreground">Manage client contracts and property reservations for this bloc.</p>
               </div>
               <div className="flex items-center gap-3 self-start sm:self-auto">
                 <ToggleGroup type="single" value={viewMode} onValueChange={(v) => v && setViewMode(v as "card" | "table")} className="bg-muted rounded-lg p-0.5">
@@ -124,7 +137,7 @@ const Index = ({ contracts, companies, clients }: ContractsProps) => {
             {viewMode === "card" && (
               <div className="flex flex-col gap-3">
                 {contracts.data.map((contract) => (
-                  <div key={contract.id} className="bg-card border border-border rounded-xl shadow-[var(--shadow-card)] overflow-hidden hover:shadow-[var(--shadow-elevated)] transition-shadow duration-300 flex items-center gap-4 p-4 cursor-pointer" onClick={() => router.visit(route('contracts.show', contract.id))}>
+                  <div key={contract.id} className="bg-card border border-border rounded-xl shadow-[var(--shadow-card)] overflow-hidden hover:shadow-[var(--shadow-elevated)] transition-shadow duration-300 flex items-center gap-4 p-4 cursor-pointer" onClick={() => router.visit(route('blocs.contracts.show', [bloc.id, contract.id]))}>
                     <div className="flex-1 min-w-0">
                       <h3 className="font-display text-sm font-bold leading-tight truncate">{contract.client?.full_name}</h3>
                       <p className="text-xs text-muted-foreground mt-0.5 truncate">{getFullPropertyPath(contract.property)}</p>
@@ -158,7 +171,7 @@ const Index = ({ contracts, companies, clients }: ContractsProps) => {
                   </TableHeader>
                   <TableBody>
                     {contracts.data.map((contract) => (
-                      <TableRow key={contract.id} className="cursor-pointer" onClick={() => router.visit(route('contracts.show', contract.id))}>
+                      <TableRow key={contract.id} className="cursor-pointer" onClick={() => router.visit(route('blocs.contracts.show', [bloc.id, contract.id]))}>
                         <TableCell className="font-semibold">{contract.client?.full_name}</TableCell>
                         <TableCell className="text-muted-foreground max-w-[300px] truncate" title={getFullPropertyPath(contract.property)}>
                           {getFullPropertyPath(contract.property)}
@@ -176,10 +189,10 @@ const Index = ({ contracts, companies, clients }: ContractsProps) => {
                               <Pencil className="w-3.5 h-3.5" />
                             </Button>
 
-                            <Button variant="ghost" size="icon" className="h-7 w-7 text-rose-500 hover:text-rose-600 hover:bg-rose-50" onClick={(e) => { 
-                              e.stopPropagation(); 
+                            <Button variant="ghost" size="icon" className="h-7 w-7 text-rose-500 hover:text-rose-600 hover:bg-rose-50" onClick={(e) => {
+                              e.stopPropagation();
                               if(confirm('Are you sure you want to delete this contract?')) {
-                                router.delete(route('contracts.destroy', contract.id));
+                                router.delete(route('blocs.contracts.destroy', [bloc.id, contract.id]));
                               }
                             }}>
                               <Trash className="w-3.5 h-3.5" />
@@ -214,6 +227,7 @@ const Index = ({ contracts, companies, clients }: ContractsProps) => {
         companies={companies}
         clients={clients}
         contract={editingContract}
+        bloc={bloc}
         onSuccess={() => router.reload()}
       />
     </SidebarProvider>

@@ -13,12 +13,32 @@ interface BreadcrumbEntry {
   href?: string;
 }
 
-export function AppBreadcrumb() {
-  const { url } = usePage();
+interface AppBreadcrumbProps {
+  contractPath?: string;
+  hierarchyData?: {
+    companyId?: number;
+    companyName?: string;
+    projectId?: number;
+    projectName?: string;
+    trancheId?: number;
+    trancheName?: string;
+    blocId?: number;
+    blocName?: string;
+  };
+}
+
+export function AppBreadcrumb({ contractPath, hierarchyData }: AppBreadcrumbProps = {}) {
+  const { url, props } = usePage();
   const location = new URL(url || "/", window.location.origin);
   const searchParams = location.searchParams;
   const path = location.pathname;
   const pathParts = path.split('/');
+
+  // Use contractPath from props if available (for contract details page)
+  const propertyPath = contractPath || (props as any)?.path || '';
+
+  // Use hierarchyData from props or extract from page props
+  const data = hierarchyData || (props as any)?.hierarchyData || {};
 
   let projectId = searchParams.get("project") || "";
   if (path.startsWith("/management/") || path.match(/^\/projects\/[^/]+\/(blocs|tranches)/)) {
@@ -157,6 +177,77 @@ export function AppBreadcrumb() {
     crumbs.push({ label: "Activity History" });
   } else if (path === "/news") {
     crumbs.push({ label: "News" });
+  } else if (path.match(/^\/blocs\/\d+\/contracts$/)) {
+    crumbs.push({ label: "Companies", href: "/companies" });
+    if (companyId) {
+      crumbs.push({ label: decodeURIComponent(companyName), href: `/projects${companyQuery}` });
+    } else {
+      crumbs.push({ label: "Projects", href: "/projects" });
+    }
+    if (projectId) {
+      crumbs.push({ label: decodeURIComponent(projectName), href: tranchesHref });
+      if (trancheId) crumbs.push({ label: decodeURIComponent(trancheName), href: blocsHref });
+      if (blocId) crumbs.push({ label: decodeURIComponent(blocName), href: pmHref });
+    }
+    crumbs.push({ label: "Contracts" });
+  } else if (path.match(/^\/blocs\/\d+\/contracts\/\d+$/)) {
+    // Use property hierarchy from contract if available
+    if (propertyPath && data.companyId) {
+      const hierarchyParts = propertyPath.split(' > ');
+      const { companyId, companyName, projectId, projectName, trancheId, trancheName, blocId, blocName } = data;
+
+      // Company
+      if (companyName) {
+        crumbs.push({ label: companyName, href: `/companies` });
+      }
+      // Project
+      if (projectName && companyId) {
+        crumbs.push({ label: projectName, href: `/projects?company=${companyId}&companyName=${encodeURIComponent(companyName)}` });
+      }
+      // Tranche
+      if (trancheName && projectId) {
+        crumbs.push({ label: trancheName, href: `/tranches?project=${projectId}&name=${encodeURIComponent(projectName)}&company=${companyId}&companyName=${encodeURIComponent(companyName)}` });
+      }
+      // Bloc
+      if (blocName && trancheId) {
+        crumbs.push({ label: blocName, href: `/blocs?project=${projectId}&name=${encodeURIComponent(projectName)}&company=${companyId}&companyName=${encodeURIComponent(companyName)}&tranche=${trancheId}&trancheName=${encodeURIComponent(trancheName)}` });
+      }
+      // Property (last part of hierarchy before Contracts)
+      if (hierarchyParts.length > 4) {
+        const propertyName = hierarchyParts[4];
+        crumbs.push({ label: propertyName });
+      }
+      // Contracts link
+      if (blocId) {
+        const contractsQuery = new URLSearchParams();
+        if (companyId) contractsQuery.set('company', companyId.toString());
+        if (companyName) contractsQuery.set('companyName', companyName);
+        if (projectId) contractsQuery.set('project', projectId.toString());
+        if (projectName) contractsQuery.set('name', projectName);
+        if (trancheId) contractsQuery.set('tranche', trancheId.toString());
+        if (trancheName) contractsQuery.set('trancheName', trancheName);
+        if (blocName) contractsQuery.set('blocName', blocName);
+        crumbs.push({ label: "Contracts", href: `/blocs/${blocId}/contracts${contractsQuery.toString() ? '?' + contractsQuery.toString() : ''}` });
+      } else {
+        crumbs.push({ label: "Contracts" });
+      }
+      crumbs.push({ label: "Details" });
+    } else {
+      // Fallback to URL parameters
+      crumbs.push({ label: "Companies", href: "/companies" });
+      if (companyId) {
+        crumbs.push({ label: decodeURIComponent(companyName), href: `/projects${companyQuery}` });
+      } else {
+        crumbs.push({ label: "Projects", href: "/projects" });
+      }
+      if (projectId) {
+        crumbs.push({ label: decodeURIComponent(projectName), href: tranchesHref });
+        if (trancheId) crumbs.push({ label: decodeURIComponent(trancheName), href: blocsHref });
+        if (blocId) crumbs.push({ label: decodeURIComponent(blocName), href: `/blocs/${blocId}/contracts${companyQueryAmp ? '&' + companyQueryAmp.slice(1) : ''}${trancheQuery}` });
+      }
+      crumbs.push({ label: "Contracts", href: `/blocs/${blocId}/contracts${companyQueryAmp ? '?' + companyQueryAmp.slice(1) : ''}${trancheQuery}${blocQuery}` });
+      crumbs.push({ label: "Details" });
+    }
   }
 
   if (crumbs.length === 0) return null;

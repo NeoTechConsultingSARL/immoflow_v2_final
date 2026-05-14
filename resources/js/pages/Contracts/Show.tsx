@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 interface ContractProps {
   contract: any;
   path: string;
+  bloc: any;
 }
 
 const statusStyles: Record<string, string> = {
@@ -18,8 +19,20 @@ const statusStyles: Record<string, string> = {
   "draft": "bg-gradient-to-r from-amber-500/20 to-amber-600/20 text-amber-600 dark:text-amber-400 border-amber-300 dark:border-amber-700 shadow-lg shadow-amber-500/20",
 };
 
-const Show = ({ contract, path }: ContractProps) => {
+const Show = ({ contract, path, bloc }: ContractProps) => {
   const parts = path.split(' > ');
+
+  // Extract hierarchy data for breadcrumb
+  const hierarchyData = contract?.property?.bloc ? {
+    companyId: contract.property.bloc.tranche?.project?.company?.id,
+    companyName: contract.property.bloc.tranche?.project?.company?.name,
+    projectId: contract.property.bloc.tranche?.project?.id,
+    projectName: contract.property.bloc.tranche?.project?.name,
+    trancheId: contract.property.bloc.tranche?.id,
+    trancheName: contract.property.bloc.tranche?.name,
+    blocId: contract.property.bloc?.id,
+    blocName: contract.property.bloc?.name,
+  } : {};
 
   return (
     <SidebarProvider>
@@ -29,10 +42,10 @@ const Show = ({ contract, path }: ContractProps) => {
           <header className="h-16 bg-gradient-to-r from-card to-card/95 backdrop-blur-sm border-b border-border/50 flex items-center justify-between px-6 sticky top-0 z-40 shadow-sm">
             <div className="flex items-center gap-4">
               <SidebarTrigger className="lg:hidden" />
-              <AppBreadcrumb />
+              <AppBreadcrumb contractPath={path} hierarchyData={hierarchyData} />
             </div>
             <div className="flex items-center gap-2">
-                <Button variant="outline" onClick={() => window.open(route('contracts.pdf', contract.id), '_blank')} className="gap-2 border-primary/50 text-primary hover:bg-primary hover:text-primary-foreground hover:border-primary transition-all duration-200 shadow-md hover:shadow-lg">
+                <Button variant="outline" onClick={() => window.open(route('blocs.contracts.pdf', [bloc.id, contract.id]), '_blank')} className="gap-2 border-primary/50 text-primary hover:bg-primary hover:text-primary-foreground hover:border-primary transition-all duration-200 shadow-md hover:shadow-lg">
                     <FileText className="w-4 h-4" /> Generate PDF
                 </Button>
             </div>
