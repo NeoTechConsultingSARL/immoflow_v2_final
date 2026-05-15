@@ -13,6 +13,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
+use App\Services\ContractPdfService;
 
 class ContractController extends Controller
 {
@@ -141,13 +142,31 @@ class ContractController extends Controller
         return redirect()->route('blocs.contracts.index', $bloc->id)->with('success', 'Contract deleted successfully.');
     }
 
-    public function generatePdf(Bloc $bloc, Contract $contract)
+    public function generatePdf(Bloc $bloc, Contract $contract, ContractPdfService $pdfService)
     {
         $contract->load(['client', 'property.bloc.tranche.project.company']);
 
-        $pdf = Pdf::loadView('contracts.pdf', compact('contract'));
+        $clauses = $pdfService->getClauses($contract);
 
-        $fileName = 'Contract_'.$contract->id.'_'.Str::slug($contract->client->full_name).'.pdf';
+        $pdf = Pdf::loadView('contracts.pdf', compact('contract', 'clauses'));
+
+        $contractNumber = 'ct' . $contract->id;
+        
+        $projectName = '';
+        if ($contract->property && $contract->property->bloc && $contract->property->bloc->tranche && $contract->property->bloc->tranche->project) {
+            $projectName = $contract->property->bloc->tranche->project->name;
+        }
+        $projectName = strtolower(preg_replace('/\s+/', '', $projectName));
+        
+        $clientName = '';
+        if ($contract->client) {
+            $clientName = $contract->client->full_name;
+        }
+        $clientName = strtolower(preg_replace('/\s+/', '', $clientName));
+        
+        $date = $contract->date ? \Carbon\Carbon::parse($contract->date)->format('dmY') : now()->format('dmY');
+
+        $fileName = 'contrat_' . $contractNumber . '_' . $projectName . '_' . $clientName . '_' . $date . '.pdf';
 
         return $pdf->download($fileName);
     }
