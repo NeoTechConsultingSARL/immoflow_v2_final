@@ -21,9 +21,10 @@ interface ContractFormModalProps {
   clients: any[];
   contract?: any;
   onSuccess?: () => void;
+  bloc?: any;
 }
 
-const ContractFormModal = ({ open, onOpenChange, companies, clients, contract, onSuccess }: ContractFormModalProps) => {
+const ContractFormModal = ({ open, onOpenChange, companies, clients, contract, onSuccess, bloc }: ContractFormModalProps) => {
   const isEditing = !!contract;
 
   const { data, setData, post, put, processing, errors, reset, setData: setFormData } = useForm({
@@ -33,10 +34,10 @@ const ContractFormModal = ({ open, onOpenChange, companies, clients, contract, o
     price: contract?.price || "",
     date: contract?.date || "",
     // temporary states for cascading
-    company_id: contract?.property?.bloc?.tranche?.project?.company_id?.toString() || "",
-    project_id: contract?.property?.bloc?.tranche?.project_id?.toString() || "",
-    tranche_id: contract?.property?.bloc?.tranche_id?.toString() || "",
-    bloc_id: contract?.property?.bloc_id?.toString() || "",
+    company_id: contract?.property?.bloc?.tranche?.project?.company_id?.toString() || bloc?.tranche?.project?.company_id?.toString() || "",
+    project_id: contract?.property?.bloc?.tranche?.project_id?.toString() || bloc?.tranche?.project_id?.toString() || "",
+    tranche_id: contract?.property?.bloc?.tranche_id?.toString() || bloc?.tranche_id?.toString() || "",
+    bloc_id: contract?.property?.bloc_id?.toString() || bloc?.id?.toString() || "",
   });
 
   // Update form data when contract changes
@@ -126,7 +127,7 @@ const ContractFormModal = ({ open, onOpenChange, companies, clients, contract, o
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (isEditing) {
-      put(route('contracts.update', contract.id), {
+      put(route('blocs.contracts.update', [bloc.id, contract.id]), {
         onSuccess: () => {
           onOpenChange(false);
           onSuccess?.();
@@ -134,7 +135,7 @@ const ContractFormModal = ({ open, onOpenChange, companies, clients, contract, o
         },
       });
     } else {
-      post(route('contracts.store'), {
+      post(route('blocs.contracts.store', bloc.id), {
         onSuccess: () => {
           onOpenChange(false);
           onSuccess?.();

@@ -2,32 +2,27 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Contract;
+use App\Models\Bloc;
+use App\Models\Client;
 use App\Models\Company;
+use App\Models\Contract;
 use App\Models\Project;
 use App\Models\Tranche;
-use App\Models\Bloc;
-use App\Models\Property;
-use App\Models\Client;
-use Illuminate\Http\Request;
-use Inertia\Inertia;
-use Illuminate\Support\Facades\DB;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Inertia\Inertia;
+use App\Services\ContractPdfService;
 
 class ContractController extends Controller
 {
-    public function index(Request $request)
+    public function index(Request $request, Bloc $bloc)
     {
-        $query = Contract::with(['client', 'property.bloc.tranche.project.company']);
-
-        if ($request->has('company_id')) {
-            $query->byCompany($request->company_id);
-        }
-
-        if ($request->has('project_id')) {
-            $query->byProject($request->project_id);
-        }
+        $query = Contract::with(['client', 'property.bloc.tranche.project.company'])
+            ->whereHas('property', function ($q) use ($bloc) {
+                $q->where('bloc_id', $bloc->id);
+            });
 
         $contracts = $query->latest()->paginate(10);
 
@@ -35,18 +30,20 @@ class ContractController extends Controller
             'contracts' => $contracts,
             'companies' => Company::all(),
             'clients' => Client::all(),
+            'bloc' => $bloc->load('tranche.project.company'),
         ]);
     }
 
-    public function create()
+    public function create(Bloc $bloc)
     {
         return Inertia::render('Contracts/Create', [
             'companies' => Company::all(),
             'clients' => Client::all(),
+            'bloc' => $bloc->load('tranche.project.company'),
         ]);
     }
 
-    public function store(Request $request)
+    public function store(Request $request, Bloc $bloc)
     {
         $validated = $request->validate([
             'client_id' => 'required|exists:clients,id',
@@ -64,10 +61,10 @@ class ContractController extends Controller
             }
         });
 
-        return redirect()->route('contracts.index')->with('success', 'Contract created successfully.');
+        return redirect()->route('blocs.contracts.index', $bloc->id)->with('success', 'Contract created successfully.');
     }
 
-    public function show(Contract $contract)
+    public function show(Bloc $bloc, Contract $contract)
     {
         $contract->load(['client', 'property.bloc.tranche.project.company']);
 
@@ -81,10 +78,18 @@ class ContractController extends Controller
             $company = $project ? $project->company : null;
 
             $parts = [];
-            if ($company) $parts[] = $company->name;
-            if ($project) $parts[] = $project->name;
-            if ($tranche) $parts[] = $tranche->name;
-            if ($bloc) $parts[] = $bloc->name;
+            if ($company) {
+                $parts[] = $company->name;
+            }
+            if ($project) {
+                $parts[] = $project->name;
+            }
+            if ($tranche) {
+                $parts[] = $tranche->name;
+            }
+            if ($bloc) {
+                $parts[] = $bloc->name;
+            }
             $parts[] = $property->name;
 
             $path = implode(' > ', $parts);
@@ -93,20 +98,23 @@ class ContractController extends Controller
         return Inertia::render('Contracts/Show', [
             'contract' => $contract,
             'path' => $path,
+            'bloc' => $bloc->load('tranche.project.company'),
         ]);
     }
 
-    public function edit(Contract $contract)
+    public function edit(Bloc $bloc, Contract $contract)
     {
         $contract->load(['property.bloc.tranche.project.company']);
+
         return Inertia::render('Contracts/Create', [
             'contract' => $contract,
             'companies' => Company::all(),
             'clients' => Client::all(),
+            'bloc' => $bloc->load('tranche.project.company'),
         ]);
     }
 
-    public function update(Request $request, Contract $contract)
+    public function update(Request $request, Bloc $bloc, Contract $contract)
     {
         $validated = $request->validate([
             'client_id' => 'required|exists:clients,id',
@@ -120,27 +128,46 @@ class ContractController extends Controller
 
         if ($contract->status === 'active') {
             $contract->property->update(['status' => 'Reserved']);
-        } else if ($contract->status === 'cancelled') {
+        } elseif ($contract->status === 'cancelled') {
             $contract->property->update(['status' => 'Available']); // Assuming 'Available' is a valid status
         }
 
-        return redirect()->route('contracts.index')->with('success', 'Contract updated successfully.');
+        return redirect()->route('blocs.contracts.index', $bloc->id)->with('success', 'Contract updated successfully.');
     }
 
-    public function destroy(Contract $contract)
+    public function destroy(Bloc $bloc, Contract $contract)
     {
         $contract->delete(); // Soft delete
-        return redirect()->route('contracts.index')->with('success', 'Contract deleted successfully.');
+
+        return redirect()->route('blocs.contracts.index', $bloc->id)->with('success', 'Contract deleted successfully.');
     }
 
-    public function generatePdf(Contract $contract)
+    public function generatePdf(Bloc $bloc, Contract $contract, ContractPdfService $pdfService)
     {
         $contract->load(['client', 'property.bloc.tranche.project.company']);
+
+        $clauses = $pdfService->getClauses($contract);
+
+        $pdf = Pdf::loadView('contracts.pdf', compact('contract', 'clauses'));
+
+        $contractNumber = 'ct' . $contract->id;
         
-        $pdf = Pdf::loadView('contracts.pdf', compact('contract'));
+        $projectName = '';
+        if ($contract->property && $contract->property->bloc && $contract->property->bloc->tranche && $contract->property->bloc->tranche->project) {
+            $projectName = $contract->property->bloc->tranche->project->name;
+        }
+        $projectName = strtolower(preg_replace('/\s+/', '', $projectName));
         
-        $fileName = 'Contract_' . $contract->id . '_' . Str::slug($contract->client->full_name) . '.pdf';
+        $clientName = '';
+        if ($contract->client) {
+            $clientName = $contract->client->full_name;
+        }
+        $clientName = strtolower(preg_replace('/\s+/', '', $clientName));
         
+        $date = $contract->date ? \Carbon\Carbon::parse($contract->date)->format('dmY') : now()->format('dmY');
+
+        $fileName = 'contrat_' . $contractNumber . '_' . $projectName . '_' . $clientName . '_' . $date . '.pdf';
+
         return $pdf->download($fileName);
     }
 
