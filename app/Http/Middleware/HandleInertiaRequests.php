@@ -35,6 +35,12 @@ class HandleInertiaRequests extends Middleware
             'auth' => [
                 'user' => $request->user(),
             ],
+            'flash' => [
+                'status' => fn () => $request->session()->get('status'),
+                'two_factor_secret' => fn () => $request->session()->get('two_factor_secret'),
+                'two_factor_qr_url' => fn () => $request->session()->get('two_factor_qr_url'),
+                'two_factor_recovery_codes' => fn () => $request->session()->get('two_factor_recovery_codes'),
+            ],
             'ziggy' => fn () => [
                 ...(new Ziggy)->toArray(),
                 'location' => $request->url(),
