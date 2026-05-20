@@ -1,7 +1,7 @@
 import { router, usePage, useForm } from "@inertiajs/react";
 import { PageProps as InertiaPageProps } from "@inertiajs/core";
 import { useState, useEffect } from "react";
-import { Building2, Plus, Pencil, MapPin, Phone, Mail, Globe } from "lucide-react";
+import { Building2, Plus, Pencil, MapPin, Phone, Mail, Globe, Printer } from "lucide-react";
 import { AppBreadcrumb } from "@/components/AppBreadcrumb";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/dashboard/AppSidebar";
@@ -24,6 +24,10 @@ interface Company {
   phone?: string;
   website?: string;
   properties: number;
+  rc?: string;
+  if?: string;
+  patent?: string;
+  fax?: string;
   created_at: string;
 }
 
@@ -59,6 +63,10 @@ const Companies = () => {
     phone: "",
     website: "",
     properties: 0,
+    rc: "",
+    if: "",
+    patent: "",
+    fax: "",
   });
 
   const openCreate = () => {
@@ -79,6 +87,10 @@ const Companies = () => {
       phone: company.phone || "",
       website: company.website || "",
       properties: company.properties,
+      rc: company.rc || "",
+      if: company.if || "",
+      patent: company.patent || "",
+      fax: company.fax || "",
     });
     clearErrors();
     setDialogOpen(true);
@@ -172,6 +184,12 @@ const Companies = () => {
                           <span>{company.phone}</span>
                         </div>
                       )}
+                      {company.fax && (
+                        <div className="flex items-center gap-2.5 text-sm text-muted-foreground">
+                          <Printer className="w-4 h-4 shrink-0" />
+                          <span>{company.fax}</span>
+                        </div>
+                      )}
                       {company.email && (
                         <div className="flex items-center gap-2.5 text-sm text-muted-foreground">
                           <Mail className="w-4 h-4 shrink-0" />
@@ -182,6 +200,28 @@ const Companies = () => {
                         <div className="flex items-center gap-2.5 text-sm text-muted-foreground">
                           <Globe className="w-4 h-4 shrink-0" />
                           <span>{company.website}</span>
+                        </div>
+                      )}
+                      {(company.rc || company.if || company.patent) && (
+                        <div className="mt-3 pt-3 border-t border-border/50 grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs text-muted-foreground">
+                          {company.rc && (
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <span className="font-semibold text-foreground/70 shrink-0">RC:</span>
+                              <span className="truncate">{company.rc}</span>
+                            </div>
+                          )}
+                          {company.if && (
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <span className="font-semibold text-foreground/70 shrink-0">IF:</span>
+                              <span className="truncate">{company.if}</span>
+                            </div>
+                          )}
+                          {company.patent && (
+                            <div className="flex items-center gap-1.5 min-w-0 col-span-2">
+                              <span className="font-semibold text-foreground/70 shrink-0">Patent:</span>
+                              <span className="truncate">{company.patent}</span>
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
@@ -233,7 +273,7 @@ const Companies = () => {
           <DialogHeader>
             <DialogTitle className="font-display text-xl">{editing ? "Edit Company" : "New Company"}</DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleSave} className="grid gap-4 py-4">
+          <form onSubmit={handleSave} className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto pr-2">
             <div className="grid gap-2">
               <Label htmlFor="name">Company Name *</Label>
               <Input 
@@ -332,6 +372,54 @@ const Companies = () => {
                   className={cn(errors.properties && "border-destructive")}
                 />
                 {errors.properties && <p className="text-xs text-destructive">{errors.properties}</p>}
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="rc">RC (Registre de Commerce)</Label>
+                <Input 
+                  id="rc" 
+                  value={data.rc} 
+                  onChange={e => setData("rc", e.target.value)} 
+                  placeholder="e.g. 123456" 
+                  className={cn(errors.rc && "border-destructive")}
+                />
+                {errors.rc && <p className="text-xs text-destructive">{errors.rc}</p>}
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="if">IF (Identifiant Fiscal)</Label>
+                <Input 
+                  id="if" 
+                  value={data.if} 
+                  onChange={e => setData("if", e.target.value)} 
+                  placeholder="e.g. 789012" 
+                  className={cn(errors.if && "border-destructive")}
+                />
+                {errors.if && <p className="text-xs text-destructive">{errors.if}</p>}
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="patent">Patent</Label>
+                <Input 
+                  id="patent" 
+                  value={data.patent} 
+                  onChange={e => setData("patent", e.target.value)} 
+                  placeholder="e.g. 345678" 
+                  className={cn(errors.patent && "border-destructive")}
+                />
+                {errors.patent && <p className="text-xs text-destructive">{errors.patent}</p>}
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="fax">Fax</Label>
+                <Input 
+                  id="fax" 
+                  value={data.fax} 
+                  onChange={e => setData("fax", e.target.value)} 
+                  placeholder="e.g. +49 89 123 457" 
+                  className={cn(errors.fax && "border-destructive")}
+                />
+                {errors.fax && <p className="text-xs text-destructive">{errors.fax}</p>}
               </div>
             </div>
             {/* Submit button inside form for accessibility, hidden or same as footer */}

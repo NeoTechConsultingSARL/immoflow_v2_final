@@ -1,15 +1,16 @@
 <?php
 
 use App\Http\Controllers\BlocController;
+use App\Http\Controllers\ClientController;
 use App\Http\Controllers\CompanyController;
+use App\Http\Controllers\ContractArticleController;
+use App\Http\Controllers\ContractController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\PropertyController;
 use App\Http\Controllers\PropertyTypeController;
 use App\Http\Controllers\TrancheController;
 use App\Http\Controllers\UserController;
-use App\Http\Controllers\ClientController;
-use App\Http\Controllers\ContractController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -23,9 +24,18 @@ Route::middleware('auth')->group(function () {
         return Inertia::render('Dashboard');
     })->name('dashboard');
 
-    // Contracts
-    Route::resource('contracts', ContractController::class);
-    Route::get('/contracts/{contract}/pdf', [ContractController::class, 'generatePdf'])->name('contracts.pdf');
+    // Contracts - nested under blocs
+    Route::get('/blocs/{bloc}/contracts', [ContractController::class, 'index'])->name('blocs.contracts.index');
+    Route::get('/blocs/{bloc}/contracts/create', [ContractController::class, 'create'])->name('blocs.contracts.create');
+    Route::post('/blocs/{bloc}/contracts', [ContractController::class, 'store'])->name('blocs.contracts.store');
+    Route::get('/blocs/{bloc}/contracts/{contract}', [ContractController::class, 'show'])->name('blocs.contracts.show');
+    Route::get('/blocs/{bloc}/contracts/{contract}/edit', [ContractController::class, 'edit'])->name('blocs.contracts.edit');
+    Route::put('/blocs/{bloc}/contracts/{contract}', [ContractController::class, 'update'])->name('blocs.contracts.update');
+    Route::delete('/blocs/{bloc}/contracts/{contract}', [ContractController::class, 'destroy'])->name('blocs.contracts.destroy');
+    Route::get('/blocs/{bloc}/contracts/{contract}/pdf', [ContractController::class, 'generatePdf'])->name('blocs.contracts.pdf');
+
+    // Clients
+    Route::resource('clients', ClientController::class)->except(['destroy']);
     Route::get('/api/companies/{company}/projects', [ContractController::class, 'getProjects'])->name('api.companies.projects');
     Route::get('/api/projects/{project}/tranches', [ContractController::class, 'getTranches'])->name('api.projects.tranches');
     Route::get('/api/tranches/{tranche}/blocs', [ContractController::class, 'getBlocs'])->name('api.tranches.blocs');
@@ -137,6 +147,20 @@ Route::middleware('auth')->group(function () {
     Route::get('/settings/profiles/edit/{roleId}', function ($roleId) {
         return Inertia::render('CreateEditRole', ['roleId' => $roleId]);
     })->name('settings.profiles.edit')->middleware('role:admin');
+
+    // Contract Articles settings routes
+    Route::get('/settings/contract-articles', [ContractArticleController::class, 'index'])
+        ->name('settings.contract-articles.index')->middleware('role:admin');
+    Route::post('/settings/contract-articles', [ContractArticleController::class, 'store'])
+        ->name('settings.contract-articles.store')->middleware('role:admin');
+    Route::put('/settings/contract-articles/{contractArticle}', [ContractArticleController::class, 'update'])
+        ->name('settings.contract-articles.update')->middleware('role:admin');
+    Route::delete('/settings/contract-articles/{contractArticle}', [ContractArticleController::class, 'destroy'])
+        ->name('settings.contract-articles.destroy')->middleware('role:admin');
+    Route::patch('/settings/contract-articles/{contractArticle}/toggle-status', [ContractArticleController::class, 'toggleStatus'])
+        ->name('settings.contract-articles.toggle-status')->middleware('role:admin');
+    Route::post('/settings/contract-articles/reorder', [ContractArticleController::class, 'reorder'])
+        ->name('settings.contract-articles.reorder')->middleware('role:admin');
 
     Route::get('/history', function () {
         return Inertia::render('History');

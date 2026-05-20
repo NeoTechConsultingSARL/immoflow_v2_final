@@ -16,7 +16,7 @@ class CompanyController extends Controller
      */
     public function index(): Response
     {
-        $companies = Company::select('id', 'name', 'status', 'description', 'email', 'address', 'phone', 'website', 'properties', 'created_at')
+        $companies = Company::select('id', 'name', 'status', 'description', 'email', 'address', 'phone', 'website', 'properties', 'rc', 'if', 'patent', 'fax', 'created_at')
             ->orderBy('name', 'asc')
             ->get()
             ->map(function ($company) {
@@ -31,6 +31,10 @@ class CompanyController extends Controller
                     'phone' => $company->phone,
                     'website' => $company->website,
                     'properties' => $company->properties,
+                    'rc' => $company->rc,
+                    'if' => $company->if,
+                    'patent' => $company->patent,
+                    'fax' => $company->fax,
                     'created_at' => $company->created_at->format('Y-m-d'),
                 ];
             });
@@ -57,6 +61,10 @@ class CompanyController extends Controller
             'phone' => $validated['phone'] ?? null,
             'website' => $validated['website'] ?? null,
             'properties' => $validated['properties'] ?? 0,
+            'rc' => $validated['rc'] ?? null,
+            'if' => $validated['if'] ?? null,
+            'patent' => $validated['patent'] ?? null,
+            'fax' => $validated['fax'] ?? null,
         ]);
 
         return redirect()
@@ -80,6 +88,10 @@ class CompanyController extends Controller
             'phone' => $validated['phone'] ?? null,
             'website' => $validated['website'] ?? null,
             'properties' => $validated['properties'] ?? 0,
+            'rc' => $validated['rc'] ?? null,
+            'if' => $validated['if'] ?? null,
+            'patent' => $validated['patent'] ?? null,
+            'fax' => $validated['fax'] ?? null,
         ]);
 
         return redirect()

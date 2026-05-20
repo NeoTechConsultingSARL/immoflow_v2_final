@@ -1,6 +1,8 @@
 import { router, usePage, Link } from "@inertiajs/react";
 import { useState, useEffect } from "react";
+
 import { FolderKanban, Plus, Pencil, Building2, MapPin, Calendar, Euro, LayoutGrid, FileText, ClipboardList, X, Rows3, Table as TableIcon, Eye, Trash } from "lucide-react";
+
 import { AppBreadcrumb } from "@/components/AppBreadcrumb";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/dashboard/AppSidebar";
@@ -9,6 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
+import ContractFormModal from "@/components/ContractFormModal";
 
 interface Contract {
   id: number;
@@ -38,6 +41,21 @@ interface Contract {
 
 interface ContractsProps {
   contracts: { data: Contract[]; current_page: number; last_page: number; };
+  companies: any[];
+  clients: any[];
+  bloc: {
+    id: string;
+    name: string;
+    tranche?: {
+      name: string;
+      project?: {
+        name: string;
+        company?: {
+          name: string;
+        }
+      }
+    }
+  };
 }
 
 const statusStyles: Record<string, string> = {
@@ -47,9 +65,11 @@ const statusStyles: Record<string, string> = {
   "draft": "bg-amber-500/10 text-amber-600 border-amber-200 dark:border-amber-800",
 };
 
-const Index = ({ contracts }: ContractsProps) => {
+const Index = ({ contracts, companies, clients, bloc }: ContractsProps) => {
   const { flash } = usePage().props as any;
   const [viewMode, setViewMode] = useState<"card" | "table">("table");
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editingContract, setEditingContract] = useState<any>(null);
 
   useEffect(() => {
     if (flash?.success) {
@@ -61,7 +81,13 @@ const Index = ({ contracts }: ContractsProps) => {
   }, [flash]);
 
   const openCreate = () => {
-    router.visit(route('contracts.create'));
+    setEditingContract(null);
+    setModalOpen(true);
+  };
+
+  const openEdit = (contract: Contract) => {
+    setEditingContract(contract);
+    setModalOpen(true);
   };
 
   const getFullPropertyPath = (property: Contract['property']) => {
@@ -93,8 +119,8 @@ const Index = ({ contracts }: ContractsProps) => {
           <main className="flex-1 p-6 lg:p-8 max-w-[1400px] animate-in fade-in slide-in-from-bottom-1 duration-400">
             <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-6">
               <div>
-                <h2 className="font-display text-[1.75rem] xl:text-[2rem] font-bold">Contracts</h2>
-                <p className="text-[0.9375rem] text-muted-foreground">Manage client contracts and property reservations.</p>
+                <h2 className="font-display text-[1.75rem] xl:text-[2rem] font-bold">Contracts - {bloc?.name}</h2>
+                <p className="text-[0.9375rem] text-muted-foreground">Manage client contracts and property reservations for this bloc.</p>
               </div>
               <div className="flex items-center gap-3 self-start sm:self-auto">
                 <ToggleGroup type="single" value={viewMode} onValueChange={(v) => v && setViewMode(v as "card" | "table")} className="bg-muted rounded-lg p-0.5">
@@ -111,7 +137,7 @@ const Index = ({ contracts }: ContractsProps) => {
             {viewMode === "card" && (
               <div className="flex flex-col gap-3">
                 {contracts.data.map((contract) => (
-                  <div key={contract.id} className="bg-card border border-border rounded-xl shadow-[var(--shadow-card)] overflow-hidden hover:shadow-[var(--shadow-elevated)] transition-shadow duration-300 flex items-center gap-4 p-4 cursor-pointer" onClick={() => router.visit(route('contracts.show', contract.id))}>
+                  <div key={contract.id} className="bg-card border border-border rounded-xl shadow-[var(--shadow-card)] overflow-hidden hover:shadow-[var(--shadow-elevated)] transition-shadow duration-300 flex items-center gap-4 p-4 cursor-pointer" onClick={() => router.visit(route('blocs.contracts.show', [bloc.id, contract.id]))}>
                     <div className="flex-1 min-w-0">
                       <h3 className="font-display text-sm font-bold leading-tight truncate">{contract.client?.full_name}</h3>
                       <p className="text-xs text-muted-foreground mt-0.5 truncate">{getFullPropertyPath(contract.property)}</p>
@@ -121,7 +147,7 @@ const Index = ({ contracts }: ContractsProps) => {
                       {contract.status}
                     </span>
                     <div className="flex items-center gap-1 shrink-0">
-                      <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" onClick={(e) => { e.stopPropagation(); router.visit(route('contracts.edit', contract.id)); }}>
+                      <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" onClick={(e) => { e.stopPropagation(); openEdit(contract); }}>
                         <Pencil className="w-3.5 h-3.5" />
                       </Button>
                     </div>
@@ -145,7 +171,7 @@ const Index = ({ contracts }: ContractsProps) => {
                   </TableHeader>
                   <TableBody>
                     {contracts.data.map((contract) => (
-                      <TableRow key={contract.id} className="cursor-pointer" onClick={() => router.visit(route('contracts.show', contract.id))}>
+                      <TableRow key={contract.id} className="cursor-pointer" onClick={() => router.visit(route('blocs.contracts.show', [bloc.id, contract.id]))}>
                         <TableCell className="font-semibold">{contract.client?.full_name}</TableCell>
                         <TableCell className="text-muted-foreground max-w-[300px] truncate" title={getFullPropertyPath(contract.property)}>
                           {getFullPropertyPath(contract.property)}
@@ -159,17 +185,19 @@ const Index = ({ contracts }: ContractsProps) => {
                         <TableCell>{contract.date}</TableCell>
                         <TableCell>
                           <div className="flex items-center gap-1">
-                            <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" onClick={(e) => { e.stopPropagation(); router.visit(route('contracts.edit', contract.id)); }}>
+                            <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" onClick={(e) => { e.stopPropagation(); openEdit(contract); }}>
                               <Pencil className="w-3.5 h-3.5" />
                             </Button>
-                            <Button variant="ghost" size="icon" className="h-7 w-7 text-rose-500 hover:text-rose-600 hover:bg-rose-50" onClick={(e) => { 
-                              e.stopPropagation(); 
+
+                            <Button variant="ghost" size="icon" className="h-7 w-7 text-rose-500 hover:text-rose-600 hover:bg-rose-50" onClick={(e) => {
+                              e.stopPropagation();
                               if(confirm('Are you sure you want to delete this contract?')) {
-                                router.delete(route('contracts.destroy', contract.id));
+                                router.delete(route('blocs.contracts.destroy', [bloc.id, contract.id]));
                               }
                             }}>
                               <Trash className="w-3.5 h-3.5" />
                             </Button>
+
                           </div>
                         </TableCell>
                       </TableRow>
@@ -192,6 +220,16 @@ const Index = ({ contracts }: ContractsProps) => {
           </main>
         </div>
       </div>
+
+      <ContractFormModal
+        open={modalOpen}
+        onOpenChange={setModalOpen}
+        companies={companies}
+        clients={clients}
+        contract={editingContract}
+        bloc={bloc}
+        onSuccess={() => router.reload()}
+      />
     </SidebarProvider>
   );
 };

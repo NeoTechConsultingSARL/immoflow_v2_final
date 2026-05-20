@@ -11,6 +11,11 @@ export default defineConfig({
         }),
         react(),
     ],
+    esbuild: {
+        loader: "tsx",
+        include: /\.(tsx|ts)$/,
+        exclude: /node_modules/,
+    },
     server: {
         proxy: {
             '/login': {

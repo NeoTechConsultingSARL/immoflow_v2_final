@@ -87,7 +87,7 @@ class ProjectSeeder extends Seeder
 
         foreach ($projects as $projectData) {
             $company = Company::where('name', $projectData['company_name'])->first();
-            
+
             if ($company) {
                 Project::create([
                     'name' => $projectData['name'],

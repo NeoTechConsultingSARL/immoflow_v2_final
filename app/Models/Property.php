@@ -13,6 +13,8 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 #[Fillable(['name', 'bloc_id', 'property_type_id', 'price', 'status'])]
 class Property extends Model
 {
+    use HasFactory;
+
     /** @use HasFactory<PropertyFactory> */
     use HasFactory, SoftDeletes;
 

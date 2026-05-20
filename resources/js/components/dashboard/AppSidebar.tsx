@@ -1,6 +1,6 @@
 import { router, usePage } from "@inertiajs/react";
 import {
-  LayoutDashboard, Settings, HelpCircle, Building2, ShoppingCart, Truck, Wallet, Contact, LogOut, FileText,
+  LayoutDashboard, Settings, HelpCircle, Building2, ShoppingCart, Truck, Wallet, Contact, LogOut, FileText, Users,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import {
@@ -36,9 +36,9 @@ const getNavSections = (user: any) => {
       items: [
         { title: "Companies", url: "/companies", icon: Building2 },
         { title: "Projects", url: "/projects", icon: ShoppingCart },
-        { title: "Contracts", url: "/contracts", icon: FileText },
         { title: "Tranches", url: "/tranches", icon: Truck },
         { title: "Blocs", url: "/blocs", icon: Wallet },
+        { title: "Clients", url: "/clients", icon: Users },
       ],
     });
   }

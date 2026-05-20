@@ -13,6 +13,8 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 #[Fillable(['name', 'project_id', 'status'])]
 class Tranche extends Model
 {
+    use HasFactory;
+
     /** @use HasFactory<TrancheFactory> */
     use HasFactory, SoftDeletes;
 
