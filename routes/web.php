@@ -3,6 +3,7 @@
 use App\Http\Controllers\BlocController;
 use App\Http\Controllers\ClientController;
 use App\Http\Controllers\CompanyController;
+use App\Http\Controllers\ContractArticleController;
 use App\Http\Controllers\ContractController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ProjectController;
@@ -146,6 +147,20 @@ Route::middleware('auth')->group(function () {
     Route::get('/settings/profiles/edit/{roleId}', function ($roleId) {
         return Inertia::render('CreateEditRole', ['roleId' => $roleId]);
     })->name('settings.profiles.edit')->middleware('role:admin');
+
+    // Contract Articles settings routes
+    Route::get('/settings/contract-articles', [ContractArticleController::class, 'index'])
+        ->name('settings.contract-articles.index')->middleware('role:admin');
+    Route::post('/settings/contract-articles', [ContractArticleController::class, 'store'])
+        ->name('settings.contract-articles.store')->middleware('role:admin');
+    Route::put('/settings/contract-articles/{contractArticle}', [ContractArticleController::class, 'update'])
+        ->name('settings.contract-articles.update')->middleware('role:admin');
+    Route::delete('/settings/contract-articles/{contractArticle}', [ContractArticleController::class, 'destroy'])
+        ->name('settings.contract-articles.destroy')->middleware('role:admin');
+    Route::patch('/settings/contract-articles/{contractArticle}/toggle-status', [ContractArticleController::class, 'toggleStatus'])
+        ->name('settings.contract-articles.toggle-status')->middleware('role:admin');
+    Route::post('/settings/contract-articles/reorder', [ContractArticleController::class, 'reorder'])
+        ->name('settings.contract-articles.reorder')->middleware('role:admin');
 
     Route::get('/history', function () {
         return Inertia::render('History');

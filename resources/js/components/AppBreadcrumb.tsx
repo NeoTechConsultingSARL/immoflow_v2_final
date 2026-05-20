@@ -172,6 +172,9 @@ export function AppBreadcrumb({ contractPath, hierarchyData }: AppBreadcrumbProp
   } else if (path === "/settings/users") {
     crumbs.push({ label: "Settings", href: "/settings" });
     crumbs.push({ label: "Users" });
+  } else if (path === "/settings/contract-articles") {
+    crumbs.push({ label: "Settings", href: "/settings" });
+    crumbs.push({ label: "Contract Articles" });
   } else if (path === "/history") {
     crumbs.push({ label: "Settings", href: "/settings" });
     crumbs.push({ label: "Activity History" });
