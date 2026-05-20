@@ -108,8 +108,8 @@
     </table>
 
     <div class="footer">
-        {{ $companyName }} - {{ $companyAddress }} - RC RRRRRRR/ IF YYYYYYYY/ Patente XXXXXXXX<br>
-        Tél : 05 36 88 77 33 / 06 44 444 444 - Fax :
+        {{ $companyName }} - {{ $companyAddress }} - RC {{ $company && $company->rc ? $company->rc : 'RRRRRRR' }}/ IF {{ $company && $company->if ? $company->if : 'YYYYYYYY' }}/ Patente {{ $company && $company->patent ? $company->patent : 'XXXXXXXX' }}<br>
+        Tél : {{ $company && $company->phone ? $company->phone : '05 36 88 77 33 / 06 44 444 444' }} - Fax : {{ $company && $company->fax ? $company->fax : '' }}
     </div>
 </body>
 </html>

@@ -33,6 +33,10 @@ class UpdateCompanyRequest extends FormRequest
             'phone' => ['nullable', 'string', 'max:45'],
             'website' => ['nullable', 'url', 'max:255'],
             'properties' => ['nullable', 'integer', 'min:0'],
+            'rc' => ['nullable', 'string', 'max:255'],
+            'if' => ['nullable', 'string', 'max:255'],
+            'patent' => ['nullable', 'string', 'max:255'],
+            'fax' => ['nullable', 'string', 'max:45'],
         ];
     }
 
@@ -60,6 +64,14 @@ class UpdateCompanyRequest extends FormRequest
             'website.max' => 'The website may not be greater than 255 characters.',
             'properties.integer' => 'The properties count must be a number.',
             'properties.min' => 'The properties count cannot be negative.',
+            'rc.string' => 'The RC must be a string.',
+            'rc.max' => 'The RC may not be greater than 255 characters.',
+            'if.string' => 'The IF must be a string.',
+            'if.max' => 'The IF may not be greater than 255 characters.',
+            'patent.string' => 'The Patent must be a string.',
+            'patent.max' => 'The Patent may not be greater than 255 characters.',
+            'fax.string' => 'The Fax must be a string.',
+            'fax.max' => 'The Fax may not be greater than 45 characters.',
         ];
     }
 }

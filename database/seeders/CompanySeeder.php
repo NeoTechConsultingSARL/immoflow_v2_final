@@ -3,7 +3,6 @@
 namespace Database\Seeders;
 
 use App\Models\Company;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
 class CompanySeeder extends Seeder
@@ -22,6 +21,10 @@ class CompanySeeder extends Seeder
             'email' => 'info@keller-immo.de',
             'website' => 'keller-immo.de',
             'properties' => 48,
+            'rc' => 'RC-987654',
+            'if' => 'IF-123456',
+            'patent' => 'PAT-112233',
+            'fax' => '+49 89 123 457',
         ]);
 
         Company::create([
@@ -33,6 +36,10 @@ class CompanySeeder extends Seeder
             'email' => 'contact@berlinwohnen.de',
             'website' => 'berlinwohnen.de',
             'properties' => 32,
+            'rc' => 'RC-112233',
+            'if' => 'IF-445566',
+            'patent' => 'PAT-778899',
+            'fax' => '+49 30 987 655',
         ]);
 
         Company::create([
@@ -44,6 +51,10 @@ class CompanySeeder extends Seeder
             'email' => 'info@hh-hausverwaltung.de',
             'website' => 'hh-hausverwaltung.de',
             'properties' => 27,
+            'rc' => 'RC-334455',
+            'if' => 'IF-556677',
+            'patent' => 'PAT-889900',
+            'fax' => '+49 40 555 124',
         ]);
 
         Company::create([
@@ -55,8 +66,11 @@ class CompanySeeder extends Seeder
             'email' => 'hello@rheinmain-prop.de',
             'website' => 'rheinmain-prop.de',
             'properties' => 17,
+            'rc' => 'RC-556677',
+            'if' => 'IF-778899',
+            'patent' => 'PAT-001122',
+            'fax' => '+49 69 444 790',
         ]);
-
 
     }
 }

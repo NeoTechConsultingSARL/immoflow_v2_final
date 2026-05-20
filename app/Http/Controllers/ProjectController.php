@@ -52,7 +52,7 @@ class ProjectController extends Controller
     public function store(StoreProjectRequest $request): RedirectResponse
     {
         $data = $request->validated();
-        
+
         // Calculate total units from property allocations if units is not provided or is 0
         if (isset($data['property_allocations']) && is_array($data['property_allocations'])) {
             $data['units'] = array_reduce($data['property_allocations'], function ($carry, $item) {

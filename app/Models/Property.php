@@ -10,15 +10,13 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-
 #[Fillable(['name', 'bloc_id', 'property_type_id', 'price', 'status'])]
 class Property extends Model
 {
-    /** @use HasFactory<PropertyFactory> */
-
-    use HasFactory, SoftDeletes;
-
     use HasFactory;
+
+    /** @use HasFactory<PropertyFactory> */
+    use HasFactory, SoftDeletes;
 
     protected $casts = [
         'price' => 'decimal:2',
@@ -34,10 +32,8 @@ class Property extends Model
         return $this->belongsTo(PropertyType::class, 'property_type_id');
     }
 
-
     public function contracts(): HasMany
     {
         return $this->hasMany(Contract::class);
     }
-
 }

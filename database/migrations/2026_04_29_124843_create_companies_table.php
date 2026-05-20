@@ -16,7 +16,7 @@ return new class extends Migration
             $table->string('name', 255);
             $table->enum('status', ['active', 'inactive'])->default('active');
             $table->timestamps();
-            
+
             $table->index(['status']);
             $table->index(['name']);
         });

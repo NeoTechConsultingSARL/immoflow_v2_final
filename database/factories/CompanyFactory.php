@@ -10,11 +10,6 @@ use Illuminate\Database\Eloquent\Factories\Factory;
  */
 class CompanyFactory extends Factory
 {
-    /**
-     * Define the model's default state.
-     *
-     * @return array<string, mixed>
-     */
     public function definition(): array
     {
         return [
@@ -26,6 +21,10 @@ class CompanyFactory extends Factory
             'phone' => $this->faker->phoneNumber(),
             'website' => $this->faker->url(),
             'properties' => $this->faker->numberBetween(0, 100),
+            'rc' => $this->faker->numerify('RC-######'),
+            'if' => $this->faker->numerify('IF-######'),
+            'patent' => $this->faker->numerify('PAT-######'),
+            'fax' => $this->faker->phoneNumber(),
         ];
     }
 }

@@ -1,6 +1,6 @@
 import { router } from "@inertiajs/react";
 import { useState } from "react";
-import { Building2, Plus, Pencil, Trash2, MapPin, Phone, Mail, Globe, LayoutGrid, Rows3, Table as TableIcon } from "lucide-react";
+import { Building2, Plus, Pencil, Trash2, MapPin, Phone, Mail, Globe, LayoutGrid, Rows3, Table as TableIcon, Printer } from "lucide-react";
 import { AppBreadcrumb } from "@/components/AppBreadcrumb";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/dashboard/AppSidebar";
@@ -25,6 +25,10 @@ interface Company {
   description: string;
   logo: string;
   properties: number;
+  rc?: string;
+  if?: string;
+  patent?: string;
+  fax?: string;
 }
 
 const initialCompanies: Company[] = [
@@ -34,7 +38,7 @@ const initialCompanies: Company[] = [
   { id: "4", name: "Rhein-Main Properties", address: "Kaiserstraße 60, Frankfurt 60311", phone: "+49 69 444 789", email: "hello@rheinmain-prop.de", website: "rheinmain-prop.de", description: "Commercial and mixed-use property management in the Rhine-Main region.", logo: "RM", properties: 17 },
 ];
 
-const emptyForm: Omit<Company, "id"> = { name: "", address: "", phone: "", email: "", website: "", description: "", logo: "", properties: 0 };
+const emptyForm: Omit<Company, "id"> = { name: "", address: "", phone: "", email: "", website: "", description: "", logo: "", properties: 0, rc: "", if: "", patent: "", fax: "" };
 
 const gradientColors = [
   "from-blue-500/10 to-blue-600/5 hover:from-blue-500/20 hover:to-blue-600/10",
@@ -74,7 +78,20 @@ const Companies = () => {
 
   const openEdit = (company: Company) => {
     setEditing(company);
-    setForm({ name: company.name, address: company.address, phone: company.phone, email: company.email, website: company.website, description: company.description, logo: company.logo, properties: company.properties });
+    setForm({ 
+      name: company.name, 
+      address: company.address, 
+      phone: company.phone, 
+      email: company.email, 
+      website: company.website, 
+      description: company.description, 
+      logo: company.logo, 
+      properties: company.properties,
+      rc: company.rc || "",
+      if: company.if || "",
+      patent: company.patent || "",
+      fax: company.fax || "",
+    });
     setDialogOpen(true);
   };
 
@@ -232,6 +249,14 @@ const Companies = () => {
                           </div>
                           <span className="font-medium">{company.phone}</span>
                         </div>
+                        {company.fax && (
+                          <div className="flex items-center gap-3 text-sm text-muted-foreground group-hover:text-foreground transition-colors duration-300">
+                            <div className="w-8 h-8 rounded-lg bg-background/50 flex items-center justify-center shrink-0 shadow-sm border border-border/50">
+                              <Printer className="w-4 h-4 text-primary/60" />
+                            </div>
+                            <span className="font-medium">{company.fax}</span>
+                          </div>
+                        )}
                         <div className="flex items-center gap-3 text-sm text-muted-foreground group-hover:text-foreground transition-colors duration-300 sm:col-span-2">
                           <div className="w-8 h-8 rounded-lg bg-background/50 flex items-center justify-center shrink-0 shadow-sm border border-border/50">
                             <Mail className="w-4 h-4 text-primary/60" />
@@ -239,6 +264,29 @@ const Companies = () => {
                           <span className="truncate font-medium">{company.email}</span>
                         </div>
                       </div>
+
+                      {(company.rc || company.if || company.patent) && (
+                        <div className="mt-4 pt-4 border-t border-border/50 grid grid-cols-2 gap-x-4 gap-y-2 text-xs text-muted-foreground">
+                          {company.rc && (
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <span className="font-semibold text-foreground/70 shrink-0">RC:</span>
+                              <span className="truncate font-medium">{company.rc}</span>
+                            </div>
+                          )}
+                          {company.if && (
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <span className="font-semibold text-foreground/70 shrink-0">IF:</span>
+                              <span className="truncate font-medium">{company.if}</span>
+                            </div>
+                          )}
+                          {company.patent && (
+                            <div className="flex items-center gap-1.5 min-w-0 col-span-2">
+                              <span className="font-semibold text-foreground/70 shrink-0">Patent:</span>
+                              <span className="truncate font-medium">{company.patent}</span>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
 
                     <div className="px-6 py-4 bg-muted/30 border-t border-border/50 flex items-center justify-between group-hover:bg-primary/5 transition-colors duration-300">
@@ -320,7 +368,7 @@ const Companies = () => {
           <DialogHeader>
             <DialogTitle className="font-display text-xl">{editing ? "Edit Company" : "New Company"}</DialogTitle>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
+          <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto pr-2">
             <div className="grid gap-2">
               <Label htmlFor="name">Company Name *</Label>
               <Input id="name" value={form.name} onChange={e => updateField("name", e.target.value)} placeholder="e.g. Keller Immobilien GmbH" />
@@ -351,6 +399,26 @@ const Companies = () => {
               <div className="grid gap-2">
                 <Label htmlFor="properties">Properties</Label>
                 <Input id="properties" type="number" value={form.properties} onChange={e => updateField("properties", parseInt(e.target.value) || 0)} />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="rc">RC (Registre de Commerce)</Label>
+                <Input id="rc" value={form.rc} onChange={e => updateField("rc", e.target.value)} placeholder="e.g. 123456" />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="if">IF (Identifiant Fiscal)</Label>
+                <Input id="if" value={form.if} onChange={e => updateField("if", e.target.value)} placeholder="e.g. 789012" />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="patent">Patent</Label>
+                <Input id="patent" value={form.patent} onChange={e => updateField("patent", e.target.value)} placeholder="e.g. 345678" />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="fax">Fax</Label>
+                <Input id="fax" value={form.fax} onChange={e => updateField("fax", e.target.value)} placeholder="e.g. +49 89 123 457" />
               </div>
             </div>
           </div>

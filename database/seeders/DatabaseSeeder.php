@@ -55,7 +55,6 @@ class DatabaseSeeder extends Seeder
 
             ClientContractSeeder::class,
 
-
             ClientSeeder::class,
         ]);
 
