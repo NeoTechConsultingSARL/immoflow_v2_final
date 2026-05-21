@@ -189,6 +189,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/user/confirmed-two-factor-authentication', [TwoFactorAuthenticationController::class, 'confirm'])
         ->name('two-factor.confirm');
     Route::post('/user/two-factor-recovery-codes', [TwoFactorAuthenticationController::class, 'showRecoveryCodes'])
+        ->middleware('throttle:auth')
         ->name('two-factor.recovery-codes');
     Route::post('/user/two-factor-recovery-codes/regenerate', [TwoFactorAuthenticationController::class, 'generateRecoveryCodes'])
         ->name('two-factor.regenerate-recovery-codes');
