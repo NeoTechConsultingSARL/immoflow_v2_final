@@ -13,9 +13,10 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 #[Fillable(['name', 'tranche_id', 'floors', 'units', 'status'])]
 class Bloc extends Model
 {
+    use HasFactory;
+
     /** @use HasFactory<BlocFactory> */
     use HasFactory, SoftDeletes;
-    use HasFactory;
 
     public function tranche(): BelongsTo
     {

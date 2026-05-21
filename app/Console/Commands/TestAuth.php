@@ -19,29 +19,30 @@ class TestAuth extends Command
     public function handle()
     {
         $this->info('Testing authentication...');
-        
+
         $user = User::where('email', 'ahmed.benali@immoflow.com')->first();
-        
-        if (!$user) {
+
+        if (! $user) {
             $this->error('User not found!');
+
             return 1;
         }
-        
+
         $this->info('User found:');
-        $this->line('ID: ' . $user->id);
-        $this->line('Email: ' . $user->email);
-        $this->line('Name: ' . $user->name);
-        $this->line('Role: ' . $user->role);
-        
+        $this->line('ID: '.$user->id);
+        $this->line('Email: '.$user->email);
+        $this->line('Name: '.$user->name);
+        $this->line('Role: '.$user->role);
+
         // Test password verification
         $passwordCheck = Hash::check('password', $user->password);
-        $this->info('Password verification: ' . ($passwordCheck ? 'PASS' : 'FAIL'));
-        
+        $this->info('Password verification: '.($passwordCheck ? 'PASS' : 'FAIL'));
+
         // Test authentication
         $credentials = ['email' => 'ahmed.benali@immoflow.com', 'password' => 'password'];
         $authResult = Auth::attempt($credentials);
-        $this->info('Authentication test: ' . ($authResult ? 'SUCCESS' : 'FAILED'));
-        
+        $this->info('Authentication test: '.($authResult ? 'SUCCESS' : 'FAILED'));
+
         return 0;
     }
 }

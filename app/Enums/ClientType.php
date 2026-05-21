@@ -12,7 +12,7 @@ enum ClientType: string
 
     public function getLabel(): string
     {
-        return match($this) {
+        return match ($this) {
             self::Individual => 'Individual',
             self::Company => 'Company',
             self::Lead => 'Lead',
@@ -23,11 +23,11 @@ enum ClientType: string
 
     public static function getValues(): array
     {
-        return array_map(fn($case) => $case->value, self::cases());
+        return array_map(fn ($case) => $case->value, self::cases());
     }
 
     public static function getLabels(): array
     {
-        return array_map(fn($case) => $case->getLabel(), self::cases());
+        return array_map(fn ($case) => $case->getLabel(), self::cases());
     }
 }

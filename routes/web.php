@@ -1,8 +1,10 @@
 <?php
 
+use App\Http\Controllers\Auth\TwoFactorAuthenticationController;
 use App\Http\Controllers\BlocController;
 use App\Http\Controllers\ClientController;
 use App\Http\Controllers\CompanyController;
+use App\Http\Controllers\ContractArticleController;
 use App\Http\Controllers\ContractController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ProjectController;
@@ -147,6 +149,20 @@ Route::middleware('auth')->group(function () {
         return Inertia::render('CreateEditRole', ['roleId' => $roleId]);
     })->name('settings.profiles.edit')->middleware('role:admin');
 
+    // Contract Articles settings routes
+    Route::get('/settings/contract-articles', [ContractArticleController::class, 'index'])
+        ->name('settings.contract-articles.index')->middleware('role:admin');
+    Route::post('/settings/contract-articles', [ContractArticleController::class, 'store'])
+        ->name('settings.contract-articles.store')->middleware('role:admin');
+    Route::put('/settings/contract-articles/{contractArticle}', [ContractArticleController::class, 'update'])
+        ->name('settings.contract-articles.update')->middleware('role:admin');
+    Route::delete('/settings/contract-articles/{contractArticle}', [ContractArticleController::class, 'destroy'])
+        ->name('settings.contract-articles.destroy')->middleware('role:admin');
+    Route::patch('/settings/contract-articles/{contractArticle}/toggle-status', [ContractArticleController::class, 'toggleStatus'])
+        ->name('settings.contract-articles.toggle-status')->middleware('role:admin');
+    Route::post('/settings/contract-articles/reorder', [ContractArticleController::class, 'reorder'])
+        ->name('settings.contract-articles.reorder')->middleware('role:admin');
+
     Route::get('/history', function () {
         return Inertia::render('History');
     })->name('history');
@@ -162,6 +178,18 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+
+    // Two-Factor Authentication routes
+    Route::post('/user/two-factor-authentication', [TwoFactorAuthenticationController::class, 'store'])
+        ->name('two-factor.enable');
+    Route::delete('/user/two-factor-authentication', [TwoFactorAuthenticationController::class, 'destroy'])
+        ->name('two-factor.disable');
+    Route::post('/user/confirmed-two-factor-authentication', [TwoFactorAuthenticationController::class, 'confirm'])
+        ->name('two-factor.confirm');
+    Route::post('/user/two-factor-recovery-codes', [TwoFactorAuthenticationController::class, 'showRecoveryCodes'])
+        ->name('two-factor.recovery-codes');
+    Route::post('/user/two-factor-recovery-codes/regenerate', [TwoFactorAuthenticationController::class, 'generateRecoveryCodes'])
+        ->name('two-factor.regenerate-recovery-codes');
 });
 
 require __DIR__.'/auth.php';

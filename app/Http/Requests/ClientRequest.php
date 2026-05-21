@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 
 class ClientRequest extends FormRequest
@@ -17,7 +18,7 @@ class ClientRequest extends FormRequest
     /**
      * Get the validation rules that apply to the request.
      *
-     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
+     * @return array<string, ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {
@@ -25,9 +26,9 @@ class ClientRequest extends FormRequest
 
         return [
             'full_name' => 'required|string|max:255',
-            'email' => 'required|email|max:255|unique:clients,email,' . $clientId,
+            'email' => 'required|email|max:255|unique:clients,email,'.$clientId,
             'phone' => 'nullable|string|max:20',
-            'identity_number' => 'required|string|max:50|unique:clients,identity_number,' . $clientId,
+            'identity_number' => 'required|string|max:50|unique:clients,identity_number,'.$clientId,
             'address' => 'nullable|string',
             'type' => 'required|in:Lead,Prospect,Owner',
         ];

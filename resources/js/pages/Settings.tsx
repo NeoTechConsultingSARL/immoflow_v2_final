@@ -1,5 +1,5 @@
 import { router } from "@inertiajs/react";
-import { Users, UserCircle, Building2, History } from "lucide-react";
+import { Users, UserCircle, Building2, History, FileText } from "lucide-react";
 import { AppBreadcrumb } from "@/components/AppBreadcrumb";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/dashboard/AppSidebar";
@@ -8,6 +8,7 @@ const settingsTiles = [
   { key: "users", label: "Users", icon: Users, color: "from-blue-500/15 to-blue-600/5 hover:from-blue-500/25 hover:to-blue-600/15", iconColor: "text-blue-600 dark:text-blue-400", borderColor: "hover:border-blue-500/30" },
   { key: "profiles", label: "Profiles", icon: UserCircle, color: "from-emerald-500/15 to-emerald-600/5 hover:from-emerald-500/25 hover:to-emerald-600/15", iconColor: "text-emerald-600 dark:text-emerald-400", borderColor: "hover:border-emerald-500/30" },
   { key: "property-types", label: "Property Types", icon: Building2, color: "from-amber-500/15 to-amber-600/5 hover:from-amber-500/25 hover:to-amber-600/15", iconColor: "text-amber-600 dark:text-amber-400", borderColor: "hover:border-amber-500/30" },
+  { key: "contract-articles", label: "Contract Articles", icon: FileText, color: "from-pink-500/15 to-pink-600/5 hover:from-pink-500/25 hover:to-pink-600/15", iconColor: "text-pink-600 dark:text-pink-400", borderColor: "hover:border-pink-500/30" },
   { key: "history", label: "History", icon: History, color: "from-violet-500/15 to-violet-600/5 hover:from-violet-500/25 hover:to-violet-600/15", iconColor: "text-violet-600 dark:text-violet-400", borderColor: "hover:border-violet-500/30" },
 ];
 
@@ -18,6 +19,7 @@ const Settings = () => {
     if (key === "property-types") router.visit("/settings/property-types");
     if (key === "users") router.visit("/settings/users");
     if (key === "profiles") router.visit("/settings/profiles");
+    if (key === "contract-articles") router.visit("/settings/contract-articles");
     if (key === "history") router.visit("/history");
   };
 

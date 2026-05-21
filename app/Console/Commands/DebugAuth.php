@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Http\Requests\Auth\LoginRequest;
 use App\Models\User;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
@@ -19,54 +20,55 @@ class DebugAuth extends Command
     public function handle()
     {
         $this->info('=== Authentication Debug ===');
-        
+
         // Check user exists
         $user = User::where('email', 'admin@admin.com')->first();
-        if (!$user) {
+        if (! $user) {
             $this->error('User not found!');
+
             return 1;
         }
-        
+
         $this->info('User found:');
-        $this->line('ID: ' . $user->id);
-        $this->line('Email: ' . $user->email);
-        $this->line('Name: ' . $user->name);
-        $this->line('Role: ' . $user->role);
-        
+        $this->line('ID: '.$user->id);
+        $this->line('Email: '.$user->email);
+        $this->line('Name: '.$user->name);
+        $this->line('Role: '.$user->role);
+
         // Check password hash
         $this->info('Password verification:');
         $this->line('Plain password: admin123');
-        $this->line('Hash starts with: ' . substr($user->password, 0, 20) . '...');
+        $this->line('Hash starts with: '.substr($user->password, 0, 20).'...');
         $passwordCheck = Hash::check('admin123', $user->password);
-        $this->line('Hash check: ' . ($passwordCheck ? 'PASS' : 'FAIL'));
-        
+        $this->line('Hash check: '.($passwordCheck ? 'PASS' : 'FAIL'));
+
         // Test Auth::attempt
         $this->info('Auth::attempt test:');
         $credentials = ['email' => 'admin@admin.com', 'password' => 'admin123'];
-        $this->line('Credentials: ' . json_encode($credentials));
+        $this->line('Credentials: '.json_encode($credentials));
         $authResult = Auth::attempt($credentials);
-        $this->line('Result: ' . ($authResult ? 'SUCCESS' : 'FAILED'));
-        
+        $this->line('Result: '.($authResult ? 'SUCCESS' : 'FAILED'));
+
         // Check current auth user
         $this->info('Current auth user:');
         $currentUser = Auth::user();
-        $this->line('Auth user: ' . ($currentUser ? $currentUser->email : 'None'));
-        
+        $this->line('Auth user: '.($currentUser ? $currentUser->email : 'None'));
+
         // Test manual validation
         $this->info('Manual validation test:');
-        $request = new \App\Http\Requests\Auth\LoginRequest();
+        $request = new LoginRequest;
         $request->merge([
             'email' => 'admin@admin.com',
-            'password' => 'admin123'
+            'password' => 'admin123',
         ]);
-        
+
         try {
             $request->authenticate();
             $this->line('LoginRequest authenticate: SUCCESS');
         } catch (\Exception $e) {
-            $this->line('LoginRequest authenticate: FAILED - ' . $e->getMessage());
+            $this->line('LoginRequest authenticate: FAILED - '.$e->getMessage());
         }
-        
+
         return 0;
     }
 }

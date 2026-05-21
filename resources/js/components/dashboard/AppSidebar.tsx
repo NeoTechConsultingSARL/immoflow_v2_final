@@ -147,12 +147,20 @@ export function AppSidebar() {
               </div>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" side="right" className="w-64 p-2 rounded-xl border-sidebar-border/50 bg-background/95 backdrop-blur-md shadow-xl animate-in zoom-in-95 duration-200">
-              <DropdownMenuLabel className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Mon Compte</DropdownMenuLabel>
+              <DropdownMenuLabel 
+                onClick={() => router.visit(route('profile.edit'))}
+                className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground transition-colors"
+              >
+                Mon Compte
+              </DropdownMenuLabel>
               <DropdownMenuSeparator className="bg-sidebar-border/50" />
-              <div className="px-3 py-3 mb-1">
+              <DropdownMenuItem 
+                onClick={() => router.visit(route('profile.edit'))} 
+                className="flex flex-col items-start px-3 py-3 mb-1 rounded-lg cursor-pointer transition-colors focus:bg-accent/10 focus:text-accent-foreground"
+              >
                 <p className="text-sm font-bold text-foreground">{user?.name}</p>
-                <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
-              </div>
+                <p className="text-xs text-muted-foreground truncate w-full">{user?.email}</p>
+              </DropdownMenuItem>
               <DropdownMenuSeparator className="bg-sidebar-border/50" />
               <DropdownMenuItem 
                 onClick={() => router.post(route('logout'))} 

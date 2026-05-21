@@ -5,14 +5,14 @@ namespace Database\Seeders;
 use App\Models\Client;
 use App\Models\Contract;
 use App\Models\Property;
-use Illuminate\Database\Seeder;
 use Carbon\Carbon;
+use Illuminate\Database\Seeder;
 
 class ClientContractSeeder extends Seeder
 {
     public function run(): void
     {
-        
+
         $client1 = Client::create([
             'full_name' => 'Yassine Mounir',
             'email' => 'yassine.m@example.com',

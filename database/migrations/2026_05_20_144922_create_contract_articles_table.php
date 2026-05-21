@@ -11,14 +11,16 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('companies', function (Blueprint $table) {
+        Schema::create('contract_articles', function (Blueprint $table) {
             $table->id();
-            $table->string('name', 255);
+            $table->string('title');
+            $table->text('description');
+            $table->integer('article_order')->default(0);
             $table->enum('status', ['active', 'inactive'])->default('active');
             $table->timestamps();
 
             $table->index(['status']);
-            $table->index(['name']);
+            $table->index(['article_order']);
         });
     }
 
@@ -27,6 +29,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('companies');
+        Schema::dropIfExists('contract_articles');
     }
 };
