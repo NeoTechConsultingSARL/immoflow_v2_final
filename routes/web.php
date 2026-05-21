@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Auth\TwoFactorAuthenticationController;
 use App\Http\Controllers\BlocController;
 use App\Http\Controllers\ClientController;
 use App\Http\Controllers\CompanyController;
@@ -36,10 +37,12 @@ Route::middleware('auth')->group(function () {
 
     // Clients
     Route::resource('clients', ClientController::class)->except(['destroy']);
-    Route::get('/api/companies/{company}/projects', [ContractController::class, 'getProjects'])->name('api.companies.projects');
-    Route::get('/api/projects/{project}/tranches', [ContractController::class, 'getTranches'])->name('api.projects.tranches');
-    Route::get('/api/tranches/{tranche}/blocs', [ContractController::class, 'getBlocs'])->name('api.tranches.blocs');
-    Route::get('/api/blocs/{bloc}/properties', [ContractController::class, 'getProperties'])->name('api.blocs.properties');
+    Route::middleware('throttle:api')->group(function () {
+        Route::get('/api/companies/{company}/projects', [ContractController::class, 'getProjects'])->name('api.companies.projects');
+        Route::get('/api/projects/{project}/tranches', [ContractController::class, 'getTranches'])->name('api.projects.tranches');
+        Route::get('/api/tranches/{tranche}/blocs', [ContractController::class, 'getBlocs'])->name('api.tranches.blocs');
+        Route::get('/api/blocs/{bloc}/properties', [ContractController::class, 'getProperties'])->name('api.blocs.properties');
+    });
 
     Route::get('/companies', [CompanyController::class, 'index'])
         ->name('companies')->middleware('role:admin,manager');
@@ -177,6 +180,19 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+
+    // Two-Factor Authentication routes
+    Route::post('/user/two-factor-authentication', [TwoFactorAuthenticationController::class, 'store'])
+        ->name('two-factor.enable');
+    Route::delete('/user/two-factor-authentication', [TwoFactorAuthenticationController::class, 'destroy'])
+        ->name('two-factor.disable');
+    Route::post('/user/confirmed-two-factor-authentication', [TwoFactorAuthenticationController::class, 'confirm'])
+        ->name('two-factor.confirm');
+    Route::post('/user/two-factor-recovery-codes', [TwoFactorAuthenticationController::class, 'showRecoveryCodes'])
+        ->middleware('throttle:auth')
+        ->name('two-factor.recovery-codes');
+    Route::post('/user/two-factor-recovery-codes/regenerate', [TwoFactorAuthenticationController::class, 'generateRecoveryCodes'])
+        ->name('two-factor.regenerate-recovery-codes');
 });
 
 require __DIR__.'/auth.php';
