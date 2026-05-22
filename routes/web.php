@@ -43,6 +43,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/api/projects/{project}/tranches', [ContractController::class, 'getTranches'])->name('api.projects.tranches');
         Route::get('/api/tranches/{tranche}/blocs', [ContractController::class, 'getBlocs'])->name('api.tranches.blocs');
         Route::get('/api/blocs/{bloc}/properties', [ContractController::class, 'getProperties'])->name('api.blocs.properties');
+        Route::get('/api/clients-lookup', [ContractController::class, 'clientsLookup'])->name('api.clients.lookup');
     });
 
     Route::get('/companies', [CompanyController::class, 'index'])
