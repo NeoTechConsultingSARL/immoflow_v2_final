@@ -6,6 +6,7 @@ use App\Http\Controllers\ClientController;
 use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\ContractArticleController;
 use App\Http\Controllers\ContractController;
+use App\Http\Controllers\ParkingController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\PropertyController;
@@ -115,6 +116,15 @@ Route::middleware('auth')->group(function () {
         ->name('properties.update')->middleware('role:admin,manager');
     Route::delete('/properties/{property}', [PropertyController::class, 'destroy'])
         ->name('properties.destroy')->middleware('role:admin,manager');
+
+    Route::get('/parkings', [ParkingController::class, 'index'])
+        ->name('parkings')->middleware('role:admin,manager');
+    Route::post('/parkings', [ParkingController::class, 'store'])
+        ->name('parkings.store')->middleware('role:admin,manager');
+    Route::put('/parkings/{parking}', [ParkingController::class, 'update'])
+        ->name('parkings.update')->middleware('role:admin,manager');
+    Route::delete('/parkings/{parking}', [ParkingController::class, 'destroy'])
+        ->name('parkings.destroy')->middleware('role:admin,manager');
 
     Route::get('/settings', function () {
         return Inertia::render('Settings');
