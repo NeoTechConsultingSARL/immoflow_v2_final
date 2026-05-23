@@ -184,6 +184,14 @@ Route::middleware('auth')->group(function () {
         return Inertia::render('NewsArticle');
     })->name('news');
 
+    Route::get('/client-contracts', function () {
+        return Inertia::render('ClientContracts');
+    })->name('client-contracts')->middleware('role:admin,manager');
+
+    Route::get('/contract-create', function () {
+        return Inertia::render('ContractCreate');
+    })->name('contract-create')->middleware('role:admin,manager');
+
     Route::get('/admin-only', function () {
         return response('Admin only access', 200);
     })->name('admin-only')->middleware('role:admin');
