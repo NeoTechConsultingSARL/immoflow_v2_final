@@ -6,6 +6,7 @@ use App\Http\Controllers\ClientController;
 use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\ContractArticleController;
 use App\Http\Controllers\ContractController;
+use App\Http\Controllers\ParkingController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\PropertyController;
@@ -37,10 +38,13 @@ Route::middleware('auth')->group(function () {
 
     // Clients
     Route::resource('clients', ClientController::class)->except(['destroy']);
-    Route::get('/api/companies/{company}/projects', [ContractController::class, 'getProjects'])->name('api.companies.projects');
-    Route::get('/api/projects/{project}/tranches', [ContractController::class, 'getTranches'])->name('api.projects.tranches');
-    Route::get('/api/tranches/{tranche}/blocs', [ContractController::class, 'getBlocs'])->name('api.tranches.blocs');
-    Route::get('/api/blocs/{bloc}/properties', [ContractController::class, 'getProperties'])->name('api.blocs.properties');
+    Route::middleware('throttle:api')->group(function () {
+        Route::get('/api/companies/{company}/projects', [ContractController::class, 'getProjects'])->name('api.companies.projects');
+        Route::get('/api/projects/{project}/tranches', [ContractController::class, 'getTranches'])->name('api.projects.tranches');
+        Route::get('/api/tranches/{tranche}/blocs', [ContractController::class, 'getBlocs'])->name('api.tranches.blocs');
+        Route::get('/api/blocs/{bloc}/properties', [ContractController::class, 'getProperties'])->name('api.blocs.properties');
+        Route::get('/api/clients-lookup', [ContractController::class, 'clientsLookup'])->name('api.clients.lookup');
+    });
 
     Route::get('/companies', [CompanyController::class, 'index'])
         ->name('companies')->middleware('role:admin,manager');
@@ -113,6 +117,15 @@ Route::middleware('auth')->group(function () {
         ->name('properties.update')->middleware('role:admin,manager');
     Route::delete('/properties/{property}', [PropertyController::class, 'destroy'])
         ->name('properties.destroy')->middleware('role:admin,manager');
+
+    Route::get('/parkings', [ParkingController::class, 'index'])
+        ->name('parkings')->middleware('role:admin,manager');
+    Route::post('/parkings', [ParkingController::class, 'store'])
+        ->name('parkings.store')->middleware('role:admin,manager');
+    Route::put('/parkings/{parking}', [ParkingController::class, 'update'])
+        ->name('parkings.update')->middleware('role:admin,manager');
+    Route::delete('/parkings/{parking}', [ParkingController::class, 'destroy'])
+        ->name('parkings.destroy')->middleware('role:admin,manager');
 
     Route::get('/settings', function () {
         return Inertia::render('Settings');
@@ -195,6 +208,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/user/confirmed-two-factor-authentication', [TwoFactorAuthenticationController::class, 'confirm'])
         ->name('two-factor.confirm');
     Route::post('/user/two-factor-recovery-codes', [TwoFactorAuthenticationController::class, 'showRecoveryCodes'])
+        ->middleware('throttle:auth')
         ->name('two-factor.recovery-codes');
     Route::post('/user/two-factor-recovery-codes/regenerate', [TwoFactorAuthenticationController::class, 'generateRecoveryCodes'])
         ->name('two-factor.regenerate-recovery-codes');

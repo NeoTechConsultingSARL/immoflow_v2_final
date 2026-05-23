@@ -44,6 +44,12 @@ const ProjectManagement = () => {
       } else {
         toast({ title: "Please select a bloc first to manage contracts", variant: "destructive" });
       }
+    } else if (tileId === "parking") {
+      if (blocId) {
+        router.visit(`/parkings?bloc=${blocId}${companyQuery}&project=${projectId}&name=${encodeURIComponent(projectName)}${trancheQuery}&blocName=${encodeURIComponent(blocName)}`);
+      } else {
+        toast({ title: "Please select a bloc first to manage parking", variant: "destructive" });
+      }
     }
     // Other tiles can be wired up later
   };
