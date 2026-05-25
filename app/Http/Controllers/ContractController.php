@@ -51,12 +51,14 @@ class ContractController extends Controller
         return DB::transaction(function () use ($validated, $request, $bloc) {
             // 1. Check or create the Client record
             if (empty($validated['client_id'])) {
+                $fullName = trim(($validated['first_name'] ?? '') . ' ' . ($validated['last_name'] ?? ''));
                 $client = Client::create([
-                    'first_name' => $validated['first_name'],
-                    'last_name' => $validated['last_name'],
+                    'full_name' => $fullName ?: null,
                     'email' => $validated['email'] ?? null,
-                    'phone' => $validated['phone'],
-                    'id_number' => $validated['id_number'] ?? null,
+                    'phone' => $validated['phone'] ?? null,
+                    'identity_number' => $validated['id_number'] ?? null,
+                    'address' => $validated['address'] ?? null,
+                    'type' => $validated['type'] ?? 'individual',
                 ]);
                 $clientId = $client->id;
             } else {
@@ -102,14 +104,20 @@ class ContractController extends Controller
             }
 
             // 4. Generate or save the payment timeline rows
-            if ($validated['withDetails']) {
+            if (!empty($validated['withDetails'])) {
                 if (!empty($validated['schedule'])) {
                     foreach ($validated['schedule'] as $payment) {
-                        $contract->paymentSchedules()->create([
-                            'due_date' => $payment['due_date'],
-                            'amount' => $payment['amount'],
-                            'observation' => $payment['observation'] ?? null,
-                        ]);
+                        $dueDate = $payment['due_date'] ?? $payment['date'] ?? null;
+                        $amount = $payment['amount'] ?? null;
+                        $observation = $payment['observation'] ?? $payment['note'] ?? null;
+
+                        if ($dueDate && $amount !== null) {
+                            $contract->paymentSchedules()->create([
+                                'due_date' => $dueDate,
+                                'amount' => $amount,
+                                'observation' => $observation,
+                            ]);
+                        }
                     }
                 }
             } else {
@@ -134,11 +142,12 @@ class ContractController extends Controller
 
             // 5. Save commission rules if present
             if (!empty($validated['commission'])) {
+                $commission = $validated['commission'];
                 $contract->commission()->create([
-                    'broker_name' => $validated['commission']['broker_name'],
-                    'amount' => $validated['commission']['amount'],
-                    'description' => $validated['commission']['description'] ?? null,
-                    'status' => $validated['commission']['status'] ?? 'pending',
+                    'broker_name' => $commission['broker_name'] ?? $commission['name'] ?? null,
+                    'amount' => $commission['amount'] ?? null,
+                    'description' => $commission['description'] ?? null,
+                    'status' => $commission['status'] ?? ($commission['status'] ?? 'pending'),
                 ]);
             }
 
@@ -151,6 +160,29 @@ class ContractController extends Controller
             return redirect()->route('blocs.contracts.show', ['bloc' => $bloc->id, 'contract' => $contract->id])
                 ->with('success', 'Contract created successfully.');
         });
+    }
+
+    /**
+     * Alternate entry point for non-nested POST /contracts requests.
+     * Finds the related bloc from the provided property and delegates to the
+     * same transactional creation logic.
+     */
+    public function storeGlobal(StoreContractRequest $request)
+    {
+        $validated = $request->validated();
+
+        // Resolve the property and its bloc
+        $property = \App\Models\Property::findOrFail($validated['property_id']);
+        $bloc = $property->bloc;
+
+        if (! $bloc) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'property_id' => 'Could not resolve the property bloc for this property.',
+            ]);
+        }
+
+        // Reuse existing store logic by calling the store method with the resolved bloc
+        return $this->store($request, $bloc);
     }
 
     public function show(Bloc $bloc, Contract $contract)
@@ -226,7 +258,7 @@ class ContractController extends Controller
 
     public function destroy(Bloc $bloc, Contract $contract)
     {
-        $contract->delete(); // Soft delete
+        $contract->update(['status' => 'annulé']); // Soft delete as per policy
 
         return redirect()->route('blocs.contracts.index', $bloc->id)->with('success', 'Contract deleted successfully.');
     }
@@ -268,7 +300,14 @@ class ContractController extends Controller
 
     public function clientsLookup()
     {
-        return response()->json(Client::select(['id', 'first_name', 'last_name', 'email', 'id_number', 'phone'])->get());
+        return response()->json(Client::select([
+            'id', 
+            'full_name as name', 
+            'email', 
+            'identity_number as idNumber', 
+            'phone',
+            'address'
+        ])->get());
     }
 
     public function getTranches(Project $project)
@@ -283,6 +322,23 @@ class ContractController extends Controller
 
     public function getProperties(Bloc $bloc)
     {
-        return response()->json($bloc->properties);
+        return response()->json($bloc->properties()->with('propertyType')->get());
+    }
+
+    public function getNextContractNumber()
+    {
+        $lastContract = Contract::orderBy('id', 'desc')->first();
+        $nextId = $lastContract ? $lastContract->id + 1 : 1;
+        $year = date('Y');
+        
+        do {
+            $number = sprintf('CT-%d-%03d', $year, $nextId);
+            $exists = Contract::where('contract_number', $number)->exists();
+            if ($exists) {
+                $nextId++;
+            }
+        } while ($exists);
+
+        return response()->json(['contract_number' => $number]);
     }
 }
