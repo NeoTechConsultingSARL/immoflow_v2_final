@@ -22,19 +22,23 @@ class ContractController extends Controller
 {
     public function index(Request $request, Bloc $bloc)
     {
-        $query = Contract::with(['client', 'property.bloc.tranche.project.company'])
-            ->whereHas('property', function ($q) use ($bloc) {
-                $q->where('bloc_id', $bloc->id);
-            });
+        $bloc->load('tranche.project.company');
+        $project = $bloc->tranche?->project;
+        $tranche = $bloc->tranche;
 
-        $contracts = $query->latest()->paginate(10);
+        $params = $request->query();
+        $params['bloc'] = $bloc->id;
+        $params['blocName'] = $bloc->name;
+        if ($project) {
+            $params['project'] = $project->id;
+            $params['name'] = $project->name;
+        }
+        if ($tranche) {
+            $params['tranche'] = $tranche->id;
+            $params['trancheName'] = $tranche->name;
+        }
 
-        return Inertia::render('Contracts/Index', [
-            'contracts' => $contracts,
-            'companies' => Company::all(),
-            'clients' => Client::all(),
-            'bloc' => $bloc->load('tranche.project.company'),
-        ]);
+        return redirect()->route('client-contracts', $params);
     }
 
     public function create(Bloc $bloc)
@@ -272,22 +276,22 @@ class ContractController extends Controller
             $contract->property->update(['status' => 'Available']); // Assuming 'Available' is a valid status
         }
 
-        if ($request->header('Referer') && str_contains(strtolower($request->header('Referer')), 'client-contracts')) {
-            return redirect()->route('client-contracts', ['bloc' => $bloc->id])->with('success', 'Contract updated successfully.');
+        if ($request->header('Referer')) {
+            return redirect($request->header('Referer'))->with('success', 'Contract updated successfully.');
         }
 
-        return redirect()->route('blocs.contracts.index', $bloc->id)->with('success', 'Contract updated successfully.');
+        return redirect()->route('client-contracts', ['bloc' => $bloc->id])->with('success', 'Contract updated successfully.');
     }
 
     public function destroy(Request $request, Bloc $bloc, Contract $contract)
     {
         $contract->update(['status' => 'cancelled']); // Mark as cancelled / expired as per policy
 
-        if ($request->header('Referer') && str_contains(strtolower($request->header('Referer')), 'client-contracts')) {
-            return redirect()->route('client-contracts', ['bloc' => $bloc->id])->with('success', 'Contract deleted successfully.');
+        if ($request->header('Referer')) {
+            return redirect($request->header('Referer'))->with('success', 'Contract deleted successfully.');
         }
 
-        return redirect()->route('blocs.contracts.index', $bloc->id)->with('success', 'Contract deleted successfully.');
+        return redirect()->route('client-contracts', ['bloc' => $bloc->id])->with('success', 'Contract deleted successfully.');
     }
 
     public function generatePdf(Bloc $bloc, Contract $contract, ContractPdfService $pdfService)
