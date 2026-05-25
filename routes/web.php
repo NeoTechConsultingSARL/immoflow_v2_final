@@ -259,6 +259,10 @@ Route::middleware('auth')->group(function () {
         return Inertia::render('ContractCreate');
     })->name('contract-create')->middleware('role:admin,manager');
 
+    Route::get('/contract-details', function () {
+        return Inertia::render('ContractDetails');
+    })->name('contract-details')->middleware('role:admin,manager');
+
     Route::get('/admin-only', function () {
         return response('Admin only access', 200);
     })->name('admin-only')->middleware('role:admin');
