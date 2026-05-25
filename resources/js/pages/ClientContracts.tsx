@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { router, Link, usePage } from "@inertiajs/react";
 import { Users, Plus, Pencil, Trash2, FileText, Calendar, Euro, Phone, Mail, LayoutGrid, Rows3, Table as TableIcon, Check, ChevronsUpDown } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -30,18 +30,10 @@ interface ClientContract {
   endDate: string;
   amount: string;
   status: "Active" | "Pending" | "Completed" | "Expired";
+  clientId?: string;
+  propertyId?: string;
+  blocId?: string;
 }
-
-const initialContracts: ClientContract[] = [
-  { id: "1", contractNumber: "CT-2026-001", clientName: "Anna Müller", email: "anna.mueller@email.com", phone: "+49 170 1234567", property: "Unit A1 — Residenz am Englischen Garten", type: "Sale", startDate: "2026-01-15", endDate: "2026-03-15", amount: "€485,000", status: "Active" },
-  { id: "2", contractNumber: "CT-2026-002", clientName: "Thomas Braun", email: "thomas.braun@email.com", phone: "+49 171 2345678", property: "Loft 101 — Spree Lofts", type: "Rental", startDate: "2026-02-01", endDate: "2027-02-01", amount: "€1,450 / mo", status: "Active" },
-  { id: "3", contractNumber: "CT-2026-003", clientName: "Lisa Weber", email: "lisa.weber@email.com", phone: "+49 172 3456789", property: "Unit B1 — Residenz am Englischen Garten", type: "Reservation", startDate: "2026-02-10", endDate: "2026-04-10", amount: "€25,000", status: "Pending" },
-  { id: "4", contractNumber: "CT-2025-098", clientName: "Erik Hoffmann", email: "erik.hoffmann@email.com", phone: "+49 173 4567890", property: "Villa Rosengarten", type: "Sale", startDate: "2025-11-20", endDate: "2026-01-20", amount: "€2,100,000", status: "Completed" },
-  { id: "5", contractNumber: "CT-2026-004", clientName: "Sarah Klein", email: "sarah.klein@email.com", phone: "+49 174 5678901", property: "Sky Penthouse — Spree Lofts", type: "Sale", startDate: "2026-03-01", endDate: "2026-05-01", amount: "€1,450,000", status: "Active" },
-  { id: "6", contractNumber: "CT-2026-005", clientName: "Maximilian Schwarz", email: "max.schwarz@email.com", phone: "+49 175 6789012", property: "Office 101", type: "Rental", startDate: "2026-01-01", endDate: "2028-01-01", amount: "€3,200 / mo", status: "Active" },
-  { id: "7", contractNumber: "CT-2025-076", clientName: "Julia Fischer", email: "julia.fischer@email.com", phone: "+49 176 7890123", property: "Studio 201 — Spree Lofts", type: "Rental", startDate: "2025-06-01", endDate: "2026-01-31", amount: "€890 / mo", status: "Expired" },
-  { id: "8", contractNumber: "CT-2026-006", clientName: "Daniel Krüger", email: "daniel.krueger@email.com", phone: "+49 177 8901234", property: "Plot B-7 — Spree Lofts", type: "Sale", startDate: "2026-02-20", endDate: "2026-04-20", amount: "€480,000", status: "Pending" },
-];
 
 const statusStyles: Record<string, string> = {
   Active: "bg-emerald-500/10 text-emerald-600",
@@ -80,12 +72,7 @@ const emptyForm = {
   status: "Active" as ClientContract["status"],
 };
 
-const existingClients = [
-  { id: "c1", name: "Anna Müller", firstName: "Anna", lastName: "Müller", idNumber: "DE-A123456", birthdate: "1985-04-12", email: "anna.mueller@email.com", phone: "+49 170 1234567", address: "Leopoldstraße 12, München" },
-  { id: "c2", name: "Thomas Braun", firstName: "Thomas", lastName: "Braun", idNumber: "DE-B234567", birthdate: "1979-09-23", email: "thomas.braun@email.com", phone: "+49 171 2345678", address: "Kantstraße 88, Berlin" },
-  { id: "c3", name: "Lisa Weber", firstName: "Lisa", lastName: "Weber", idNumber: "DE-W345678", birthdate: "1990-12-02", email: "lisa.weber@email.com", phone: "+49 172 3456789", address: "Hauptstraße 5, Hamburg" },
-  { id: "c4", name: "Erik Hoffmann", firstName: "Erik", lastName: "Hoffmann", idNumber: "DE-H456789", birthdate: "1972-06-30", email: "erik.hoffmann@email.com", phone: "+49 173 4567890", address: "Marienplatz 3, München" },
-];
+const existingClients: any[] = [];
 
 const propertiesByType: Record<string, string[]> = {
   Apartment: ["Unit A1 — Residenz am Englischen Garten", "Unit B1 — Residenz am Englischen Garten", "Loft 101 — Spree Lofts", "Studio 201 — Spree Lofts"],
@@ -100,14 +87,12 @@ interface ClientContractsProps {
 }
 
 const ClientContracts = ({ dbContracts = [] }: ClientContractsProps) => {
-  const [contracts, setContracts] = useState<ClientContract[]>(() => {
-    if (!dbContracts || dbContracts.length === 0) {
-      return initialContracts;
-    }
-    const dbNumbers = new Set(dbContracts.map(c => c.contractNumber));
-    const uniqueInitials = initialContracts.filter(c => !dbNumbers.has(c.contractNumber));
-    return [...dbContracts, ...uniqueInitials];
-  });
+  const [contracts, setContracts] = useState<ClientContract[]>(dbContracts);
+
+  useEffect(() => {
+    setContracts(dbContracts);
+  }, [dbContracts]);
+
   const [viewMode, setViewMode] = useState<ViewMode>("list");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -175,24 +160,46 @@ const ClientContracts = ({ dbContracts = [] }: ClientContractsProps) => {
       toast({ title: "Contract number and client name are required", variant: "destructive" });
       return;
     }
-    const payload: Omit<ClientContract, "id"> = {
-      contractNumber: form.contractNumber, clientName, email, phone,
-      property: form.property, type: form.type, startDate: form.startDate,
-      endDate: form.endDate, amount: form.amount, status: form.status,
-    };
+    
     if (editing) {
-      setContracts(prev => prev.map(c => c.id === editing.id ? { ...c, ...payload } : c));
-      toast({ title: "Contract updated" });
-    } else {
-      setContracts(prev => [...prev, { ...payload, id: crypto.randomUUID() }]);
-      toast({ title: "Contract created" });
+      const payload = {
+        client_name: clientName,
+        client_email: email,
+        client_phone: phone,
+        contract_number: form.contractNumber,
+        status: form.status.toLowerCase(), // active, completed, cancelled, draft
+        price: form.amount.replace(/[^0-9.]/g, ''),
+        date: form.startDate,
+        client_id: editing.clientId,
+        property_id: editing.propertyId,
+      };
+
+      router.put(`/blocs/${editing.blocId}/contracts/${editing.id}`, payload, {
+        onSuccess: () => {
+          toast({ title: "Contract updated" });
+          setDialogOpen(false);
+          setEditing(null);
+        },
+        onError: (err) => {
+          toast({ title: "Failed to update contract", description: Object.values(err).join("\n"), variant: "destructive" });
+        }
+      });
     }
-    setDialogOpen(false);
   };
 
   const handleDelete = () => {
-    if (deleting) { setContracts(prev => prev.filter(c => c.id !== deleting.id)); toast({ title: "Contract deleted" }); }
-    setDeleteOpen(false); setDeleting(null);
+    if (deleting) {
+      router.delete(`/blocs/${deleting.blocId}/contracts/${deleting.id}`, {
+        onSuccess: () => {
+          toast({ title: "Contract deleted" });
+          setDeleteOpen(false);
+          setDeleting(null);
+        },
+        onError: (err) => {
+          toast({ title: "Failed to delete contract", variant: "destructive" });
+        }
+      });
+    }
   };
 
   const updateField = (field: keyof typeof form, value: string) => setForm(prev => ({ ...prev, [field]: value }));

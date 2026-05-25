@@ -2,19 +2,21 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreContractRequest;
 use App\Models\Bloc;
 use App\Models\Client;
 use App\Models\Company;
 use App\Models\Contract;
 use App\Models\Project;
+use App\Models\Property;
 use App\Models\Tranche;
 use App\Services\ContractPdfService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
-use App\Http\Requests\StoreContractRequest;
 
 class ContractController extends Controller
 {
@@ -51,7 +53,7 @@ class ContractController extends Controller
         return DB::transaction(function () use ($validated, $request, $bloc) {
             // 1. Check or create the Client record
             if (empty($validated['client_id'])) {
-                $fullName = trim(($validated['first_name'] ?? '') . ' ' . ($validated['last_name'] ?? ''));
+                $fullName = trim(($validated['first_name'] ?? '').' '.($validated['last_name'] ?? ''));
                 $client = Client::create([
                     'full_name' => $fullName ?: null,
                     'email' => $validated['email'] ?? null,
@@ -66,11 +68,11 @@ class ContractController extends Controller
             }
 
             // Target Property Unit matching incoming property ID
-            $property = \App\Models\Property::findOrFail($validated['property_id']);
-            
+            $property = Property::findOrFail($validated['property_id']);
+
             // Verify status
-            if (!in_array(strtolower($property->status), ['disponible', 'available'])) {
-                throw \Illuminate\Validation\ValidationException::withMessages([
+            if (! in_array(strtolower($property->status), ['disponible', 'available'])) {
+                throw ValidationException::withMessages([
                     'property_id' => 'This property is not available.',
                 ]);
             }
@@ -89,13 +91,13 @@ class ContractController extends Controller
             ]);
 
             // 2. Handle file upload for the modification image
-            if (!empty($validated['modification'])) {
+            if (! empty($validated['modification'])) {
                 $imagePath = null;
                 if ($request->hasFile('modification.image')) {
                     $imagePath = $request->file('modification.image')->store('modifications', 'public');
                 }
-                
-                if (!empty($validated['modification']['notes']) || $imagePath) {
+
+                if (! empty($validated['modification']['notes']) || $imagePath) {
                     $contract->modification()->create([
                         'notes' => $validated['modification']['notes'] ?? null,
                         'image_path' => $imagePath,
@@ -104,8 +106,8 @@ class ContractController extends Controller
             }
 
             // 4. Generate or save the payment timeline rows
-            if (!empty($validated['withDetails'])) {
-                if (!empty($validated['schedule'])) {
+            if (! empty($validated['withDetails'])) {
+                if (! empty($validated['schedule'])) {
                     foreach ($validated['schedule'] as $payment) {
                         $dueDate = $payment['due_date'] ?? $payment['date'] ?? null;
                         $amount = $payment['amount'] ?? null;
@@ -123,12 +125,12 @@ class ContractController extends Controller
             } else {
                 $duration = $validated['paymentDuration'] ?? 0;
                 $frequency = $validated['paymentFrequency'] ?? 1;
-                
+
                 if ($duration > 0 && $frequency > 0) {
                     $totalRows = ceil($duration / $frequency);
                     $balance = $contract->price - ($contract->advance ?? 0);
                     $amountPerRow = $totalRows > 0 ? $balance / $totalRows : 0;
-                    $currentDate = \Carbon\Carbon::parse($contract->date ?? now());
+                    $currentDate = Carbon::parse($contract->date ?? now());
 
                     for ($i = 1; $i <= $totalRows; $i++) {
                         $contract->paymentSchedules()->create([
@@ -141,7 +143,7 @@ class ContractController extends Controller
             }
 
             // 5. Save commission rules if present
-            if (!empty($validated['commission'])) {
+            if (! empty($validated['commission'])) {
                 $commission = $validated['commission'];
                 $contract->commission()->create([
                     'broker_name' => $commission['broker_name'] ?? $commission['name'] ?? null,
@@ -172,11 +174,11 @@ class ContractController extends Controller
         $validated = $request->validated();
 
         // Resolve the property and its bloc
-        $property = \App\Models\Property::findOrFail($validated['property_id']);
+        $property = Property::findOrFail($validated['property_id']);
         $bloc = $property->bloc;
 
         if (! $bloc) {
-            throw \Illuminate\Validation\ValidationException::withMessages([
+            throw ValidationException::withMessages([
                 'property_id' => 'Could not resolve the property bloc for this property.',
             ]);
         }
@@ -238,14 +240,31 @@ class ContractController extends Controller
     public function update(Request $request, Bloc $bloc, Contract $contract)
     {
         $validated = $request->validate([
-            'client_id' => 'required|exists:clients,id',
-            'property_id' => 'required|exists:properties,id',
+            'client_id' => 'nullable|exists:clients,id',
+            'property_id' => 'nullable|exists:properties,id',
+            'contract_number' => 'nullable|string',
             'status' => 'nullable|string|in:active,completed,cancelled,draft',
             'price' => 'nullable|numeric|min:0',
+            'advance' => 'nullable|numeric|min:0',
+            'payment_duration' => 'nullable|integer|min:0',
+            'payment_frequency' => 'nullable|integer|min:0',
             'date' => 'nullable|date',
+
+            // Client details for inline update if needed
+            'client_name' => 'nullable|string',
+            'client_email' => 'nullable|email',
+            'client_phone' => 'nullable|string',
         ]);
 
         $contract->update($validated);
+
+        if (! empty($validated['client_name']) && $contract->client) {
+            $contract->client->update([
+                'full_name' => $validated['client_name'],
+                'email' => $validated['client_email'] ?? $contract->client->email,
+                'phone' => $validated['client_phone'] ?? $contract->client->phone,
+            ]);
+        }
 
         if ($contract->status === 'active') {
             $contract->property->update(['status' => 'Reserved']);
@@ -253,12 +272,20 @@ class ContractController extends Controller
             $contract->property->update(['status' => 'Available']); // Assuming 'Available' is a valid status
         }
 
+        if ($request->header('Referer') && str_contains(strtolower($request->header('Referer')), 'client-contracts')) {
+            return redirect()->route('client-contracts', ['bloc' => $bloc->id])->with('success', 'Contract updated successfully.');
+        }
+
         return redirect()->route('blocs.contracts.index', $bloc->id)->with('success', 'Contract updated successfully.');
     }
 
-    public function destroy(Bloc $bloc, Contract $contract)
+    public function destroy(Request $request, Bloc $bloc, Contract $contract)
     {
-        $contract->update(['status' => 'annulé']); // Soft delete as per policy
+        $contract->update(['status' => 'cancelled']); // Mark as cancelled / expired as per policy
+
+        if ($request->header('Referer') && str_contains(strtolower($request->header('Referer')), 'client-contracts')) {
+            return redirect()->route('client-contracts', ['bloc' => $bloc->id])->with('success', 'Contract deleted successfully.');
+        }
 
         return redirect()->route('blocs.contracts.index', $bloc->id)->with('success', 'Contract deleted successfully.');
     }
@@ -301,12 +328,12 @@ class ContractController extends Controller
     public function clientsLookup()
     {
         return response()->json(Client::select([
-            'id', 
-            'full_name as name', 
-            'email', 
-            'identity_number as idNumber', 
+            'id',
+            'full_name as name',
+            'email',
+            'identity_number as idNumber',
             'phone',
-            'address'
+            'address',
         ])->get());
     }
 
@@ -330,7 +357,7 @@ class ContractController extends Controller
         $lastContract = Contract::orderBy('id', 'desc')->first();
         $nextId = $lastContract ? $lastContract->id + 1 : 1;
         $year = date('Y');
-        
+
         do {
             $number = sprintf('CT-%d-%03d', $year, $nextId);
             $exists = Contract::where('contract_number', $number)->exists();
