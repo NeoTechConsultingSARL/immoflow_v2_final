@@ -94,15 +94,11 @@ const ClientContracts = ({ dbContracts = [] }: ClientContractsProps) => {
   }, [dbContracts]);
 
   const [viewMode, setViewMode] = useState<ViewMode>("list");
-  const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
-  const [editing, setEditing] = useState<ClientContract | null>(null);
   const [deleting, setDeleting] = useState<ClientContract | null>(null);
-  const [form, setForm] = useState(emptyForm);
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(5);
-  const [clientPickerOpen, setClientPickerOpen] = useState(false);
 
   const { url } = usePage();
   const location = new URL(url || "/", window.location.origin);
@@ -110,10 +106,8 @@ const ClientContracts = ({ dbContracts = [] }: ClientContractsProps) => {
   const projectName = searchParams.get("name") || "";
 
   const openContract = (c: ClientContract) => {
-    const qs = new URLSearchParams(searchParams.toString());
-    qs.set("id", c.id);
-    qs.set("ref", c.contractNumber);
-    router.visit(`/contract-details?${qs.toString()}`);
+    const qs = searchParams.toString();
+    router.visit(`/blocs/${c.blocId}/contracts/${c.id}${qs ? `?${qs}` : ""}`);
   };
   const stop = (e: React.MouseEvent) => e.stopPropagation();
 
@@ -123,69 +117,11 @@ const ClientContracts = ({ dbContracts = [] }: ClientContractsProps) => {
   };
 
   const openEdit = (c: ClientContract) => {
-    setEditing(c);
-    const [firstName, ...rest] = c.clientName.split(" ");
-    setForm({
-      ...emptyForm,
-      clientMode: "new",
-      firstName: firstName || "",
-      lastName: rest.join(" "),
-      email: c.email,
-      phone: c.phone,
-      contractNumber: c.contractNumber,
-      property: c.property,
-      type: c.type,
-      startDate: c.startDate,
-      endDate: c.endDate,
-      amount: c.amount,
-      status: c.status,
-    });
-    setDialogOpen(true);
+    const qs = searchParams.toString();
+    router.visit(`/contracts/${c.id}/edit${qs ? `?${qs}` : ""}`);
   };
 
   const openDelete = (c: ClientContract) => { setDeleting(c); setDeleteOpen(true); };
-
-  const handleSave = () => {
-    let clientName = "";
-    let email = form.email;
-    let phone = form.phone;
-    if (form.clientMode === "existing") {
-      const ex = existingClients.find(c => c.id === form.existingClientId);
-      if (!ex) { toast({ title: "Please select an existing client", variant: "destructive" }); return; }
-      clientName = ex.name; email = ex.email; phone = ex.phone;
-    } else {
-      clientName = `${form.firstName} ${form.lastName}`.trim();
-    }
-    if (!form.contractNumber.trim() || !clientName) {
-      toast({ title: "Contract number and client name are required", variant: "destructive" });
-      return;
-    }
-    
-    if (editing) {
-      const payload = {
-        client_name: clientName,
-        client_email: email,
-        client_phone: phone,
-        contract_number: form.contractNumber,
-        status: form.status.toLowerCase(), // active, completed, cancelled, draft
-        price: form.amount.replace(/[^0-9.]/g, ''),
-        date: form.startDate,
-        client_id: editing.clientId,
-        property_id: editing.propertyId,
-      };
-
-      router.put(`/blocs/${editing.blocId}/contracts/${editing.id}`, payload, {
-        onSuccess: () => {
-          toast({ title: "Contract updated" });
-          setDialogOpen(false);
-          setEditing(null);
-        },
-        onError: (err) => {
-          toast({ title: "Failed to update contract", description: Object.values(err).join("\n"), variant: "destructive" });
-        }
-      });
-    }
-  };
 
   const handleDelete = () => {
     if (deleting) {
@@ -201,8 +137,6 @@ const ClientContracts = ({ dbContracts = [] }: ClientContractsProps) => {
       });
     }
   };
-
-  const updateField = (field: keyof typeof form, value: string) => setForm(prev => ({ ...prev, [field]: value }));
 
   const filtered = filterStatus === "all" ? contracts : contracts.filter(c => c.status === filterStatus);
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
@@ -474,197 +408,6 @@ const ClientContracts = ({ dbContracts = [] }: ClientContractsProps) => {
           </main>
         </div>
       </div>
-
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="font-display text-2xl">{editing ? "Edit Contract" : "New Contract"}</DialogTitle>
-          </DialogHeader>
-
-          {/* Section 1: Client */}
-          <section className="rounded-xl border border-border bg-muted/30 p-5 space-y-4">
-            <div className="flex items-center justify-between flex-wrap gap-3">
-              <h3 className="font-display text-base font-bold flex items-center gap-2">
-                <Users className="w-4 h-4" /> Client Information
-              </h3>
-              <ToggleGroup
-                type="single"
-                value={form.clientMode}
-                onValueChange={(v) => v && updateField("clientMode", v)}
-                className="bg-background rounded-lg p-0.5 border border-border"
-              >
-                <ToggleGroupItem value="new" className="px-3 py-1.5 text-xs data-[state=on]:bg-accent data-[state=on]:text-accent-foreground rounded-md">New client</ToggleGroupItem>
-                <ToggleGroupItem value="existing" className="px-3 py-1.5 text-xs data-[state=on]:bg-accent data-[state=on]:text-accent-foreground rounded-md">Existing client</ToggleGroupItem>
-              </ToggleGroup>
-            </div>
-
-            {form.clientMode === "existing" ? (
-              <div className="grid gap-2">
-                <Label>Select client</Label>
-                <Popover open={clientPickerOpen} onOpenChange={setClientPickerOpen}>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      role="combobox"
-                      aria-expanded={clientPickerOpen}
-                      className="w-full justify-between font-normal"
-                    >
-                      {form.existingClientId
-                        ? (() => {
-                            const c = existingClients.find(x => x.id === form.existingClientId);
-                            return c ? `${c.name} — ${c.email}` : "Choose a client";
-                          })()
-                        : "Search a client..."}
-                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
-                    <Command>
-                      <CommandInput placeholder="Search by name, email, ID..." />
-                      <CommandList>
-                        <CommandEmpty>No client found.</CommandEmpty>
-                        <CommandGroup>
-                          {existingClients.map(c => (
-                            <CommandItem
-                              key={c.id}
-                              value={`${c.name} ${c.email} ${c.idNumber} ${c.phone}`}
-                              onSelect={() => {
-                                updateField("existingClientId", c.id);
-                                setClientPickerOpen(false);
-                              }}
-                            >
-                              <Check className={cn("mr-2 h-4 w-4", form.existingClientId === c.id ? "opacity-100" : "opacity-0")} />
-                              <div className="flex flex-col">
-                                <span className="font-medium">{c.name}</span>
-                                <span className="text-xs text-muted-foreground">{c.email} · {c.idNumber}</span>
-                              </div>
-                            </CommandItem>
-                          ))}
-                        </CommandGroup>
-                      </CommandList>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
-              </div>
-            ) : (
-              <>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="grid gap-2">
-                    <Label htmlFor="lastName">Last name *</Label>
-                    <Input id="lastName" value={form.lastName} onChange={e => updateField("lastName", e.target.value)} placeholder="Müller" />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="firstName">First name *</Label>
-                    <Input id="firstName" value={form.firstName} onChange={e => updateField("firstName", e.target.value)} placeholder="Anna" />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="idNumber">ID</Label>
-                    <Input id="idNumber" value={form.idNumber} onChange={e => updateField("idNumber", e.target.value)} placeholder="DE-A123456" />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="birthdate">Birthdate</Label>
-                    <Input id="birthdate" type="date" value={form.birthdate} onChange={e => updateField("birthdate", e.target.value)} />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="phone">Phone</Label>
-                    <Input id="phone" value={form.phone} onChange={e => updateField("phone", e.target.value)} placeholder="+49 170 1234567" />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="email">Email</Label>
-                    <Input id="email" type="email" value={form.email} onChange={e => updateField("email", e.target.value)} placeholder="client@email.com" />
-                  </div>
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="address">Address</Label>
-                  <Input id="address" value={form.address} onChange={e => updateField("address", e.target.value)} placeholder="Street, City" />
-                </div>
-              </>
-            )}
-          </section>
-
-          {/* Section 2: Contract */}
-          <section className="rounded-xl border border-border bg-muted/30 p-5 space-y-4">
-            <h3 className="font-display text-base font-bold flex items-center gap-2">
-              <FileText className="w-4 h-4" /> Contract Details
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="contractNumber">Contract # *</Label>
-                <Input id="contractNumber" value={form.contractNumber} onChange={e => updateField("contractNumber", e.target.value)} placeholder="CT-2026-001" />
-              </div>
-              <div className="grid gap-2">
-                <Label>Property type</Label>
-                <Select value={form.propertyType} onValueChange={v => { updateField("propertyType", v); updateField("property", ""); }}>
-                  <SelectTrigger><SelectValue placeholder="Select a property type" /></SelectTrigger>
-                  <SelectContent>
-                    {Object.keys(propertiesByType).map(t => (
-                      <SelectItem key={t} value={t}>{t}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            {form.propertyType && (
-              <div className="grid gap-2">
-                <Label>Property</Label>
-                <Select value={form.property} onValueChange={v => updateField("property", v)}>
-                  <SelectTrigger><SelectValue placeholder="Select a property" /></SelectTrigger>
-                  <SelectContent>
-                    {(propertiesByType[form.propertyType] || []).map(p => (
-                      <SelectItem key={p} value={p}>{p}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="grid gap-2">
-                <Label>Type</Label>
-                <Select value={form.type} onValueChange={v => updateField("type", v)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Sale">Sale</SelectItem>
-                    <SelectItem value="Rental">Rental</SelectItem>
-                    <SelectItem value="Reservation">Reservation</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid gap-2">
-                <Label>Status</Label>
-                <Select value={form.status} onValueChange={v => updateField("status", v)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Active">Active</SelectItem>
-                    <SelectItem value="Pending">Pending</SelectItem>
-                    <SelectItem value="Completed">Completed</SelectItem>
-                    <SelectItem value="Expired">Expired</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="startDate">Start Date</Label>
-                <Input id="startDate" type="date" value={form.startDate} onChange={e => updateField("startDate", e.target.value)} />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="endDate">End Date</Label>
-                <Input id="endDate" type="date" value={form.endDate} onChange={e => updateField("endDate", e.target.value)} />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="amount">Amount</Label>
-                <Input id="amount" value={form.amount} onChange={e => updateField("amount", e.target.value)} placeholder="€485,000" />
-              </div>
-            </div>
-          </section>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleSave} style={{ background: "hsl(var(--accent))", color: "hsl(var(--accent-foreground))" }}>
-              {editing ? "Save Changes" : "Create Contract"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <AlertDialogContent>

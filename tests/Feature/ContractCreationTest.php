@@ -17,14 +17,14 @@ class ContractCreationTest extends TestCase
     {
         // 1. Préparation des données de test
         $user = User::factory()->create();
-        
+
         // Créer les entités nécessaires
         $property = Property::factory()->create([
             'status' => 'available',
             'price' => 100000,
         ]);
         $blocId = $property->bloc_id; // Récupère le bloc de la propriété
-        
+
         $client = Client::factory()->create();
 
         // 2. Préparation du payload (les données du formulaire)
@@ -45,7 +45,7 @@ class ContractCreationTest extends TestCase
 
         // 4. Vérifications (Assertions)
         $response->assertRedirect(); // Vérifie que ça redirige après succès
-        
+
         // Vérifie que le contrat est en base de données
         $this->assertDatabaseHas('contracts', [
             'contract_number' => 'CTR-TEST-001',
@@ -61,5 +61,25 @@ class ContractCreationTest extends TestCase
         // Vérifie que la logique d'auto-génération a bien fonctionné
         // 12 mois / 3 mois = 4 paiements
         $this->assertDatabaseCount('payment_schedules', 4);
+    }
+
+    public function test_can_get_all_properties_via_api()
+    {
+        $user = User::factory()->create();
+
+        $properties = Property::factory()->count(3)->create();
+
+        $response = $this->actingAs($user)
+            ->get(route('api.properties'));
+
+        $response->assertStatus(200);
+        $response->assertJsonCount(3);
+
+        // Assert loaded relationships are present in JSON
+        $data = $response->json();
+        $this->assertArrayHasKey('property_type', $data[0]);
+        $this->assertArrayHasKey('bloc', $data[0]);
+        $this->assertArrayHasKey('tranche', $data[0]['bloc']);
+        $this->assertArrayHasKey('project', $data[0]['bloc']['tranche']);
     }
 }

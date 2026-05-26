@@ -7,9 +7,9 @@ use App\Models\Bloc;
 use App\Models\Client;
 use App\Models\Company;
 use App\Models\Contract;
-use App\Models\Project;
+use App\Models\Parking;
 use App\Models\Property;
-use App\Models\Tranche;
+use App\Models\PropertyType;
 use App\Services\ContractPdfService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
@@ -43,7 +43,7 @@ class ContractController extends Controller
 
     public function create(Bloc $bloc)
     {
-        return Inertia::render('Contracts/Create', [
+        return Inertia::render('ContractCreate', [
             'companies' => Company::all(),
             'clients' => Client::all(),
             'bloc' => $bloc->load('tranche.project.company'),
@@ -85,6 +85,7 @@ class ContractController extends Controller
             $contract = Contract::create([
                 'client_id' => $clientId,
                 'property_id' => $property->id,
+                'parking_id' => $validated['parking_id'] ?? null,
                 'contract_number' => $validated['contract_number'],
                 'price' => $validated['price'],
                 'advance' => $validated['advance'] ?? null,
@@ -153,8 +154,16 @@ class ContractController extends Controller
                     'broker_name' => $commission['broker_name'] ?? $commission['name'] ?? null,
                     'amount' => $commission['amount'] ?? null,
                     'description' => $commission['description'] ?? null,
-                    'status' => $commission['status'] ?? ($commission['status'] ?? 'pending'),
+                    'status' => $commission['status'] ?? 'pending',
                 ]);
+            }
+
+            // Reserve the parking space if selected
+            if (! empty($validated['parking_id'])) {
+                $parking = Parking::find($validated['parking_id']);
+                if ($parking) {
+                    $parking->update(['status' => 'reserved']);
+                }
             }
 
             // Update property status and price
@@ -231,9 +240,16 @@ class ContractController extends Controller
 
     public function edit(Bloc $bloc, Contract $contract)
     {
-        $contract->load(['property.bloc.tranche.project.company']);
+        $contract->load([
+            'client',
+            'property.bloc.tranche.project.company',
+            'modification',
+            'paymentSchedules',
+            'commission',
+            'parking',
+        ]);
 
-        return Inertia::render('Contracts/Create', [
+        return Inertia::render('ContractCreate', [
             'contract' => $contract,
             'companies' => Company::all(),
             'clients' => Client::all(),
@@ -241,57 +257,270 @@ class ContractController extends Controller
         ]);
     }
 
-    public function update(Request $request, Bloc $bloc, Contract $contract)
+    public function editStandalone(Contract $contract)
     {
-        $validated = $request->validate([
-            'client_id' => 'nullable|exists:clients,id',
-            'property_id' => 'nullable|exists:properties,id',
-            'contract_number' => 'nullable|string',
-            'status' => 'nullable|string|in:active,completed,cancelled,draft',
-            'price' => 'nullable|numeric|min:0',
-            'advance' => 'nullable|numeric|min:0',
-            'payment_duration' => 'nullable|integer|min:0',
-            'payment_frequency' => 'nullable|integer|min:0',
-            'date' => 'nullable|date',
-
-            // Client details for inline update if needed
-            'client_name' => 'nullable|string',
-            'client_email' => 'nullable|email',
-            'client_phone' => 'nullable|string',
+        $contract->load([
+            'client',
+            'property.bloc.tranche.project.company',
+            'modification',
+            'paymentSchedules',
+            'commission',
+            'parking',
         ]);
 
-        $contract->update($validated);
+        $bloc = $contract->property?->bloc;
 
-        if (! empty($validated['client_name']) && $contract->client) {
-            $contract->client->update([
-                'full_name' => $validated['client_name'],
-                'email' => $validated['client_email'] ?? $contract->client->email,
-                'phone' => $validated['client_phone'] ?? $contract->client->phone,
+        if ($bloc) {
+            $bloc->load('tranche.project.company');
+        }
+
+        return Inertia::render('ContractCreate', [
+            'contract' => $contract,
+            'companies' => Company::all(),
+            'clients' => Client::all(),
+            'bloc' => $bloc,
+        ]);
+    }
+
+    public function update(Request $request, Bloc $bloc, Contract $contract)
+    {
+        if ($request->has('schedule') && is_array($request->input('schedule'))) {
+            $filteredSchedule = array_filter($request->input('schedule'), function ($item) {
+                return isset($item['amount']) && trim($item['amount']) !== '';
+            });
+            $request->merge([
+                'schedule' => array_values($filteredSchedule),
             ]);
         }
 
-        if ($contract->status === 'active') {
-            $contract->property->update(['status' => 'Reserved']);
-        } elseif ($contract->status === 'cancelled') {
-            $contract->property->update(['status' => 'Available']); // Assuming 'Available' is a valid status
-        }
+        $validated = $request->validate([
+            'client_id' => 'nullable|exists:clients,id',
+            'first_name' => 'required_without:client_id|string|max:255',
+            'last_name' => 'required_without:client_id|string|max:255',
+            'email' => 'nullable|email|max:255',
+            'phone' => 'required_without:client_id|string|max:255',
+            'id_number' => 'nullable|string|max:255',
+            'address' => 'nullable|string|max:255',
 
-        if ($request->header('Referer')) {
-            return redirect($request->header('Referer'))->with('success', 'Contract updated successfully.');
-        }
+            'property_id' => 'required|exists:properties,id',
+            'parking_id' => 'nullable|exists:parkings,id',
+            'contract_number' => 'required|string|unique:contracts,contract_number,'.$contract->id,
+            'price' => 'required|numeric|min:0',
+            'advance' => 'nullable|numeric|min:0',
+            'paymentDuration' => 'nullable|integer|min:1',
+            'paymentFrequency' => 'nullable|integer|min:1',
+            'date' => 'nullable|date',
 
-        return redirect()->route('client-contracts', ['bloc' => $bloc->id])->with('success', 'Contract updated successfully.');
+            'modification.notes' => 'nullable|string',
+            'modification.image' => 'nullable|image|max:2048',
+
+            'withDetails' => 'required|boolean',
+            'schedule' => 'required_if:withDetails,1|array',
+            'schedule.*.due_date' => 'required_with:schedule|date',
+            'schedule.*.amount' => 'required_with:schedule|numeric|min:0',
+            'schedule.*.observation' => 'nullable|string',
+
+            'commission' => 'nullable|array',
+            'commission.broker_name' => 'required_with:commission|string|max:255',
+            'commission.amount' => 'required_with:commission|numeric|min:0',
+            'commission.description' => 'nullable|string',
+            'commission.status' => 'nullable|string',
+        ]);
+
+        return DB::transaction(function () use ($validated, $request, $bloc, $contract) {
+            // 1. Check or create/update the Client record
+            if (empty($validated['client_id'])) {
+                $fullName = trim(($validated['first_name'] ?? '').' '.($validated['last_name'] ?? ''));
+                $client = Client::create([
+                    'full_name' => $fullName ?: null,
+                    'email' => $validated['email'] ?? null,
+                    'phone' => $validated['phone'] ?? null,
+                    'identity_number' => $validated['id_number'] ?? null,
+                    'address' => $validated['address'] ?? null,
+                    'type' => $validated['type'] ?? 'individual',
+                ]);
+                $clientId = $client->id;
+            } else {
+                $clientId = $validated['client_id'];
+                $client = Client::findOrFail($clientId);
+                $fullName = trim(($request->input('first_name') ?? '').' '.($request->input('last_name') ?? ''));
+                if ($fullName) {
+                    $client->update(['full_name' => $fullName]);
+                }
+                if ($request->has('email')) {
+                    $client->update(['email' => $request->input('email')]);
+                }
+                if ($request->has('phone')) {
+                    $client->update(['phone' => $request->input('phone')]);
+                }
+                if ($request->has('id_number')) {
+                    $client->update(['identity_number' => $request->input('id_number')]);
+                }
+                if ($request->has('address')) {
+                    $client->update(['address' => $request->input('address')]);
+                }
+            }
+
+            // Target Property Unit matching incoming property ID
+            $property = Property::findOrFail($validated['property_id']);
+            $oldPropertyId = $contract->property_id;
+
+            if ($oldPropertyId && $oldPropertyId != $property->id) {
+                $oldProperty = Property::find($oldPropertyId);
+                if ($oldProperty) {
+                    $oldProperty->update(['status' => 'Disponible']);
+                }
+            }
+
+            // Parking reservation update
+            $oldParkingId = $contract->parking_id;
+            $newParkingId = $validated['parking_id'] ?? null;
+
+            if ($oldParkingId != $newParkingId) {
+                if ($oldParkingId) {
+                    $oldParking = Parking::find($oldParkingId);
+                    if ($oldParking) {
+                        $oldParking->update(['status' => 'free']);
+                    }
+                }
+                if ($newParkingId) {
+                    $newParking = Parking::find($newParkingId);
+                    if ($newParking) {
+                        $newParking->update(['status' => 'reserved']);
+                    }
+                }
+            }
+
+            $contract->update([
+                'client_id' => $clientId,
+                'property_id' => $property->id,
+                'parking_id' => $newParkingId,
+                'contract_number' => $validated['contract_number'],
+                'price' => $validated['price'],
+                'advance' => $validated['advance'] ?? null,
+                'payment_duration' => $validated['paymentDuration'] ?? null,
+                'payment_frequency' => $validated['paymentFrequency'] ?? null,
+                'date' => $validated['date'] ?? now(),
+            ]);
+
+            // Handle file upload for the modification image
+            if (! empty($validated['modification'])) {
+                $imagePath = null;
+                if ($request->hasFile('modification.image')) {
+                    $imagePath = $request->file('modification.image')->store('modifications', 'public');
+                }
+
+                if ($contract->modification) {
+                    $contract->modification->update([
+                        'notes' => $validated['modification']['notes'] ?? $contract->modification->notes,
+                        'image_path' => $imagePath ?? $contract->modification->image_path,
+                    ]);
+                } else {
+                    if (! empty($validated['modification']['notes']) || $imagePath) {
+                        $contract->modification()->create([
+                            'notes' => $validated['modification']['notes'] ?? null,
+                            'image_path' => $imagePath,
+                        ]);
+                    }
+                }
+            }
+
+            // Payment timeline rows update
+            if (! empty($validated['withDetails'])) {
+                $contract->paymentSchedules()->delete();
+
+                if (! empty($validated['schedule'])) {
+                    foreach ($validated['schedule'] as $payment) {
+                        $dueDate = $payment['due_date'] ?? $payment['date'] ?? null;
+                        $amount = $payment['amount'] ?? null;
+                        $observation = $payment['observation'] ?? $payment['note'] ?? null;
+
+                        if ($dueDate && $amount !== null) {
+                            $contract->paymentSchedules()->create([
+                                'due_date' => $dueDate,
+                                'amount' => $amount,
+                                'observation' => $observation,
+                            ]);
+                        }
+                    }
+                }
+            } else {
+                $contract->paymentSchedules()->delete();
+
+                $duration = $validated['paymentDuration'] ?? 0;
+                $frequency = $validated['paymentFrequency'] ?? 1;
+
+                if ($duration > 0 && $frequency > 0) {
+                    $totalRows = ceil($duration / $frequency);
+                    $balance = $contract->price - ($contract->advance ?? 0);
+                    $amountPerRow = $totalRows > 0 ? $balance / $totalRows : 0;
+                    $currentDate = Carbon::parse($contract->date ?? now());
+
+                    for ($i = 1; $i <= $totalRows; $i++) {
+                        $contract->paymentSchedules()->create([
+                            'due_date' => $currentDate->copy()->addMonths($i * $frequency),
+                            'amount' => $amountPerRow,
+                            'observation' => "Auto-generated payment #{$i}",
+                        ]);
+                    }
+                }
+            }
+
+            // Commission update
+            if (! empty($validated['commission'])) {
+                $commission = $validated['commission'];
+                if ($contract->commission) {
+                    $contract->commission->update([
+                        'broker_name' => $commission['broker_name'] ?? $commission['name'] ?? $contract->commission->broker_name,
+                        'amount' => $commission['amount'] ?? $contract->commission->amount,
+                        'description' => $commission['description'] ?? $contract->commission->description,
+                        'status' => $commission['status'] ?? $contract->commission->status,
+                    ]);
+                } else {
+                    $contract->commission()->create([
+                        'broker_name' => $commission['broker_name'] ?? $commission['name'] ?? null,
+                        'amount' => $commission['amount'] ?? null,
+                        'description' => $commission['description'] ?? null,
+                        'status' => $commission['status'] ?? 'pending',
+                    ]);
+                }
+            }
+
+            $property->update([
+                'status' => 'Vendu',
+                'price' => $contract->price,
+            ]);
+
+            if ($request->header('Referer')) {
+                return redirect($request->header('Referer'))->with('success', 'Contract updated successfully.');
+            }
+
+            return redirect()->route('client-contracts', ['bloc' => $bloc->id])->with('success', 'Contract updated successfully.');
+        });
     }
 
     public function destroy(Request $request, Bloc $bloc, Contract $contract)
     {
-        $contract->update(['status' => 'cancelled']); // Mark as cancelled / expired as per policy
+        return DB::transaction(function () use ($request, $bloc, $contract) {
+            $contract->update(['status' => 'cancelled']);
 
-        if ($request->header('Referer')) {
-            return redirect($request->header('Referer'))->with('success', 'Contract deleted successfully.');
-        }
+            if ($contract->parking_id) {
+                $parking = Parking::find($contract->parking_id);
+                if ($parking) {
+                    $parking->update(['status' => 'free']);
+                }
+            }
 
-        return redirect()->route('client-contracts', ['bloc' => $bloc->id])->with('success', 'Contract deleted successfully.');
+            if ($contract->property) {
+                $contract->property->update(['status' => 'Disponible']);
+            }
+
+            if ($request->header('Referer')) {
+                return redirect($request->header('Referer'))->with('success', 'Contract deleted successfully.');
+            }
+
+            return redirect()->route('client-contracts', ['bloc' => $bloc->id])->with('success', 'Contract deleted successfully.');
+        });
     }
 
     public function generatePdf(Bloc $bloc, Contract $contract, ContractPdfService $pdfService)
@@ -321,6 +550,39 @@ class ContractController extends Controller
         $fileName = 'contrat_'.$contractNumber.'_'.$projectName.'_'.$clientName.'_'.$date.'.pdf';
 
         return $pdf->download($fileName);
+    }
+
+    public function getPropertyTypes()
+    {
+        return response()->json(PropertyType::all());
+    }
+
+    public function getParkings(Request $request, Bloc $bloc)
+    {
+        $contractId = $request->query('contract_id');
+
+        $query = Parking::where('bloc_id', $bloc->id)
+            ->where(function ($q) use ($contractId) {
+                // Either status is free OR it is not associated with any contract
+                $q->where('status', 'free')
+                    ->orWhereNotExists(function ($subQuery) {
+                        $subQuery->select(DB::raw(1))
+                            ->from('contracts')
+                            ->whereColumn('contracts.parking_id', 'parkings.id');
+                    });
+
+                // Or it is associated with the current contract being edited
+                if ($contractId) {
+                    $q->orWhereExists(function ($subQuery) use ($contractId) {
+                        $subQuery->select(DB::raw(1))
+                            ->from('contracts')
+                            ->whereColumn('contracts.parking_id', 'parkings.id')
+                            ->where('contracts.id', $contractId);
+                    });
+                }
+            });
+
+        return response()->json($query->get());
     }
 
     // API endpoints for cascading dropdowns
@@ -371,5 +633,10 @@ class ContractController extends Controller
         } while ($exists);
 
         return response()->json(['contract_number' => $number]);
+    }
+
+    public function getAllProperties()
+    {
+        return response()->json(Property::with(['propertyType', 'bloc.tranche.project'])->get());
     }
 }

@@ -20,25 +20,24 @@ import { toast } from "@/hooks/use-toast";
 
 // propertiesByType state moved inside the component
 
-const companies = ["Legrand Klein SARL", "Spree Property GmbH", "München Residenz AG"];
 const propertyStates = ["Basic construction works", "Mid-finish", "Ready to move in", "Custom finish"];
 const paymentMethods = ["Cash", "Bank Transfer", "Check", "Card"];
-const subsoilTypes = ["None", "Cellar", "Parking Spot", "Storage Room"];
 const today = new Date().toISOString().slice(0, 10);
 
 type ScheduleRow = { date: string; amount: string; note: string };
 const makeRow = (): ScheduleRow => ({ date: today, amount: "", note: "" });
 
-const ContractCreate = () => {
+const ContractCreate = ({ contract: propContract, companies: propCompanies = [], clients: propClients = [], bloc: propBloc }: any) => {
   const { url } = usePage();
   const location = new URL(url || "/", window.location.origin);
   const searchParams = location.searchParams;
 
   // Properties
   const [propertiesByType, setPropertiesByType] = useState<Record<string, any[]>>({});
-  
+  const [properties, setProperties] = useState<any[]>([]);
+
   // Client
-  const [existingClients, setExistingClients] = useState<any[]>([]);
+  const [existingClients, setExistingClients] = useState<any[]>(propClients || []);
   const [clientMode, setClientMode] = useState<"new" | "existing">("new");
   const [existingClientId, setExistingClientId] = useState("");
   const [clientPickerOpen, setClientPickerOpen] = useState(false);
@@ -46,7 +45,7 @@ const ContractCreate = () => {
     firstName: "", lastName: "", idNumber: "", birthdate: "", email: "", phone: "", address: "",
   });
 
-  // Contract — Etape 2
+  // Contract
   const [contract, setContract] = useState({
     contractNumber: "",
     creationDate: today,
@@ -59,15 +58,23 @@ const ContractCreate = () => {
     installment: "",
     paymentMethod: "Cash",
     operationNumber: "",
-    agreedSalePrice: "",
-    deposit: "",
-    company: "",
     propertyState: "",
     facade: "",
     otherClauses: "",
-    subsoil: "",
-    subsoilPrice: "0",
   });
+
+  const initialBlocId = propContract?.property?.bloc_id || searchParams.get('bloc') || propBloc?.id;
+  const selectedPropertyObj = properties.find(p => String(p.id) === String(contract.property));
+  const resolvedBlocId = selectedPropertyObj?.bloc_id || initialBlocId;
+
+
+  // Parking integration
+  const [withParking, setWithParking] = useState(false);
+  const [parkingId, setParkingId] = useState("");
+  const [parkings, setParkings] = useState<any[]>([]);
+
+  // Property types
+  const [propertyTypes, setPropertyTypes] = useState<any[]>([]);
 
   // Modifications
   const [withModifications, setWithModifications] = useState(false);
@@ -81,7 +88,6 @@ const ContractCreate = () => {
   // Commission
   const [withCommission, setWithCommission] = useState(false);
   const [commission, setCommission] = useState({ name: "", amount: "", description: "", status: "Pending" });
-  const [properties, setProperties] = useState<any[]>([]);
 
   const updateContract = (k: keyof typeof contract, v: string) =>
     setContract(prev => ({ ...prev, [k]: v }));
@@ -93,7 +99,7 @@ const ContractCreate = () => {
   const removeRow = (i: number) => setSchedule(prev => prev.filter((_, idx) => idx !== i));
 
   const selectedClientLabel = (() => {
-    const c = existingClients.find(x => x.id === existingClientId);
+    const c = (existingClients || []).find(x => String(x.id) === String(existingClientId));
     return c ? `${c.name} — ${c.email}` : "Search a client...";
   })();
 
@@ -102,37 +108,80 @@ const ContractCreate = () => {
     router.visit(`/client-contracts${qs ? `?${qs}` : ""}`);
   };
 
-  const blocId = searchParams.get('bloc');
-
-  // Load properties for current bloc on mount
+  // Load all properties on mount
   useEffect(() => {
-    if (!blocId) return;
-    fetch(`/api/blocs/${blocId}/properties`, { headers: { Accept: 'application/json' } })
-      .then(r => r.json())
-      .then((data) => {
-        setProperties(data || []);
+    fetch('/api/properties', { headers: { Accept: 'application/json' } })
+      .then(r => {
+        if (!r.ok) throw new Error('Response error');
+        return r.json();
       })
-      .catch((err) => console.error('Failed to load properties', err));
-  }, [blocId]);
-
-  // Load clients & next contract number
-  useEffect(() => {
-    fetch('/api/clients-lookup', { headers: { Accept: 'application/json' } })
-      .then(r => r.json())
       .then((data) => {
-        setExistingClients(data || []);
-      })
-      .catch((err) => console.error('Failed to load clients', err));
-
-    fetch('/api/contracts/next-number', { headers: { Accept: 'application/json' } })
-      .then(r => r.json())
-      .then((data) => {
-        if (data && data.contract_number) {
-          updateContract("contractNumber", data.contract_number);
+        if (Array.isArray(data)) {
+          setProperties(data);
         }
       })
-      .catch((err) => console.error('Failed to load next contract number', err));
+      .catch((err) => console.error('Failed to load properties', err));
   }, []);
+
+  // Load clients, property types, and next contract number
+  useEffect(() => {
+    if (!propClients || propClients.length === 0) {
+      fetch('/api/clients-lookup', { headers: { Accept: 'application/json' } })
+        .then(r => {
+          if (!r.ok) throw new Error('Response error');
+          return r.json();
+        })
+        .then((data) => {
+          if (Array.isArray(data)) {
+            setExistingClients(data);
+          }
+        })
+        .catch((err) => console.error('Failed to load clients', err));
+    }
+
+    fetch('/api/property-types', { headers: { Accept: 'application/json' } })
+      .then(r => {
+        if (!r.ok) throw new Error('Response error');
+        return r.json();
+      })
+      .then((data) => {
+        if (Array.isArray(data)) {
+          setPropertyTypes(data);
+        }
+      })
+      .catch((err) => console.error('Failed to load property types', err));
+
+    if (!propContract) {
+      fetch('/api/contracts/next-number', { headers: { Accept: 'application/json' } })
+        .then(r => {
+          if (!r.ok) throw new Error('Response error');
+          return r.json();
+        })
+        .then((data) => {
+          if (data && data.contract_number) {
+            updateContract("contractNumber", data.contract_number);
+          }
+        })
+        .catch((err) => console.error('Failed to load next contract number', err));
+    }
+  }, [propContract?.id]);
+
+  // Load parkings for current bloc
+  useEffect(() => {
+    if (!resolvedBlocId) return;
+    const url = `/api/blocs/${resolvedBlocId}/parkings` + (propContract ? `?contract_id=${propContract.id}` : "");
+    fetch(url, { headers: { Accept: 'application/json' } })
+      .then(r => {
+        if (!r.ok) throw new Error('Response error');
+        return r.json();
+      })
+      .then((data) => {
+        if (Array.isArray(data)) {
+          setParkings(data);
+        }
+      })
+      .catch((err) => console.error('Failed to load parkings', err));
+  }, [resolvedBlocId, propContract?.id]);
 
   // Build propertiesByType whenever properties array changes
   useEffect(() => {
@@ -145,11 +194,96 @@ const ContractCreate = () => {
     setPropertiesByType(map);
   }, [properties]);
 
+  // Pre-populate form when editing
+  useEffect(() => {
+    if (propContract) {
+      // Client populating
+      if (propContract.client_id) {
+        setClientMode("existing");
+        setExistingClientId(String(propContract.client_id));
+      } else if (propContract.client) {
+        setClientMode("new");
+        const parts = (propContract.client.full_name || "").split(" ");
+        setClient({
+          firstName: parts[0] || "",
+          lastName: parts.slice(1).join(" ") || "",
+          idNumber: propContract.client.identity_number || "",
+          birthdate: propContract.client.birthdate || "",
+          email: propContract.client.email || "",
+          phone: propContract.client.phone || "",
+          address: propContract.client.address || "",
+        });
+      }
+
+      // Contract populating
+      const pType = propContract.property?.property_type?.name || propContract.property?.propertyType?.name || "";
+      setContract({
+        contractNumber: propContract.contract_number || "",
+        creationDate: propContract.date ? propContract.date.slice(0, 10) : today,
+        propertyType: pType,
+        property: String(propContract.property_id || ""),
+        negotiatedPrice: String(propContract.price || ""),
+        advance: String(propContract.advance || ""),
+        paymentDuration: String(propContract.payment_duration || ""),
+        paymentFrequency: String(propContract.payment_frequency || ""),
+        installment: "", // will be calculated below
+        paymentMethod: propContract.payment_method || "Cash",
+        operationNumber: propContract.operation_number || "",
+        propertyState: propContract.property_state || "",
+        facade: propContract.facade || "",
+        otherClauses: propContract.other_clauses || "",
+      });
+
+      if (propContract.parking_id) {
+        setWithParking(true);
+        setParkingId(String(propContract.parking_id));
+      }
+
+      if (propContract.modification) {
+        setWithModifications(true);
+        setModNote(propContract.modification.notes || "");
+      }
+
+      if (propContract.payment_schedules && propContract.payment_schedules.length > 0) {
+        setWithDetails(true);
+        setSchedule(propContract.payment_schedules.map((s: any) => ({
+          date: s.due_date ? s.due_date.slice(0, 10) : "",
+          amount: String(s.amount),
+          note: s.observation || "",
+        })));
+      }
+
+      if (propContract.commission) {
+        setWithCommission(true);
+        setCommission({
+          name: propContract.commission.broker_name || "",
+          amount: String(propContract.commission.amount || ""),
+          description: propContract.commission.description || "",
+          status: propContract.commission.status || "Pending",
+        });
+      }
+    }
+  }, [propContract]);
+
+  // Installment Auto-Calculation
+  useEffect(() => {
+    const priceVal = parseFloat(contract.negotiatedPrice.replace(/[^0-9.]/g, '')) || 0;
+    const advanceVal = parseFloat(contract.advance.replace(/[^0-9.]/g, '')) || 0;
+    const duration = parseFloat(contract.paymentDuration) || 0;
+    const freq = parseFloat(contract.paymentFrequency) || 0;
+
+    if (duration > 0 && freq > 0) {
+      const calculated = Math.round((priceVal - advanceVal) / (duration / freq));
+      if (!isNaN(calculated) && isFinite(calculated)) {
+        updateContract("installment", String(calculated));
+      }
+    }
+  }, [contract.negotiatedPrice, contract.advance, contract.paymentDuration, contract.paymentFrequency]);
+
   const handleSave = () => {
     let clientName = "";
     if (clientMode === "existing") {
-      // eslint-disable-next-line eqeqeq
-      const ex = existingClients.find(c => c.id == existingClientId);
+      const ex = existingClients.find(c => String(c.id) === String(existingClientId));
       if (!ex) { toast({ title: "Please select an existing client", variant: "destructive" }); return; }
       clientName = ex.name;
     } else {
@@ -160,8 +294,7 @@ const ContractCreate = () => {
       toast({ title: "Contract number is required", variant: "destructive" });
       return;
     }
-    // build payload and submit to backend
-    // property must be an id (number). If not provided, ask user to select a real property id.
+
     const propertyId = Number(contract.property);
     if (!propertyId || Number.isNaN(propertyId)) {
       toast({ title: "Please select a valid property (ID)", variant: "destructive" });
@@ -189,6 +322,11 @@ const ContractCreate = () => {
     if (contract.paymentDuration) form.append('paymentDuration', contract.paymentDuration);
     if (contract.paymentFrequency) form.append('paymentFrequency', contract.paymentFrequency);
     if (contract.creationDate) form.append('date', contract.creationDate);
+
+    // parking slot allocation
+    if (withParking && parkingId) {
+      form.append('parking_id', parkingId);
+    }
 
     // modifications
     form.append('withDetails', withDetails ? '1' : '0');
@@ -218,9 +356,16 @@ const ContractCreate = () => {
       form.append('commission[status]', commission.status || 'Pending');
     }
 
-    router.post('/contracts', form, {
+    const isEdit = !!propContract;
+    const url = isEdit ? `/blocs/${resolvedBlocId}/contracts/${propContract.id}` : '/contracts';
+
+    if (isEdit) {
+      form.append('_method', 'PUT');
+    }
+
+    router.post(url, form, {
       onSuccess: () => {
-        toast({ title: 'Contract created', description: `${contract.contractNumber} · ${clientName}` });
+        toast({ title: isEdit ? 'Contract updated' : 'Contract created', description: `${contract.contractNumber} · ${clientName}` });
         cancel();
       },
       onError: (errors) => {
@@ -253,8 +398,12 @@ const ContractCreate = () => {
 
           <main className="flex-1 p-6 lg:p-8 max-w-[1400px] w-full mx-auto animate-in fade-in slide-in-from-bottom-1 duration-400 space-y-6">
             <div>
-              <h2 className="font-display text-[1.75rem] xl:text-[2rem] font-bold">New Client Contract</h2>
-              <p className="text-[0.9375rem] text-muted-foreground">Capture the client and the full contract specifications.</p>
+              <h2 className="font-display text-[1.75rem] xl:text-[2rem] font-bold">
+                {propContract ? "Edit Client Contract" : "New Client Contract"}
+              </h2>
+              <p className="text-[0.9375rem] text-muted-foreground">
+                {propContract ? "Modify the client and contract specifications." : "Capture the client and the full contract specifications."}
+              </p>
             </div>
 
             {/* SECTION 1 — CLIENT */}
@@ -290,13 +439,13 @@ const ContractCreate = () => {
                           <CommandList>
                             <CommandEmpty>No client found.</CommandEmpty>
                             <CommandGroup>
-                              {existingClients.map(c => (
+                              {(existingClients || []).map(c => (
                                 <CommandItem
                                   key={c.id}
                                   value={`${c.name} ${c.email} ${c.idNumber} ${c.phone}`}
                                   onSelect={() => { setExistingClientId(c.id); setClientPickerOpen(false); }}
                                 >
-                                  <Check className={cn("mr-2 h-4 w-4", existingClientId === c.id ? "opacity-100" : "opacity-0")} />
+                                  <Check className={cn("mr-2 h-4 w-4", String(existingClientId) === String(c.id) ? "opacity-100" : "opacity-0")} />
                                   <div className="flex flex-col">
                                     <span className="font-medium">{c.name}</span>
                                     <span className="text-xs text-muted-foreground">{c.email} · {c.idNumber}</span>
@@ -367,7 +516,7 @@ const ContractCreate = () => {
                     <Select value={contract.propertyType} onValueChange={v => { updateContract("propertyType", v); updateContract("property", ""); }}>
                       <SelectTrigger><SelectValue placeholder="Select type" /></SelectTrigger>
                       <SelectContent>
-                        {Object.keys(propertiesByType).map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                        {propertyTypes.map(t => <SelectItem key={t.id} value={t.name}>{t.name}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   </div>
@@ -377,9 +526,19 @@ const ContractCreate = () => {
                       <SelectTrigger><SelectValue placeholder={contract.propertyType ? "Select property" : "Pick type first"} /></SelectTrigger>
                       <SelectContent>
                         {properties
-                          .filter(p => (p.property_type && p.property_type.name ? p.property_type.name : (p.propertyType ? p.propertyType.name : '')) === contract.propertyType)
+                          .filter(p => {
+                            const matchesType = (p.property_type && p.property_type.name ? p.property_type.name : (p.propertyType ? p.propertyType.name : '')) === contract.propertyType;
+                            if (!matchesType) return false;
+                            if (initialBlocId) {
+                              return String(p.bloc_id) === String(initialBlocId);
+                            }
+                            return true;
+                          })
                           .map((p: any) => (
-                            <SelectItem key={p.id} value={String(p.id)}>{p.name} — {p.property_type?.name || p.propertyType?.name || ''}</SelectItem>
+                            <SelectItem key={p.id} value={String(p.id)}>
+                              {p.name} — {p.property_type?.name || p.propertyType?.name || ''}
+                              {p.bloc?.tranche?.project?.name ? ` (${p.bloc.tranche.project.name} · ${p.bloc.name || ''})` : ''}
+                            </SelectItem>
                           ))}
                       </SelectContent>
                     </Select>
@@ -405,7 +564,7 @@ const ContractCreate = () => {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="grid gap-2">
                     <Label>Installment</Label>
                     <Input value={contract.installment} onChange={e => updateContract("installment", e.target.value)} placeholder="€" />
@@ -423,26 +582,9 @@ const ContractCreate = () => {
                     <Label>Operation #</Label>
                     <Input value={contract.operationNumber} onChange={e => updateContract("operationNumber", e.target.value)} />
                   </div>
-                  <div className="grid gap-2">
-                    <Label>Company</Label>
-                    <Select value={contract.company} onValueChange={v => updateContract("company", v)}>
-                      <SelectTrigger><SelectValue placeholder="Select company" /></SelectTrigger>
-                      <SelectContent>
-                        {companies.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                  <div className="grid gap-2">
-                    <Label>Agreed sale price</Label>
-                    <Input value={contract.agreedSalePrice} onChange={e => updateContract("agreedSalePrice", e.target.value)} placeholder="€" />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label>Deposit</Label>
-                    <Input value={contract.deposit} onChange={e => updateContract("deposit", e.target.value)} placeholder="€" />
-                  </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="grid gap-2">
                     <Label>Property state</Label>
                     <Select value={contract.propertyState} onValueChange={v => updateContract("propertyState", v)}>
@@ -463,20 +605,27 @@ const ContractCreate = () => {
                   <Textarea rows={3} value={contract.otherClauses} onChange={e => updateContract("otherClauses", e.target.value)} placeholder="Additional terms..." />
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-border">
-                  <div className="grid gap-2">
-                    <Label>Subsoil</Label>
-                    <Select value={contract.subsoil} onValueChange={v => updateContract("subsoil", v)}>
-                      <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                      <SelectContent>
-                        {subsoilTypes.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="grid gap-2">
-                    <Label>Subsoil price</Label>
-                    <Input value={contract.subsoilPrice} onChange={e => updateContract("subsoilPrice", e.target.value)} placeholder="0" />
-                  </div>
+                {/* Parking Reservation Dropdown Section */}
+                <div className="pt-4 border-t border-border space-y-4">
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <Checkbox checked={withParking} onCheckedChange={(v) => setWithParking(!!v)} />
+                    <span className="text-sm font-medium">With parking</span>
+                  </label>
+                  {withParking && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-1 duration-200">
+                      <div className="grid gap-2">
+                        <Label>Select Parking Slot</Label>
+                        <Select value={parkingId} onValueChange={setParkingId}>
+                          <SelectTrigger><SelectValue placeholder="Choose a parking slot" /></SelectTrigger>
+                          <SelectContent>
+                            {parkings.map(p => (
+                              <SelectItem key={p.id} value={String(p.id)}>{p.name} ({p.status})</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </section>
@@ -490,7 +639,7 @@ const ContractCreate = () => {
                 </span>
               </label>
               {withModifications && (
-                <div className="p-5 pt-0 grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="p-5 pt-0 grid grid-cols-1 md:grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-1 duration-200">
                   <div className="grid gap-2">
                     <Label>Client note</Label>
                     <Textarea rows={4} value={modNote} onChange={e => setModNote(e.target.value)} />
@@ -512,7 +661,7 @@ const ContractCreate = () => {
                 </span>
               </label>
               {withDetails && (
-                <div className="p-5 pt-0 space-y-3">
+                <div className="p-5 pt-0 space-y-3 animate-in fade-in slide-in-from-top-1 duration-200">
                   {schedule.map((row, i) => (
                     <div key={i} className="grid grid-cols-1 md:grid-cols-[180px_1fr_1fr_auto] gap-3 items-end">
                       <div className="grid gap-1">
@@ -548,7 +697,7 @@ const ContractCreate = () => {
                 </span>
               </label>
               {withCommission && (
-                <div className="p-5 pt-0 grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="p-5 pt-0 grid grid-cols-1 md:grid-cols-4 gap-4 animate-in fade-in slide-in-from-top-1 duration-200">
                   <div className="grid gap-2">
                     <Label>Commissioner</Label>
                     <Input value={commission.name} onChange={e => setCommission({ ...commission, name: e.target.value })} />

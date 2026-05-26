@@ -50,6 +50,9 @@ Route::middleware('auth')->group(function () {
         Route::get('/api/blocs/{bloc}/properties', [ContractController::class, 'getProperties'])->name('api.blocs.properties');
         Route::get('/api/clients-lookup', [ContractController::class, 'clientsLookup'])->name('api.clients.lookup');
         Route::get('/api/contracts/next-number', [ContractController::class, 'getNextContractNumber'])->name('api.contracts.next-number');
+        Route::get('/api/property-types', [ContractController::class, 'getPropertyTypes'])->name('api.property-types');
+        Route::get('/api/blocs/{bloc}/parkings', [ContractController::class, 'getParkings'])->name('api.blocs.parkings');
+        Route::get('/api/properties', [ContractController::class, 'getAllProperties'])->name('api.properties');
     });
 
     Route::get('/companies', [CompanyController::class, 'index'])
@@ -258,6 +261,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/contract-create', function () {
         return Inertia::render('ContractCreate');
     })->name('contract-create')->middleware('role:admin,manager');
+
+    Route::get('/contracts/{contract}/edit', [ContractController::class, 'editStandalone'])->name('contracts.edit')->middleware('role:admin,manager');
 
     Route::get('/admin-only', function () {
         return response('Admin only access', 200);
