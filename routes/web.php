@@ -1,16 +1,20 @@
 <?php
 
+use App\Http\Controllers\Auth\TwoFactorAuthenticationController;
 use App\Http\Controllers\BlocController;
 use App\Http\Controllers\ClientController;
 use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\ContractArticleController;
 use App\Http\Controllers\ContractController;
+use App\Http\Controllers\ParkingController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\PropertyController;
 use App\Http\Controllers\PropertyTypeController;
 use App\Http\Controllers\TrancheController;
 use App\Http\Controllers\UserController;
+use App\Models\Contract;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -34,12 +38,22 @@ Route::middleware('auth')->group(function () {
     Route::delete('/blocs/{bloc}/contracts/{contract}', [ContractController::class, 'destroy'])->name('blocs.contracts.destroy');
     Route::get('/blocs/{bloc}/contracts/{contract}/pdf', [ContractController::class, 'generatePdf'])->name('blocs.contracts.pdf');
 
+    // Global Contract Create (not nested under bloc)
+    Route::post('/contracts', [ContractController::class, 'storeGlobal'])->name('contracts.store');
+
     // Clients
     Route::resource('clients', ClientController::class)->except(['destroy']);
-    Route::get('/api/companies/{company}/projects', [ContractController::class, 'getProjects'])->name('api.companies.projects');
-    Route::get('/api/projects/{project}/tranches', [ContractController::class, 'getTranches'])->name('api.projects.tranches');
-    Route::get('/api/tranches/{tranche}/blocs', [ContractController::class, 'getBlocs'])->name('api.tranches.blocs');
-    Route::get('/api/blocs/{bloc}/properties', [ContractController::class, 'getProperties'])->name('api.blocs.properties');
+    Route::middleware('throttle:api')->group(function () {
+        Route::get('/api/companies/{company}/projects', [ContractController::class, 'getProjects'])->name('api.companies.projects');
+        Route::get('/api/projects/{project}/tranches', [ContractController::class, 'getTranches'])->name('api.projects.tranches');
+        Route::get('/api/tranches/{tranche}/blocs', [ContractController::class, 'getBlocs'])->name('api.tranches.blocs');
+        Route::get('/api/blocs/{bloc}/properties', [ContractController::class, 'getProperties'])->name('api.blocs.properties');
+        Route::get('/api/clients-lookup', [ContractController::class, 'clientsLookup'])->name('api.clients.lookup');
+        Route::get('/api/contracts/next-number', [ContractController::class, 'getNextContractNumber'])->name('api.contracts.next-number');
+        Route::get('/api/property-types', [ContractController::class, 'getPropertyTypes'])->name('api.property-types');
+        Route::get('/api/blocs/{bloc}/parkings', [ContractController::class, 'getParkings'])->name('api.blocs.parkings');
+        Route::get('/api/properties', [ContractController::class, 'getAllProperties'])->name('api.properties');
+    });
 
     Route::get('/companies', [CompanyController::class, 'index'])
         ->name('companies')->middleware('role:admin,manager');
@@ -113,6 +127,15 @@ Route::middleware('auth')->group(function () {
     Route::delete('/properties/{property}', [PropertyController::class, 'destroy'])
         ->name('properties.destroy')->middleware('role:admin,manager');
 
+    Route::get('/parkings', [ParkingController::class, 'index'])
+        ->name('parkings')->middleware('role:admin,manager');
+    Route::post('/parkings', [ParkingController::class, 'store'])
+        ->name('parkings.store')->middleware('role:admin,manager');
+    Route::put('/parkings/{parking}', [ParkingController::class, 'update'])
+        ->name('parkings.update')->middleware('role:admin,manager');
+    Route::delete('/parkings/{parking}', [ParkingController::class, 'destroy'])
+        ->name('parkings.destroy')->middleware('role:admin,manager');
+
     Route::get('/settings', function () {
         return Inertia::render('Settings');
     })->name('settings')->middleware('role:admin');
@@ -170,6 +193,77 @@ Route::middleware('auth')->group(function () {
         return Inertia::render('NewsArticle');
     })->name('news');
 
+    Route::get('/client-contracts', function (Request $request) {
+        $blocId = $request->query('bloc');
+
+        $query = Contract::with(['client', 'property.bloc.tranche.project.company']);
+
+        if ($blocId) {
+            $query->whereHas('property', function ($q) use ($blocId) {
+                $q->where('bloc_id', $blocId);
+            });
+        }
+
+        $dbContracts = $query->latest()->get()->map(function ($contract) {
+            $startDate = $contract->date ? $contract->date->format('Y-m-d') : '';
+            $endDate = '';
+            if ($contract->date && $contract->payment_duration) {
+                $endDate = $contract->date->copy()->addMonths($contract->payment_duration)->format('Y-m-d');
+            }
+
+            // Format amount
+            $amount = $contract->price ? '€'.number_format($contract->price) : '';
+            if ($contract->payment_frequency && $contract->payment_frequency < 12 && $contract->price < 10000) {
+                $amount .= ' / mo';
+            }
+
+            // Determine type
+            $type = 'Sale';
+            if ($contract->status === 'draft') {
+                $type = 'Reservation';
+            } elseif ($contract->payment_duration > 0 && $contract->price < 20000) {
+                $type = 'Rental';
+            }
+
+            // Map status correctly (Active, Pending, Completed, Expired)
+            $status = 'Active';
+            if ($contract->status === 'draft') {
+                $status = 'Pending';
+            } elseif ($contract->status === 'completed') {
+                $status = 'Completed';
+            } elseif ($contract->status === 'cancelled') {
+                $status = 'Expired';
+            }
+
+            return [
+                'id' => (string) $contract->id,
+                'contractNumber' => $contract->contract_number ?: 'CT-'.$contract->id,
+                'clientName' => $contract->client ? $contract->client->full_name : 'Unknown',
+                'clientId' => (string) $contract->client_id,
+                'email' => $contract->client ? $contract->client->email : '',
+                'phone' => $contract->client ? $contract->client->phone : '',
+                'property' => $contract->property ? ($contract->property->name.' — '.($contract->property->bloc->tranche->project->name ?? '')) : '',
+                'propertyId' => (string) $contract->property_id,
+                'blocId' => (string) ($contract->property ? $contract->property->bloc_id : ''),
+                'type' => $type,
+                'startDate' => $startDate,
+                'endDate' => $endDate,
+                'amount' => $amount,
+                'status' => $status,
+            ];
+        });
+
+        return Inertia::render('ClientContracts', [
+            'dbContracts' => $dbContracts,
+        ]);
+    })->name('client-contracts')->middleware('role:admin,manager');
+
+    Route::get('/contract-create', function () {
+        return Inertia::render('ContractCreate');
+    })->name('contract-create')->middleware('role:admin,manager');
+
+    Route::get('/contracts/{contract}/edit', [ContractController::class, 'editStandalone'])->name('contracts.edit')->middleware('role:admin,manager');
+
     Route::get('/admin-only', function () {
         return response('Admin only access', 200);
     })->name('admin-only')->middleware('role:admin');
@@ -177,6 +271,19 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+
+    // Two-Factor Authentication routes
+    Route::post('/user/two-factor-authentication', [TwoFactorAuthenticationController::class, 'store'])
+        ->name('two-factor.enable');
+    Route::delete('/user/two-factor-authentication', [TwoFactorAuthenticationController::class, 'destroy'])
+        ->name('two-factor.disable');
+    Route::post('/user/confirmed-two-factor-authentication', [TwoFactorAuthenticationController::class, 'confirm'])
+        ->name('two-factor.confirm');
+    Route::post('/user/two-factor-recovery-codes', [TwoFactorAuthenticationController::class, 'showRecoveryCodes'])
+        ->middleware('throttle:auth')
+        ->name('two-factor.recovery-codes');
+    Route::post('/user/two-factor-recovery-codes/regenerate', [TwoFactorAuthenticationController::class, 'generateRecoveryCodes'])
+        ->name('two-factor.regenerate-recovery-codes');
 });
 
 require __DIR__.'/auth.php';

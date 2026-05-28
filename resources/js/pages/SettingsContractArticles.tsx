@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Pencil, Trash2, ArrowUp, ArrowDown, FileText, Info } from "lucide-react";
+import { Plus, Pencil, Trash2, ArrowUp, ArrowDown, FileText } from "lucide-react";
 import { AppBreadcrumb } from "@/components/AppBreadcrumb";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/dashboard/AppSidebar";
@@ -322,23 +322,6 @@ const SettingsContractArticles = ({ articles: initialArticles }: SettingsContrac
           </DialogHeader>
 
           <div className="flex-1 overflow-y-auto space-y-4 py-2 pr-1">
-            <Card className="bg-muted/40 border-none shadow-none">
-              <CardContent className="p-4 flex items-start gap-3">
-                <Info className="w-5 h-5 text-sky-600 mt-0.5 flex-shrink-0" />
-                <div className="text-xs text-muted-foreground space-y-1">
-                  <p className="font-semibold text-foreground">Dynamic Placeholders Guide:</p>
-                  <p>You can use these placeholders to pull real contract details automatically into the PDF clauses:</p>
-                  <ul className="list-disc list-inside font-mono text-[10px] mt-1 space-y-0.5">
-                    <li><strong className="text-foreground">{"{projectName}"}</strong> - Name of the project</li>
-                    <li><strong className="text-foreground">{"{propertyName}"}</strong> - Unit number / Property name</li>
-                    <li><strong className="text-foreground">{"{area}"}</strong> - Approximate surface area</li>
-                    <li><strong className="text-foreground">{"{price}"}</strong> - Agreed contract price</li>
-                  </ul>
-                  <p className="mt-1">HTML formatting (like <code className="font-mono text-[10px]">&lt;br&gt;</code>, <code className="font-mono text-[10px]">&lt;ul&gt;</code>, <code className="font-mono text-[10px]">&lt;li&gt;</code>, <code className="font-mono text-[10px]">&lt;u&gt;</code>) is supported in description.</p>
-                </div>
-              </CardContent>
-            </Card>
-
             <div>
               <Label>Title <span className="text-destructive">*</span></Label>
               <Input

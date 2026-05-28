@@ -81,8 +81,7 @@ const Index = ({ contracts, companies, clients, bloc }: ContractsProps) => {
   }, [flash]);
 
   const openCreate = () => {
-    setEditingContract(null);
-    setModalOpen(true);
+    router.visit(`/contract-create${window.location.search}`);
   };
 
   const openEdit = (contract: Contract) => {
