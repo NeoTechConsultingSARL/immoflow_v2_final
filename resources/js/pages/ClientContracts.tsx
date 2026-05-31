@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { router, Link, usePage } from "@inertiajs/react";
+import { router, usePage } from "@inertiajs/react";
 import { Users, Plus, Pencil, Trash2, FileText, Calendar, Euro, Phone, Mail, LayoutGrid, Rows3, Table as TableIcon, Check, ChevronsUpDown } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
@@ -51,7 +51,6 @@ const typeStyles: Record<string, string> = {
 type ViewMode = "list" | "grid" | "table";
 
 const emptyForm = {
-  // Client
   clientMode: "new" as "new" | "existing",
   existingClientId: "",
   firstName: "",
@@ -61,7 +60,6 @@ const emptyForm = {
   email: "",
   phone: "",
   address: "",
-  // Contract
   contractNumber: "",
   propertyType: "",
   property: "",
@@ -72,7 +70,12 @@ const emptyForm = {
   status: "Active" as ClientContract["status"],
 };
 
-const existingClients: any[] = [];
+const existingClients = [
+  { id: "c1", name: "Anna Müller", firstName: "Anna", lastName: "Müller", idNumber: "DE-A123456", birthdate: "1985-04-12", email: "anna.mueller@email.com", phone: "+49 170 1234567", address: "Leopoldstraße 12, München" },
+  { id: "c2", name: "Thomas Braun", firstName: "Thomas", lastName: "Braun", idNumber: "DE-B234567", birthdate: "1979-09-23", email: "thomas.braun@email.com", phone: "+49 171 2345678", address: "Kantstraße 88, Berlin" },
+  { id: "c3", name: "Lisa Weber", firstName: "Lisa", lastName: "Weber", idNumber: "DE-W345678", birthdate: "1990-12-02", email: "lisa.weber@email.com", phone: "+49 172 3456789", address: "Hauptstraße 5, Hamburg" },
+  { id: "c4", name: "Erik Hoffmann", firstName: "Erik", lastName: "Hoffmann", idNumber: "DE-H456789", birthdate: "1972-06-30", email: "erik.hoffmann@email.com", phone: "+49 173 4567890", address: "Marienplatz 3, München" },
+];
 
 const propertiesByType: Record<string, string[]> = {
   Apartment: ["Unit A1 — Residenz am Englischen Garten", "Unit B1 — Residenz am Englischen Garten", "Loft 101 — Spree Lofts", "Studio 201 — Spree Lofts"],
@@ -108,13 +111,13 @@ const ClientContracts = ({ dbContracts = [] }: ClientContractsProps) => {
   const location = new URL(url || "/", window.location.origin);
   const searchParams = location.searchParams;
   const projectName = searchParams.get("name") || "";
+  const blocName = searchParams.get("blocName") || "";
 
   const openContract = (c: ClientContract) => {
-    const qs = new URLSearchParams(searchParams.toString());
-    qs.set("id", c.id);
-    qs.set("ref", c.contractNumber);
-    router.visit(`/contract-details?${qs.toString()}`);
+    const qs = searchParams.toString();
+    router.visit(`/blocs/${c.blocId}/contracts/${c.id}${qs ? `?${qs}` : ""}`);
   };
+
   const stop = (e: React.MouseEvent) => e.stopPropagation();
 
   const openCreate = () => {
@@ -123,27 +126,29 @@ const ClientContracts = ({ dbContracts = [] }: ClientContractsProps) => {
   };
 
   const openEdit = (c: ClientContract) => {
-    setEditing(c);
-    const [firstName, ...rest] = c.clientName.split(" ");
-    setForm({
-      ...emptyForm,
-      clientMode: "new",
-      firstName: firstName || "",
-      lastName: rest.join(" "),
-      email: c.email,
-      phone: c.phone,
-      contractNumber: c.contractNumber,
-      property: c.property,
-      type: c.type,
-      startDate: c.startDate,
-      endDate: c.endDate,
-      amount: c.amount,
-      status: c.status,
-    });
-    setDialogOpen(true);
+    const qs = searchParams.toString();
+    router.visit(`/contracts/${c.id}/edit${qs ? `?${qs}` : ""}`);
   };
 
-  const openDelete = (c: ClientContract) => { setDeleting(c); setDeleteOpen(true); };
+  const openDelete = (c: ClientContract) => {
+    setDeleting(c);
+    setDeleteOpen(true);
+  };
+
+  const handleDelete = () => {
+    if (deleting) {
+      router.delete(`/blocs/${deleting.blocId}/contracts/${deleting.id}`, {
+        onSuccess: () => {
+          toast({ title: "Contract deleted" });
+          setDeleteOpen(false);
+          setDeleting(null);
+        },
+        onError: () => {
+          toast({ title: "Failed to delete contract", variant: "destructive" });
+        },
+      });
+    }
+  };
 
   const handleSave = () => {
     let clientName = "";
@@ -160,55 +165,30 @@ const ClientContracts = ({ dbContracts = [] }: ClientContractsProps) => {
       toast({ title: "Contract number and client name are required", variant: "destructive" });
       return;
     }
-    
+    const payload: Omit<ClientContract, "id"> = {
+      contractNumber: form.contractNumber, clientName, email, phone,
+      property: form.property, type: form.type, startDate: form.startDate,
+      endDate: form.endDate, amount: form.amount, status: form.status,
+    };
     if (editing) {
-      const payload = {
-        client_name: clientName,
-        client_email: email,
-        client_phone: phone,
-        contract_number: form.contractNumber,
-        status: form.status.toLowerCase(), // active, completed, cancelled, draft
-        price: form.amount.replace(/[^0-9.]/g, ''),
-        date: form.startDate,
-        client_id: editing.clientId,
-        property_id: editing.propertyId,
-      };
-
-      router.put(`/blocs/${editing.blocId}/contracts/${editing.id}`, payload, {
-        onSuccess: () => {
-          toast({ title: "Contract updated" });
-          setDialogOpen(false);
-          setEditing(null);
-        },
-        onError: (err) => {
-          toast({ title: "Failed to update contract", description: Object.values(err).join("\n"), variant: "destructive" });
-        }
-      });
+      setContracts(prev => prev.map(c => c.id === editing.id ? { ...c, ...payload } : c));
+      toast({ title: "Contract updated" });
+    } else {
+      setContracts(prev => [...prev, { ...payload, id: crypto.randomUUID() }]);
+      toast({ title: "Contract created" });
     }
+    setDialogOpen(false);
   };
 
-  const handleDelete = () => {
-    if (deleting) {
-      router.delete(`/blocs/${deleting.blocId}/contracts/${deleting.id}`, {
-        onSuccess: () => {
-          toast({ title: "Contract deleted" });
-          setDeleteOpen(false);
-          setDeleting(null);
-        },
-        onError: (err) => {
-          toast({ title: "Failed to delete contract", variant: "destructive" });
-        }
-      });
-    }
-  };
-
-  const updateField = (field: keyof typeof form, value: string) => setForm(prev => ({ ...prev, [field]: value }));
+  const updateField = (field: keyof typeof form, value: string) =>
+    setForm(prev => ({ ...prev, [field]: value }));
 
   const filtered = filterStatus === "all" ? contracts : contracts.filter(c => c.status === filterStatus);
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const currentPage = Math.min(page, totalPages);
   const paged = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
   const goTo = (p: number) => setPage(Math.min(Math.max(1, p), totalPages));
+
   const pageNumbers: (number | "ellipsis")[] = (() => {
     if (totalPages <= 7) return Array.from({ length: totalPages }, (_, i) => i + 1);
     const arr: (number | "ellipsis")[] = [1];
@@ -241,7 +221,7 @@ const ClientContracts = ({ dbContracts = [] }: ClientContractsProps) => {
               <div>
                 <h2 className="font-display text-[1.75rem] xl:text-[2rem] font-bold">Clients & Contracts</h2>
                 <p className="text-[0.9375rem] text-muted-foreground">
-                  {projectName ? `Manage contracts for ${decodeURIComponent(projectName)}` : "Manage all client contracts and agreements"}
+                  {blocName && projectName ? `Manage contracts for ${decodeURIComponent(blocName)} > ${decodeURIComponent(projectName)}` : projectName ? `Manage contracts for ${decodeURIComponent(projectName)}` : "Manage all client contracts and agreements"}
                 </p>
               </div>
               <div className="flex items-center gap-3">
@@ -406,7 +386,6 @@ const ClientContracts = ({ dbContracts = [] }: ClientContractsProps) => {
               </div>
             )}
 
-
             {filtered.length > 0 && (
               <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
                 <div className="flex items-center gap-3 text-sm text-muted-foreground">
@@ -475,13 +454,13 @@ const ClientContracts = ({ dbContracts = [] }: ClientContractsProps) => {
         </div>
       </div>
 
+      {/* Dialog - New/Edit Contract */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="font-display text-2xl">{editing ? "Edit Contract" : "New Contract"}</DialogTitle>
           </DialogHeader>
 
-          {/* Section 1: Client */}
           <section className="rounded-xl border border-border bg-muted/30 p-5 space-y-4">
             <div className="flex items-center justify-between flex-wrap gap-3">
               <h3 className="font-display text-base font-bold flex items-center gap-2">
@@ -503,12 +482,7 @@ const ClientContracts = ({ dbContracts = [] }: ClientContractsProps) => {
                 <Label>Select client</Label>
                 <Popover open={clientPickerOpen} onOpenChange={setClientPickerOpen}>
                   <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      role="combobox"
-                      aria-expanded={clientPickerOpen}
-                      className="w-full justify-between font-normal"
-                    >
+                    <Button variant="outline" role="combobox" aria-expanded={clientPickerOpen} className="w-full justify-between font-normal">
                       {form.existingClientId
                         ? (() => {
                             const c = existingClients.find(x => x.id === form.existingClientId);
@@ -528,10 +502,7 @@ const ClientContracts = ({ dbContracts = [] }: ClientContractsProps) => {
                             <CommandItem
                               key={c.id}
                               value={`${c.name} ${c.email} ${c.idNumber} ${c.phone}`}
-                              onSelect={() => {
-                                updateField("existingClientId", c.id);
-                                setClientPickerOpen(false);
-                              }}
+                              onSelect={() => { updateField("existingClientId", c.id); setClientPickerOpen(false); }}
                             >
                               <Check className={cn("mr-2 h-4 w-4", form.existingClientId === c.id ? "opacity-100" : "opacity-0")} />
                               <div className="flex flex-col">
@@ -582,7 +553,6 @@ const ClientContracts = ({ dbContracts = [] }: ClientContractsProps) => {
             )}
           </section>
 
-          {/* Section 2: Contract */}
           <section className="rounded-xl border border-border bg-muted/30 p-5 space-y-4">
             <h3 className="font-display text-base font-bold flex items-center gap-2">
               <FileText className="w-4 h-4" /> Contract Details
@@ -657,6 +627,7 @@ const ClientContracts = ({ dbContracts = [] }: ClientContractsProps) => {
               </div>
             </div>
           </section>
+
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
             <Button onClick={handleSave} style={{ background: "hsl(var(--accent))", color: "hsl(var(--accent-foreground))" }}>
@@ -674,7 +645,9 @@ const ClientContracts = ({ dbContracts = [] }: ClientContractsProps) => {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction>
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Delete
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

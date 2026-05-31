@@ -36,6 +36,7 @@ class StoreContractRequest extends FormRequest
             'id_number' => 'nullable|string|max:255',
 
             'property_id' => 'required|exists:properties,id',
+            'parking_id' => 'nullable|exists:parkings,id',
             'contract_number' => 'required|string|unique:contracts,contract_number',
             'price' => 'required|numeric|min:0',
             'advance' => 'nullable|numeric|min:0',

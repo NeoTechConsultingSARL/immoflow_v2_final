@@ -17,6 +17,7 @@ class Contract extends Model
     protected $fillable = [
         'client_id',
         'property_id',
+        'parking_id',
         'contract_number',
         'status',
         'price',
@@ -40,6 +41,11 @@ class Contract extends Model
     public function property(): BelongsTo
     {
         return $this->belongsTo(Property::class);
+    }
+
+    public function parking(): BelongsTo
+    {
+        return $this->belongsTo(Parking::class);
     }
 
     public function modification(): HasOne

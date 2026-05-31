@@ -64,6 +64,7 @@ class ContractCreationTest extends TestCase
         $this->assertDatabaseCount('payment_schedules', 4);
     }
 
+
     public function test_can_view_contract_details()
     {
         $user = User::factory()->create(['role' => 'admin']);
@@ -235,5 +236,25 @@ class ContractCreationTest extends TestCase
             'contract_id' => $contract->id,
             'notes' => 'VIP Client - modification requested.',
         ]);
+
+    public function test_can_get_all_properties_via_api()
+    {
+        $user = User::factory()->create();
+
+        $properties = Property::factory()->count(3)->create();
+
+        $response = $this->actingAs($user)
+            ->get(route('api.properties'));
+
+        $response->assertStatus(200);
+        $response->assertJsonCount(3);
+
+        // Assert loaded relationships are present in JSON
+        $data = $response->json();
+        $this->assertArrayHasKey('property_type', $data[0]);
+        $this->assertArrayHasKey('bloc', $data[0]);
+        $this->assertArrayHasKey('tranche', $data[0]['bloc']);
+        $this->assertArrayHasKey('project', $data[0]['bloc']['tranche']);
+
     }
 }
