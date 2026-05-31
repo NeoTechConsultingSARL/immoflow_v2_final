@@ -1,9 +1,13 @@
 <?php
+
+use App\Models\Property;
+use Illuminate\Contracts\Console\Kernel;
+
 require __DIR__.'/../vendor/autoload.php';
 $app = require_once __DIR__.'/../bootstrap/app.php';
-$app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+$app->make(Kernel::class)->bootstrap();
 
-$prop = \App\Models\Property::find(93);
+$prop = Property::find(93);
 if ($prop) {
     $prop->status = 'available';
     $prop->save();
@@ -12,7 +16,7 @@ if ($prop) {
     echo "Property 93 not found.\n";
 }
 
-$prop2 = \App\Models\Property::find(117);
+$prop2 = Property::find(117);
 if ($prop2) {
     $prop2->status = 'available';
     $prop2->save();

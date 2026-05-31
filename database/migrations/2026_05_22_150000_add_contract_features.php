@@ -48,7 +48,7 @@ return new class extends Migration
         Schema::dropIfExists('contract_commissions');
         Schema::dropIfExists('payment_schedules');
         Schema::dropIfExists('contract_modifications');
-        
+
         Schema::table('contracts', function (Blueprint $table) {
             $table->dropColumn(['contract_number', 'advance', 'payment_duration', 'payment_frequency']);
         });

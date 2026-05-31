@@ -143,4 +143,60 @@ class ContractPdfTest extends TestCase
         $this->assertStringContainsString('Patente XXXXXXXX', $viewHtml);
         $this->assertStringContainsString('Tél : 05 36 88 77 33 / 06 44 444 444', $viewHtml);
     }
+
+    /**
+     * Test that the contract PDF rendered view shapes and connects Arabic characters correctly.
+     */
+    public function test_contract_pdf_renders_arabic_correctly(): void
+    {
+        $company = Company::factory()->create([
+            'name' => 'شركة العقار',
+            'address' => 'شارع السلام وجدة',
+        ]);
+
+        $project = Project::factory()->create(['company_id' => $company->id]);
+        $tranche = Tranche::factory()->create(['project_id' => $project->id]);
+        $bloc = Bloc::factory()->create(['tranche_id' => $tranche->id]);
+
+        $propertyType = PropertyType::factory()->create();
+
+        $property = Property::create([
+            'name' => 'Unit 103',
+            'bloc_id' => $bloc->id,
+            'property_type_id' => $propertyType->id,
+            'price' => 300000,
+            'status' => 'available',
+        ]);
+
+        $client = Client::create([
+            'full_name' => 'محمد علي',
+            'email' => 'ali@example.com',
+            'phone' => '+212600000000',
+            'identity_number' => 'AB12345',
+            'address' => 'الشارع الرئيسي الناظور',
+        ]);
+
+        $contract = Contract::create([
+            'client_id' => $client->id,
+            'property_id' => $property->id,
+            'status' => 'active',
+            'price' => 300000,
+            'date' => now(),
+        ]);
+
+        $pdfService = new ContractPdfService;
+        $clauses = $pdfService->getClauses($contract, 'ar');
+        $lang = 'ar';
+
+        $viewHtml = view('contracts.pdf', compact('contract', 'clauses', 'lang'))->render();
+
+        // Title "عقد حجز محل تجاري" must be shaped as "ﺪﻘﻋ ﺰﺠﺣ ﻞﺤﻣ ﻱﺭﺎﺠﺗ"
+        $this->assertStringContainsString('ﺪﻘﻋ ﺰﺠﺣ ﻞﺤﻣ ﻱﺭﺎﺠﺗ', $viewHtml);
+
+        // "الطرف الأول" shaped as "ﻑﺮﻄﻟﺍ ﻝﻭﻷﺍ"
+        $this->assertStringContainsString('ﻑﺮﻄﻟﺍ ﻝﻭﻷﺍ', $viewHtml);
+
+        // "الطرف الثاني" shaped as "ﻑﺮﻄﻟﺍ ﻲﻧﺎﺜﻟﺍ"
+        $this->assertStringContainsString('ﻑﺮﻄﻟﺍ ﻲﻧﺎﺜﻟﺍ', $viewHtml);
+    }
 }
