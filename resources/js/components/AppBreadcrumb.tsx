@@ -112,7 +112,11 @@ export function AppBreadcrumb({ contractPath, hierarchyData }: AppBreadcrumbProp
       if (blocId) crumbs.push({ label: decodeURIComponent(blocName), href: pmHref });
     }
     crumbs.push({ label: "Property Types" });
+
+  } else if (path === "/client-contracts" || path === "/contract-details" || path === "/contract-create" || path.match(/^\/contracts\/\d+\/edit$/) || path.match(/^\/blocs\/\d+\/contracts\/\d+\/edit$/)) {
+
   } else if (path === "/client-contracts" || path === "/contract-details" || path === "/contract-create") {
+
     crumbs.push({ label: "Companies", href: "/companies" });
     if (companyId) {
       crumbs.push({ label: decodeURIComponent(companyName), href: `/projects${companyQuery}` });
@@ -133,6 +137,12 @@ export function AppBreadcrumb({ contractPath, hierarchyData }: AppBreadcrumbProp
       const search = location.search || "";
       crumbs.push({ label: "Clients & Contracts", href: `/client-contracts${search}` });
       crumbs.push({ label: "New Contract" });
+
+    } else if (path.match(/^\/contracts\/\d+\/edit$/) || path.match(/^\/blocs\/\d+\/contracts\/\d+\/edit$/)) {
+      const search = location.search || "";
+      crumbs.push({ label: "Clients & Contracts", href: `/client-contracts${search}` });
+      crumbs.push({ label: "Edit Contract" });
+
     } else {
       crumbs.push({ label: "Clients & Contracts" });
     }

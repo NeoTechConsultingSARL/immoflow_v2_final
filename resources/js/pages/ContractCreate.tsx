@@ -1,3 +1,5 @@
+
+import { useState, useEffect } from "react";
 import { useState } from "react";
 import { router, Link, usePage } from "@inertiajs/react";
 import { Users, FileText, Check, ChevronsUpDown, ArrowLeft, Save, Plus, Trash2, Banknote, ClipboardList, Percent } from "lucide-react";
@@ -15,6 +17,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
+
+
+// existingClients will be fetched from the API
+
+// propertiesByType state moved inside the component
+
+const propertyStates = ["Basic construction works", "Mid-finish", "Ready to move in", "Custom finish"];
+const paymentMethods = ["Cash", "Bank Transfer", "Check", "Card"];
 
 const existingClients = [
   { id: "c1", name: "Anna Müller", firstName: "Anna", lastName: "Müller", idNumber: "DE-A123456", birthdate: "1985-04-12", email: "anna.mueller@email.com", phone: "+49 170 1234567", address: "Leopoldstraße 12, München" },
@@ -35,17 +45,31 @@ const companies = ["Legrand Klein SARL", "Spree Property GmbH", "München Reside
 const propertyStates = ["Basic construction works", "Mid-finish", "Ready to move in", "Custom finish"];
 const paymentMethods = ["Cash", "Bank Transfer", "Check", "Card"];
 const subsoilTypes = ["None", "Cellar", "Parking Spot", "Storage Room"];
+
 const today = new Date().toISOString().slice(0, 10);
 
 type ScheduleRow = { date: string; amount: string; note: string };
 const makeRow = (): ScheduleRow => ({ date: today, amount: "", note: "" });
 
+
+const ContractCreate = ({ contract: propContract, companies: propCompanies = [], clients: propClients = [], bloc: propBloc }: any) => {
+
 const ContractCreate = () => {
+
   const { url } = usePage();
   const location = new URL(url || "/", window.location.origin);
   const searchParams = location.searchParams;
 
+
+  // Properties
+  const [propertiesByType, setPropertiesByType] = useState<Record<string, any[]>>({});
+  const [properties, setProperties] = useState<any[]>([]);
+
   // Client
+  const [existingClients, setExistingClients] = useState<any[]>(propClients || []);
+=======
+  // Client
+
   const [clientMode, setClientMode] = useState<"new" | "existing">("new");
   const [existingClientId, setExistingClientId] = useState("");
   const [clientPickerOpen, setClientPickerOpen] = useState(false);
@@ -53,7 +77,11 @@ const ContractCreate = () => {
     firstName: "", lastName: "", idNumber: "", birthdate: "", email: "", phone: "", address: "",
   });
 
+
+  // Contract
+
   // Contract — Etape 2
+
   const [contract, setContract] = useState({
     contractNumber: "",
     creationDate: today,
@@ -66,6 +94,30 @@ const ContractCreate = () => {
     installment: "",
     paymentMethod: "Cash",
     operationNumber: "",
+
+    propertyState: "",
+    facade: "",
+    otherClauses: "",
+  });
+
+  const initialBlocId = propContract?.property?.bloc_id || searchParams.get('bloc') || propBloc?.id;
+  const selectedPropertyObj = properties.find(p => String(p.id) === String(contract.property));
+  const resolvedBlocId = selectedPropertyObj?.bloc_id || initialBlocId;
+
+
+  // Parking integration
+  const [withParking, setWithParking] = useState(false);
+  const [parkingId, setParkingId] = useState("");
+  const [parkings, setParkings] = useState<any[]>([]);
+
+  // Property types
+  const [propertyTypes, setPropertyTypes] = useState<any[]>([]);
+
+  // Modifications
+  const [withModifications, setWithModifications] = useState(false);
+  const [modNote, setModNote] = useState("");
+  const [modImage, setModImage] = useState<File | null>(null);
+
     agreedSalePrice: "",
     deposit: "",
     company: "",
@@ -79,6 +131,7 @@ const ContractCreate = () => {
   // Modifications
   const [withModifications, setWithModifications] = useState(false);
   const [modNote, setModNote] = useState("");
+
 
   // Additional info (payment schedule)
   const [withDetails, setWithDetails] = useState(false);
@@ -98,7 +151,11 @@ const ContractCreate = () => {
   const removeRow = (i: number) => setSchedule(prev => prev.filter((_, idx) => idx !== i));
 
   const selectedClientLabel = (() => {
+
+    const c = (existingClients || []).find(x => String(x.id) === String(existingClientId));
+
     const c = existingClients.find(x => x.id === existingClientId);
+
     return c ? `${c.name} — ${c.email}` : "Search a client...";
   })();
 
@@ -107,10 +164,189 @@ const ContractCreate = () => {
     router.visit(`/client-contracts${qs ? `?${qs}` : ""}`);
   };
 
+
+  // Load all properties on mount
+  useEffect(() => {
+    fetch('/api/properties', { headers: { Accept: 'application/json' } })
+      .then(r => {
+        if (!r.ok) throw new Error('Response error');
+        return r.json();
+      })
+      .then((data) => {
+        if (Array.isArray(data)) {
+          setProperties(data);
+        }
+      })
+      .catch((err) => console.error('Failed to load properties', err));
+  }, []);
+
+  // Load clients, property types, and next contract number
+  useEffect(() => {
+    if (!propClients || propClients.length === 0) {
+      fetch('/api/clients-lookup', { headers: { Accept: 'application/json' } })
+        .then(r => {
+          if (!r.ok) throw new Error('Response error');
+          return r.json();
+        })
+        .then((data) => {
+          if (Array.isArray(data)) {
+            setExistingClients(data);
+          }
+        })
+        .catch((err) => console.error('Failed to load clients', err));
+    }
+
+    fetch('/api/property-types', { headers: { Accept: 'application/json' } })
+      .then(r => {
+        if (!r.ok) throw new Error('Response error');
+        return r.json();
+      })
+      .then((data) => {
+        if (Array.isArray(data)) {
+          setPropertyTypes(data);
+        }
+      })
+      .catch((err) => console.error('Failed to load property types', err));
+
+    if (!propContract) {
+      fetch('/api/contracts/next-number', { headers: { Accept: 'application/json' } })
+        .then(r => {
+          if (!r.ok) throw new Error('Response error');
+          return r.json();
+        })
+        .then((data) => {
+          if (data && data.contract_number) {
+            updateContract("contractNumber", data.contract_number);
+          }
+        })
+        .catch((err) => console.error('Failed to load next contract number', err));
+    }
+  }, [propContract?.id]);
+
+  // Load parkings for current bloc
+  useEffect(() => {
+    if (!resolvedBlocId) return;
+    const url = `/api/blocs/${resolvedBlocId}/parkings` + (propContract ? `?contract_id=${propContract.id}` : "");
+    fetch(url, { headers: { Accept: 'application/json' } })
+      .then(r => {
+        if (!r.ok) throw new Error('Response error');
+        return r.json();
+      })
+      .then((data) => {
+        if (Array.isArray(data)) {
+          setParkings(data);
+        }
+      })
+      .catch((err) => console.error('Failed to load parkings', err));
+  }, [resolvedBlocId, propContract?.id]);
+
+  // Build propertiesByType whenever properties array changes
+  useEffect(() => {
+    const map: Record<string, any[]> = {};
+    properties.forEach((p: any) => {
+      const typeName = p.property_type?.name || p.propertyType?.name || 'Unknown';
+      if (!map[typeName]) map[typeName] = [];
+      map[typeName].push(p);
+    });
+    setPropertiesByType(map);
+  }, [properties]);
+
+  // Pre-populate form when editing
+  useEffect(() => {
+    if (propContract) {
+      // Client populating
+      if (propContract.client_id) {
+        setClientMode("existing");
+        setExistingClientId(String(propContract.client_id));
+      } else if (propContract.client) {
+        setClientMode("new");
+        const parts = (propContract.client.full_name || "").split(" ");
+        setClient({
+          firstName: parts[0] || "",
+          lastName: parts.slice(1).join(" ") || "",
+          idNumber: propContract.client.identity_number || "",
+          birthdate: propContract.client.birthdate || "",
+          email: propContract.client.email || "",
+          phone: propContract.client.phone || "",
+          address: propContract.client.address || "",
+        });
+      }
+
+      // Contract populating
+      const pType = propContract.property?.property_type?.name || propContract.property?.propertyType?.name || "";
+      setContract({
+        contractNumber: propContract.contract_number || "",
+        creationDate: propContract.date ? propContract.date.slice(0, 10) : today,
+        propertyType: pType,
+        property: String(propContract.property_id || ""),
+        negotiatedPrice: String(propContract.price || ""),
+        advance: String(propContract.advance || ""),
+        paymentDuration: String(propContract.payment_duration || ""),
+        paymentFrequency: String(propContract.payment_frequency || ""),
+        installment: "", // will be calculated below
+        paymentMethod: propContract.payment_method || "Cash",
+        operationNumber: propContract.operation_number || "",
+        propertyState: propContract.property_state || "",
+        facade: propContract.facade || "",
+        otherClauses: propContract.other_clauses || "",
+      });
+
+      if (propContract.parking_id) {
+        setWithParking(true);
+        setParkingId(String(propContract.parking_id));
+      }
+
+      if (propContract.modification) {
+        setWithModifications(true);
+        setModNote(propContract.modification.notes || "");
+      }
+
+      if (propContract.payment_schedules && propContract.payment_schedules.length > 0) {
+        setWithDetails(true);
+        setSchedule(propContract.payment_schedules.map((s: any) => ({
+          date: s.due_date ? s.due_date.slice(0, 10) : "",
+          amount: String(s.amount),
+          note: s.observation || "",
+        })));
+      }
+
+      if (propContract.commission) {
+        setWithCommission(true);
+        setCommission({
+          name: propContract.commission.broker_name || "",
+          amount: String(propContract.commission.amount || ""),
+          description: propContract.commission.description || "",
+          status: propContract.commission.status || "Pending",
+        });
+      }
+    }
+  }, [propContract]);
+
+  // Installment Auto-Calculation
+  useEffect(() => {
+    const priceVal = parseFloat(contract.negotiatedPrice.replace(/[^0-9.]/g, '')) || 0;
+    const advanceVal = parseFloat(contract.advance.replace(/[^0-9.]/g, '')) || 0;
+    const duration = parseFloat(contract.paymentDuration) || 0;
+    const freq = parseFloat(contract.paymentFrequency) || 0;
+
+    if (duration > 0 && freq > 0) {
+      const calculated = Math.round((priceVal - advanceVal) / (duration / freq));
+      if (!isNaN(calculated) && isFinite(calculated)) {
+        updateContract("installment", String(calculated));
+      }
+    }
+  }, [contract.negotiatedPrice, contract.advance, contract.paymentDuration, contract.paymentFrequency]);
+
+  const handleSave = () => {
+    let clientName = "";
+    if (clientMode === "existing") {
+      const ex = existingClients.find(c => String(c.id) === String(existingClientId));
+
   const handleSave = () => {
     let clientName = "";
     if (clientMode === "existing") {
       const ex = existingClients.find(c => c.id === existingClientId);
+
       if (!ex) { toast({ title: "Please select an existing client", variant: "destructive" }); return; }
       clientName = ex.name;
     } else {
@@ -121,8 +357,91 @@ const ContractCreate = () => {
       toast({ title: "Contract number is required", variant: "destructive" });
       return;
     }
+
+
+    const propertyId = Number(contract.property);
+    if (!propertyId || Number.isNaN(propertyId)) {
+      toast({ title: "Please select a valid property (ID)", variant: "destructive" });
+      return;
+    }
+
+    const form = new FormData();
+    // client
+    if (clientMode === "existing") {
+      form.append('client_id', existingClientId);
+    } else {
+      form.append('first_name', client.firstName);
+      form.append('last_name', client.lastName);
+      if (client.email) form.append('email', client.email);
+      if (client.phone) form.append('phone', client.phone);
+      if (client.idNumber) form.append('id_number', client.idNumber);
+      if (client.address) form.append('address', client.address);
+    }
+
+    // contract fields
+    form.append('property_id', String(propertyId));
+    form.append('contract_number', contract.contractNumber);
+    if (contract.negotiatedPrice) form.append('price', contract.negotiatedPrice.replace(/[^0-9.]/g, ''));
+    if (contract.advance) form.append('advance', contract.advance.replace(/[^0-9.]/g, ''));
+    if (contract.paymentDuration) form.append('paymentDuration', contract.paymentDuration);
+    if (contract.paymentFrequency) form.append('paymentFrequency', contract.paymentFrequency);
+    if (contract.creationDate) form.append('date', contract.creationDate);
+
+    // parking slot allocation
+    if (withParking && parkingId) {
+      form.append('parking_id', parkingId);
+    }
+
+    // modifications
+    form.append('withDetails', withDetails ? '1' : '0');
+    if (withModifications) {
+      form.append('modification[notes]', modNote || '');
+      if (modImage) {
+        form.append('modification[image]', modImage);
+      }
+    }
+
+    // schedule rows
+    if (withDetails && schedule.length) {
+      schedule.forEach((r, i) => {
+        if (r.date && r.amount) {
+          form.append(`schedule[${i}][due_date]`, r.date);
+          form.append(`schedule[${i}][amount]`, r.amount.replace(/[^0-9.]/g, ''));
+          form.append(`schedule[${i}][observation]`, r.note || '');
+        }
+      });
+    }
+
+    // commission
+    if (withCommission) {
+      form.append('commission[broker_name]', commission.name || '');
+      form.append('commission[amount]', commission.amount ? commission.amount.replace(/[^0-9.]/g, '') : '0');
+      form.append('commission[description]', commission.description || '');
+      form.append('commission[status]', commission.status || 'Pending');
+    }
+
+    const isEdit = !!propContract;
+    const url = isEdit ? `/blocs/${resolvedBlocId}/contracts/${propContract.id}` : '/contracts';
+
+    if (isEdit) {
+      form.append('_method', 'PUT');
+    }
+
+    router.post(url, form, {
+      onSuccess: () => {
+        toast({ title: isEdit ? 'Contract updated' : 'Contract created', description: `${contract.contractNumber} · ${clientName}` });
+        cancel();
+      },
+      onError: (errors) => {
+        const errorMessages = Object.values(errors).join('\\n');
+        toast({ title: 'Validation error', description: errorMessages || 'Please check the form fields', variant: 'destructive' });
+        console.error('Contract save errors', errors);
+      }
+    });
+
     toast({ title: "Contract created", description: `${contract.contractNumber} · ${clientName}` });
     cancel();
+
   };
 
   return (
@@ -147,8 +466,17 @@ const ContractCreate = () => {
 
           <main className="flex-1 p-6 lg:p-8 max-w-[1400px] w-full mx-auto animate-in fade-in slide-in-from-bottom-1 duration-400 space-y-6">
             <div>
+
+              <h2 className="font-display text-[1.75rem] xl:text-[2rem] font-bold">
+                {propContract ? "Edit Client Contract" : "New Client Contract"}
+              </h2>
+              <p className="text-[0.9375rem] text-muted-foreground">
+                {propContract ? "Modify the client and contract specifications." : "Capture the client and the full contract specifications."}
+              </p>
+
               <h2 className="font-display text-[1.75rem] xl:text-[2rem] font-bold">New Client Contract</h2>
               <p className="text-[0.9375rem] text-muted-foreground">Capture the client and the full contract specifications.</p>
+
             </div>
 
             {/* SECTION 1 — CLIENT */}
@@ -183,14 +511,21 @@ const ContractCreate = () => {
                           <CommandInput placeholder="Search by name, email, ID..." />
                           <CommandList>
                             <CommandEmpty>No client found.</CommandEmpty>
-                            <CommandGroup>
+
+                              {(existingClients || []).map(c => (
+
                               {existingClients.map(c => (
+
                                 <CommandItem
                                   key={c.id}
                                   value={`${c.name} ${c.email} ${c.idNumber} ${c.phone}`}
                                   onSelect={() => { setExistingClientId(c.id); setClientPickerOpen(false); }}
                                 >
+
+                                  <Check className={cn("mr-2 h-4 w-4", String(existingClientId) === String(c.id) ? "opacity-100" : "opacity-0")} />
+
                                   <Check className={cn("mr-2 h-4 w-4", existingClientId === c.id ? "opacity-100" : "opacity-0")} />
+
                                   <div className="flex flex-col">
                                     <span className="font-medium">{c.name}</span>
                                     <span className="text-xs text-muted-foreground">{c.email} · {c.idNumber}</span>
@@ -261,7 +596,11 @@ const ContractCreate = () => {
                     <Select value={contract.propertyType} onValueChange={v => { updateContract("propertyType", v); updateContract("property", ""); }}>
                       <SelectTrigger><SelectValue placeholder="Select type" /></SelectTrigger>
                       <SelectContent>
+
+                        {propertyTypes.map(t => <SelectItem key={t.id} value={t.name}>{t.name}</SelectItem>)}
+
                         {Object.keys(propertiesByType).map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+
                       </SelectContent>
                     </Select>
                   </div>
@@ -270,7 +609,25 @@ const ContractCreate = () => {
                     <Select value={contract.property} onValueChange={v => updateContract("property", v)} disabled={!contract.propertyType}>
                       <SelectTrigger><SelectValue placeholder={contract.propertyType ? "Select property" : "Pick type first"} /></SelectTrigger>
                       <SelectContent>
+
+                        {properties
+                          .filter(p => {
+                            const matchesType = (p.property_type && p.property_type.name ? p.property_type.name : (p.propertyType ? p.propertyType.name : '')) === contract.propertyType;
+                            if (!matchesType) return false;
+                            if (initialBlocId) {
+                              return String(p.bloc_id) === String(initialBlocId);
+                            }
+                            return true;
+                          })
+                          .map((p: any) => (
+                            <SelectItem key={p.id} value={String(p.id)}>
+                              {p.name} — {p.property_type?.name || p.propertyType?.name || ''}
+                              {p.bloc?.tranche?.project?.name ? ` (${p.bloc.tranche.project.name} · ${p.bloc.name || ''})` : ''}
+                            </SelectItem>
+                          ))}
+
                         {(propertiesByType[contract.propertyType] || []).map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+
                       </SelectContent>
                     </Select>
                   </div>
@@ -295,7 +652,11 @@ const ContractCreate = () => {
                   </div>
                 </div>
 
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+
                   <div className="grid gap-2">
                     <Label>Installment</Label>
                     <Input value={contract.installment} onChange={e => updateContract("installment", e.target.value)} placeholder="€" />
@@ -313,6 +674,11 @@ const ContractCreate = () => {
                     <Label>Operation #</Label>
                     <Input value={contract.operationNumber} onChange={e => updateContract("operationNumber", e.target.value)} />
                   </div>
+
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
                   <div className="grid gap-2">
                     <Label>Company</Label>
                     <Select value={contract.company} onValueChange={v => updateContract("company", v)}>
@@ -333,6 +699,7 @@ const ContractCreate = () => {
                     <Label>Deposit</Label>
                     <Input value={contract.deposit} onChange={e => updateContract("deposit", e.target.value)} placeholder="€" />
                   </div>
+
                   <div className="grid gap-2">
                     <Label>Property state</Label>
                     <Select value={contract.propertyState} onValueChange={v => updateContract("propertyState", v)}>
@@ -353,6 +720,29 @@ const ContractCreate = () => {
                   <Textarea rows={3} value={contract.otherClauses} onChange={e => updateContract("otherClauses", e.target.value)} placeholder="Additional terms..." />
                 </div>
 
+
+                {/* Parking Reservation Dropdown Section */}
+                <div className="pt-4 border-t border-border space-y-4">
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <Checkbox checked={withParking} onCheckedChange={(v) => setWithParking(!!v)} />
+                    <span className="text-sm font-medium">With parking</span>
+                  </label>
+                  {withParking && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-1 duration-200">
+                      <div className="grid gap-2">
+                        <Label>Select Parking Slot</Label>
+                        <Select value={parkingId} onValueChange={setParkingId}>
+                          <SelectTrigger><SelectValue placeholder="Choose a parking slot" /></SelectTrigger>
+                          <SelectContent>
+                            {parkings.map(p => (
+                              <SelectItem key={p.id} value={String(p.id)}>{p.name} ({p.status})</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  )}
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-border">
                   <div className="grid gap-2">
                     <Label>Subsoil</Label>
@@ -367,6 +757,7 @@ const ContractCreate = () => {
                     <Label>Subsoil price</Label>
                     <Input value={contract.subsoilPrice} onChange={e => updateContract("subsoilPrice", e.target.value)} placeholder="0" />
                   </div>
+
                 </div>
               </div>
             </section>
@@ -380,13 +771,20 @@ const ContractCreate = () => {
                 </span>
               </label>
               {withModifications && (
+
+                <div className="p-5 pt-0 grid grid-cols-1 md:grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-1 duration-200">
+
                 <div className="p-5 pt-0 grid grid-cols-1 md:grid-cols-2 gap-4">
+
                   <div className="grid gap-2">
                     <Label>Client note</Label>
                     <Textarea rows={4} value={modNote} onChange={e => setModNote(e.target.value)} />
                   </div>
                   <div className="grid gap-2">
                     <Label>Client note image</Label>
+
+                    <Input type="file" onChange={(e: any) => setModImage(e.target.files && e.target.files[0] ? e.target.files[0] : null)} />
+
                     <Input type="file" />
                   </div>
                 </div>
@@ -402,6 +800,7 @@ const ContractCreate = () => {
                 </span>
               </label>
               {withDetails && (
+                <div className="p-5 pt-0 space-y-3 animate-in fade-in slide-in-from-top-1 duration-200">
                 <div className="p-5 pt-0 space-y-3">
                   {schedule.map((row, i) => (
                     <div key={i} className="grid grid-cols-1 md:grid-cols-[180px_1fr_1fr_auto] gap-3 items-end">
@@ -438,6 +837,7 @@ const ContractCreate = () => {
                 </span>
               </label>
               {withCommission && (
+                <div className="p-5 pt-0 grid grid-cols-1 md:grid-cols-4 gap-4 animate-in fade-in slide-in-from-top-1 duration-200">
                 <div className="p-5 pt-0 grid grid-cols-1 md:grid-cols-4 gap-4">
                   <div className="grid gap-2">
                     <Label>Commissioner</Label>

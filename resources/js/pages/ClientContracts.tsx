@@ -1,3 +1,5 @@
+
+import { useState, useEffect } from "react";
 import { useState } from "react";
 import { router, Link, usePage } from "@inertiajs/react";
 import { Users, Plus, Pencil, Trash2, FileText, Calendar, Euro, Phone, Mail, LayoutGrid, Rows3, Table as TableIcon, Check, ChevronsUpDown } from "lucide-react";
@@ -30,6 +32,12 @@ interface ClientContract {
   endDate: string;
   amount: string;
   status: "Active" | "Pending" | "Completed" | "Expired";
+
+  clientId?: string;
+  propertyId?: string;
+  blocId?: string;
+}
+
 }
 
 const initialContracts: ClientContract[] = [
@@ -80,6 +88,9 @@ const emptyForm = {
   status: "Active" as ClientContract["status"],
 };
 
+
+const existingClients: any[] = [];
+
 const existingClients = [
   { id: "c1", name: "Anna Müller", firstName: "Anna", lastName: "Müller", idNumber: "DE-A123456", birthdate: "1985-04-12", email: "anna.mueller@email.com", phone: "+49 170 1234567", address: "Leopoldstraße 12, München" },
   { id: "c2", name: "Thomas Braun", firstName: "Thomas", lastName: "Braun", idNumber: "DE-B234567", birthdate: "1979-09-23", email: "thomas.braun@email.com", phone: "+49 171 2345678", address: "Kantstraße 88, Berlin" },
@@ -95,6 +106,24 @@ const propertiesByType: Record<string, string[]> = {
   Land: ["Plot B-7 — Spree Lofts", "Plot C-12 — Greenfield"],
 };
 
+
+interface ClientContractsProps {
+  dbContracts?: ClientContract[];
+}
+
+const ClientContracts = ({ dbContracts = [] }: ClientContractsProps) => {
+  const [contracts, setContracts] = useState<ClientContract[]>(dbContracts);
+
+  useEffect(() => {
+    setContracts(dbContracts);
+  }, [dbContracts]);
+
+  const [viewMode, setViewMode] = useState<ViewMode>("list");
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleting, setDeleting] = useState<ClientContract | null>(null);
+  const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(5);
 const ClientContracts = () => {
   const [contracts, setContracts] = useState<ClientContract[]>(initialContracts);
   const [viewMode, setViewMode] = useState<ViewMode>("list");
@@ -108,12 +137,15 @@ const ClientContracts = () => {
   const [pageSize, setPageSize] = useState(5);
   const [clientPickerOpen, setClientPickerOpen] = useState(false);
 
+
   const { url } = usePage();
   const location = new URL(url || "/", window.location.origin);
   const searchParams = location.searchParams;
   const projectName = searchParams.get("name") || "";
 
   const openContract = (c: ClientContract) => {
+    const qs = searchParams.toString();
+    router.visit(`/blocs/${c.blocId}/contracts/${c.id}${qs ? `?${qs}` : ""}`);
     const qs = new URLSearchParams(searchParams.toString());
     qs.set("id", c.id);
     qs.set("ref", c.contractNumber);
@@ -127,6 +159,10 @@ const ClientContracts = () => {
   };
 
   const openEdit = (c: ClientContract) => {
+
+    const qs = searchParams.toString();
+    router.visit(`/contracts/${c.id}/edit${qs ? `?${qs}` : ""}`);
+
     setEditing(c);
     const [firstName, ...rest] = c.clientName.split(" ");
     setForm({
@@ -148,6 +184,22 @@ const ClientContracts = () => {
   };
 
   const openDelete = (c: ClientContract) => { setDeleting(c); setDeleteOpen(true); };
+
+
+  const handleDelete = () => {
+    if (deleting) {
+      router.delete(`/blocs/${deleting.blocId}/contracts/${deleting.id}`, {
+        onSuccess: () => {
+          toast({ title: "Contract deleted" });
+          setDeleteOpen(false);
+          setDeleting(null);
+        },
+        onError: (err) => {
+          toast({ title: "Failed to delete contract", variant: "destructive" });
+        }
+      });
+    }
+  };
 
   const handleSave = () => {
     let clientName = "";
@@ -185,6 +237,7 @@ const ClientContracts = () => {
   };
 
   const updateField = (field: keyof typeof form, value: string) => setForm(prev => ({ ...prev, [field]: value }));
+
 
   const filtered = filterStatus === "all" ? contracts : contracts.filter(c => c.status === filterStatus);
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
@@ -457,6 +510,7 @@ const ClientContracts = () => {
         </div>
       </div>
 
+
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
@@ -647,6 +701,7 @@ const ClientContracts = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
 
       <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <AlertDialogContent>

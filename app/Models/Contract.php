@@ -6,8 +6,8 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Contract extends Model
@@ -17,6 +17,7 @@ class Contract extends Model
     protected $fillable = [
         'client_id',
         'property_id',
+        'parking_id',
         'contract_number',
         'status',
         'price',
@@ -40,6 +41,11 @@ class Contract extends Model
     public function property(): BelongsTo
     {
         return $this->belongsTo(Property::class);
+    }
+
+    public function parking(): BelongsTo
+    {
+        return $this->belongsTo(Parking::class);
     }
 
     public function modification(): HasOne

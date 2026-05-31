@@ -11,6 +11,19 @@ class StoreContractRequest extends FormRequest
         return true;
     }
 
+    protected function prepareForValidation(): void
+    {
+        if ($this->has('schedule') && is_array($this->schedule)) {
+            $filteredSchedule = array_filter($this->schedule, function ($item) {
+                return isset($item['amount']) && trim($item['amount']) !== '';
+            });
+
+            $this->merge([
+                'schedule' => array_values($filteredSchedule),
+            ]);
+        }
+    }
+
     public function rules(): array
     {
         return [
@@ -23,6 +36,7 @@ class StoreContractRequest extends FormRequest
             'id_number' => 'nullable|string|max:255',
 
             'property_id' => 'required|exists:properties,id',
+            'parking_id' => 'nullable|exists:parkings,id',
             'contract_number' => 'required|string|unique:contracts,contract_number',
             'price' => 'required|numeric|min:0',
             'advance' => 'nullable|numeric|min:0',
@@ -34,7 +48,7 @@ class StoreContractRequest extends FormRequest
             'modification.image' => 'nullable|image|max:2048',
 
             'withDetails' => 'required|boolean',
-            'schedule' => 'required_if:withDetails,true|array',
+            'schedule' => 'required_if:withDetails,1|array',
             'schedule.*.due_date' => 'required_with:schedule|date',
             'schedule.*.amount' => 'required_with:schedule|numeric|min:0',
             'schedule.*.observation' => 'nullable|string',
