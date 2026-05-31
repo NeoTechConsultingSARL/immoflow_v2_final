@@ -76,29 +76,36 @@ export function AppBreadcrumb({ contractPath, hierarchyData }: AppBreadcrumbProp
       crumbs.push({ label: "Projects", href: "/projects" });
     }
     crumbs.push({ label: decodeURIComponent(projectName) });
-  } else if (path === "/blocs") {
+  } else if (path === "/blocs" || path.match(/^\/projects\/\d+\/blocs$/)) {
     crumbs.push({ label: "Companies", href: "/companies" });
     if (companyId) {
       crumbs.push({ label: decodeURIComponent(companyName), href: `/projects${companyQuery}` });
     } else {
       crumbs.push({ label: "Projects", href: "/projects" });
     }
-    crumbs.push({ label: decodeURIComponent(projectName), href: tranchesHref });
-    crumbs.push({ label: decodeURIComponent(trancheName) });
-  } else if (path === "/project-management") {
+    if (projectId) {
+      crumbs.push({ label: decodeURIComponent(projectName), href: tranchesHref });
+    }
+    if (trancheId) {
+      crumbs.push({ label: decodeURIComponent(trancheName) });
+    }
+  } else if (path === "/project-management" || path.match(/^\/management\/\d+$/)) {
     crumbs.push({ label: "Companies", href: "/companies" });
     if (companyId) {
       crumbs.push({ label: decodeURIComponent(companyName), href: `/projects${companyQuery}` });
     } else {
       crumbs.push({ label: "Projects", href: "/projects" });
     }
-    crumbs.push({ label: decodeURIComponent(projectName), href: tranchesHref });
+    if (projectId) {
+      crumbs.push({ label: decodeURIComponent(projectName), href: tranchesHref });
+    }
     if (trancheId) {
       crumbs.push({ label: decodeURIComponent(trancheName), href: blocsHref });
     }
     if (blocId) {
-      crumbs.push({ label: decodeURIComponent(blocName) });
+      crumbs.push({ label: decodeURIComponent(blocName), href: pmHref });
     }
+    crumbs.push({ label: "Management" });
   } else if (path === "/property-types") {
     crumbs.push({ label: "Companies", href: "/companies" });
     if (companyId) {
@@ -114,8 +121,6 @@ export function AppBreadcrumb({ contractPath, hierarchyData }: AppBreadcrumbProp
     crumbs.push({ label: "Property Types" });
 
   } else if (path === "/client-contracts" || path === "/contract-details" || path === "/contract-create" || path.match(/^\/contracts\/\d+\/edit$/) || path.match(/^\/blocs\/\d+\/contracts\/\d+\/edit$/)) {
-
-  } else if (path === "/client-contracts" || path === "/contract-details" || path === "/contract-create") {
 
     crumbs.push({ label: "Companies", href: "/companies" });
     if (companyId) {

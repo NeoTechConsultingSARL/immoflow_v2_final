@@ -1,7 +1,5 @@
-
 import { useState, useEffect } from "react";
-import { useState } from "react";
-import { router, Link, usePage } from "@inertiajs/react";
+import { router, usePage } from "@inertiajs/react";
 import { Users, Plus, Pencil, Trash2, FileText, Calendar, Euro, Phone, Mail, LayoutGrid, Rows3, Table as TableIcon, Check, ChevronsUpDown } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
@@ -32,24 +30,10 @@ interface ClientContract {
   endDate: string;
   amount: string;
   status: "Active" | "Pending" | "Completed" | "Expired";
-
   clientId?: string;
   propertyId?: string;
   blocId?: string;
 }
-
-}
-
-const initialContracts: ClientContract[] = [
-  { id: "1", contractNumber: "CT-2026-001", clientName: "Anna Müller", email: "anna.mueller@email.com", phone: "+49 170 1234567", property: "Unit A1 — Residenz am Englischen Garten", type: "Sale", startDate: "2026-01-15", endDate: "2026-03-15", amount: "€485,000", status: "Active" },
-  { id: "2", contractNumber: "CT-2026-002", clientName: "Thomas Braun", email: "thomas.braun@email.com", phone: "+49 171 2345678", property: "Loft 101 — Spree Lofts", type: "Rental", startDate: "2026-02-01", endDate: "2027-02-01", amount: "€1,450 / mo", status: "Active" },
-  { id: "3", contractNumber: "CT-2026-003", clientName: "Lisa Weber", email: "lisa.weber@email.com", phone: "+49 172 3456789", property: "Unit B1 — Residenz am Englischen Garten", type: "Reservation", startDate: "2026-02-10", endDate: "2026-04-10", amount: "€25,000", status: "Pending" },
-  { id: "4", contractNumber: "CT-2025-098", clientName: "Erik Hoffmann", email: "erik.hoffmann@email.com", phone: "+49 173 4567890", property: "Villa Rosengarten", type: "Sale", startDate: "2025-11-20", endDate: "2026-01-20", amount: "€2,100,000", status: "Completed" },
-  { id: "5", contractNumber: "CT-2026-004", clientName: "Sarah Klein", email: "sarah.klein@email.com", phone: "+49 174 5678901", property: "Sky Penthouse — Spree Lofts", type: "Sale", startDate: "2026-03-01", endDate: "2026-05-01", amount: "€1,450,000", status: "Active" },
-  { id: "6", contractNumber: "CT-2026-005", clientName: "Maximilian Schwarz", email: "max.schwarz@email.com", phone: "+49 175 6789012", property: "Office 101", type: "Rental", startDate: "2026-01-01", endDate: "2028-01-01", amount: "€3,200 / mo", status: "Active" },
-  { id: "7", contractNumber: "CT-2025-076", clientName: "Julia Fischer", email: "julia.fischer@email.com", phone: "+49 176 7890123", property: "Studio 201 — Spree Lofts", type: "Rental", startDate: "2025-06-01", endDate: "2026-01-31", amount: "€890 / mo", status: "Expired" },
-  { id: "8", contractNumber: "CT-2026-006", clientName: "Daniel Krüger", email: "daniel.krueger@email.com", phone: "+49 177 8901234", property: "Plot B-7 — Spree Lofts", type: "Sale", startDate: "2026-02-20", endDate: "2026-04-20", amount: "€480,000", status: "Pending" },
-];
 
 const statusStyles: Record<string, string> = {
   Active: "bg-emerald-500/10 text-emerald-600",
@@ -67,7 +51,6 @@ const typeStyles: Record<string, string> = {
 type ViewMode = "list" | "grid" | "table";
 
 const emptyForm = {
-  // Client
   clientMode: "new" as "new" | "existing",
   existingClientId: "",
   firstName: "",
@@ -77,7 +60,6 @@ const emptyForm = {
   email: "",
   phone: "",
   address: "",
-  // Contract
   contractNumber: "",
   propertyType: "",
   property: "",
@@ -87,9 +69,6 @@ const emptyForm = {
   amount: "",
   status: "Active" as ClientContract["status"],
 };
-
-
-const existingClients: any[] = [];
 
 const existingClients = [
   { id: "c1", name: "Anna Müller", firstName: "Anna", lastName: "Müller", idNumber: "DE-A123456", birthdate: "1985-04-12", email: "anna.mueller@email.com", phone: "+49 170 1234567", address: "Leopoldstraße 12, München" },
@@ -106,7 +85,6 @@ const propertiesByType: Record<string, string[]> = {
   Land: ["Plot B-7 — Spree Lofts", "Plot C-12 — Greenfield"],
 };
 
-
 interface ClientContractsProps {
   dbContracts?: ClientContract[];
 }
@@ -119,14 +97,6 @@ const ClientContracts = ({ dbContracts = [] }: ClientContractsProps) => {
   }, [dbContracts]);
 
   const [viewMode, setViewMode] = useState<ViewMode>("list");
-  const [deleteOpen, setDeleteOpen] = useState(false);
-  const [deleting, setDeleting] = useState<ClientContract | null>(null);
-  const [filterStatus, setFilterStatus] = useState<string>("all");
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(5);
-const ClientContracts = () => {
-  const [contracts, setContracts] = useState<ClientContract[]>(initialContracts);
-  const [viewMode, setViewMode] = useState<ViewMode>("list");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [editing, setEditing] = useState<ClientContract | null>(null);
@@ -137,20 +107,17 @@ const ClientContracts = () => {
   const [pageSize, setPageSize] = useState(5);
   const [clientPickerOpen, setClientPickerOpen] = useState(false);
 
-
   const { url } = usePage();
   const location = new URL(url || "/", window.location.origin);
   const searchParams = location.searchParams;
   const projectName = searchParams.get("name") || "";
+  const blocName = searchParams.get("blocName") || "";
 
   const openContract = (c: ClientContract) => {
     const qs = searchParams.toString();
     router.visit(`/blocs/${c.blocId}/contracts/${c.id}${qs ? `?${qs}` : ""}`);
-    const qs = new URLSearchParams(searchParams.toString());
-    qs.set("id", c.id);
-    qs.set("ref", c.contractNumber);
-    router.visit(`/contract-details?${qs.toString()}`);
   };
+
   const stop = (e: React.MouseEvent) => e.stopPropagation();
 
   const openCreate = () => {
@@ -159,32 +126,14 @@ const ClientContracts = () => {
   };
 
   const openEdit = (c: ClientContract) => {
-
     const qs = searchParams.toString();
     router.visit(`/contracts/${c.id}/edit${qs ? `?${qs}` : ""}`);
-
-    setEditing(c);
-    const [firstName, ...rest] = c.clientName.split(" ");
-    setForm({
-      ...emptyForm,
-      clientMode: "new",
-      firstName: firstName || "",
-      lastName: rest.join(" "),
-      email: c.email,
-      phone: c.phone,
-      contractNumber: c.contractNumber,
-      property: c.property,
-      type: c.type,
-      startDate: c.startDate,
-      endDate: c.endDate,
-      amount: c.amount,
-      status: c.status,
-    });
-    setDialogOpen(true);
   };
 
-  const openDelete = (c: ClientContract) => { setDeleting(c); setDeleteOpen(true); };
-
+  const openDelete = (c: ClientContract) => {
+    setDeleting(c);
+    setDeleteOpen(true);
+  };
 
   const handleDelete = () => {
     if (deleting) {
@@ -194,9 +143,9 @@ const ClientContracts = () => {
           setDeleteOpen(false);
           setDeleting(null);
         },
-        onError: (err) => {
+        onError: () => {
           toast({ title: "Failed to delete contract", variant: "destructive" });
-        }
+        },
       });
     }
   };
@@ -231,19 +180,15 @@ const ClientContracts = () => {
     setDialogOpen(false);
   };
 
-  const handleDelete = () => {
-    if (deleting) { setContracts(prev => prev.filter(c => c.id !== deleting.id)); toast({ title: "Contract deleted" }); }
-    setDeleteOpen(false); setDeleting(null);
-  };
-
-  const updateField = (field: keyof typeof form, value: string) => setForm(prev => ({ ...prev, [field]: value }));
-
+  const updateField = (field: keyof typeof form, value: string) =>
+    setForm(prev => ({ ...prev, [field]: value }));
 
   const filtered = filterStatus === "all" ? contracts : contracts.filter(c => c.status === filterStatus);
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const currentPage = Math.min(page, totalPages);
   const paged = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
   const goTo = (p: number) => setPage(Math.min(Math.max(1, p), totalPages));
+
   const pageNumbers: (number | "ellipsis")[] = (() => {
     if (totalPages <= 7) return Array.from({ length: totalPages }, (_, i) => i + 1);
     const arr: (number | "ellipsis")[] = [1];
@@ -276,7 +221,7 @@ const ClientContracts = () => {
               <div>
                 <h2 className="font-display text-[1.75rem] xl:text-[2rem] font-bold">Clients & Contracts</h2>
                 <p className="text-[0.9375rem] text-muted-foreground">
-                  {projectName ? `Manage contracts for ${decodeURIComponent(projectName)}` : "Manage all client contracts and agreements"}
+                  {blocName && projectName ? `Manage contracts for ${decodeURIComponent(blocName)} > ${decodeURIComponent(projectName)}` : projectName ? `Manage contracts for ${decodeURIComponent(projectName)}` : "Manage all client contracts and agreements"}
                 </p>
               </div>
               <div className="flex items-center gap-3">
@@ -441,7 +386,6 @@ const ClientContracts = () => {
               </div>
             )}
 
-
             {filtered.length > 0 && (
               <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
                 <div className="flex items-center gap-3 text-sm text-muted-foreground">
@@ -510,14 +454,13 @@ const ClientContracts = () => {
         </div>
       </div>
 
-
+      {/* Dialog - New/Edit Contract */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="font-display text-2xl">{editing ? "Edit Contract" : "New Contract"}</DialogTitle>
           </DialogHeader>
 
-          {/* Section 1: Client */}
           <section className="rounded-xl border border-border bg-muted/30 p-5 space-y-4">
             <div className="flex items-center justify-between flex-wrap gap-3">
               <h3 className="font-display text-base font-bold flex items-center gap-2">
@@ -539,12 +482,7 @@ const ClientContracts = () => {
                 <Label>Select client</Label>
                 <Popover open={clientPickerOpen} onOpenChange={setClientPickerOpen}>
                   <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      role="combobox"
-                      aria-expanded={clientPickerOpen}
-                      className="w-full justify-between font-normal"
-                    >
+                    <Button variant="outline" role="combobox" aria-expanded={clientPickerOpen} className="w-full justify-between font-normal">
                       {form.existingClientId
                         ? (() => {
                             const c = existingClients.find(x => x.id === form.existingClientId);
@@ -564,10 +502,7 @@ const ClientContracts = () => {
                             <CommandItem
                               key={c.id}
                               value={`${c.name} ${c.email} ${c.idNumber} ${c.phone}`}
-                              onSelect={() => {
-                                updateField("existingClientId", c.id);
-                                setClientPickerOpen(false);
-                              }}
+                              onSelect={() => { updateField("existingClientId", c.id); setClientPickerOpen(false); }}
                             >
                               <Check className={cn("mr-2 h-4 w-4", form.existingClientId === c.id ? "opacity-100" : "opacity-0")} />
                               <div className="flex flex-col">
@@ -618,7 +553,6 @@ const ClientContracts = () => {
             )}
           </section>
 
-          {/* Section 2: Contract */}
           <section className="rounded-xl border border-border bg-muted/30 p-5 space-y-4">
             <h3 className="font-display text-base font-bold flex items-center gap-2">
               <FileText className="w-4 h-4" /> Contract Details
@@ -693,6 +627,7 @@ const ClientContracts = () => {
               </div>
             </div>
           </section>
+
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
             <Button onClick={handleSave} style={{ background: "hsl(var(--accent))", color: "hsl(var(--accent-foreground))" }}>
@@ -702,7 +637,6 @@ const ClientContracts = () => {
         </DialogContent>
       </Dialog>
 
-
       <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -711,7 +645,9 @@ const ClientContracts = () => {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction>
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Delete
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

@@ -58,15 +58,11 @@ Route::middleware('auth')->group(function () {
     Route::get('/companies', [CompanyController::class, 'index'])
         ->name('companies')->middleware('role:admin,manager');
 
-    // Company CRUD routes
     Route::post('/companies', [CompanyController::class, 'store'])
         ->name('companies.store')->middleware('role:admin,manager');
 
     Route::put('/companies/{company}', [CompanyController::class, 'update'])
         ->name('companies.update')->middleware('role:admin,manager');
-
-    // Route::delete('/companies/{company}', [CompanyController::class, 'destroy'])
-    //     ->name('companies.destroy')->middleware('role:admin,manager');
 
     Route::get('/projects', [ProjectController::class, 'index'])
         ->name('projects')->middleware('role:admin,manager');
@@ -146,7 +142,6 @@ Route::middleware('auth')->group(function () {
     Route::get('/settings/users', [UserController::class, 'index'])
         ->name('settings.users')->middleware('role:admin');
 
-    // User CRUD routes
     Route::post('/users', [UserController::class, 'store'])
         ->name('users.store')->middleware('role:admin');
 
@@ -193,6 +188,7 @@ Route::middleware('auth')->group(function () {
         return Inertia::render('NewsArticle');
     })->name('news');
 
+    // ✅ FIXED: Single /client-contracts route with query logic
     Route::get('/client-contracts', function (Request $request) {
         $blocId = $request->query('bloc');
 
@@ -211,13 +207,11 @@ Route::middleware('auth')->group(function () {
                 $endDate = $contract->date->copy()->addMonths($contract->payment_duration)->format('Y-m-d');
             }
 
-            // Format amount
-            $amount = $contract->price ? '€'.number_format($contract->price) : '';
+            $amount = $contract->price ? '€' . number_format($contract->price) : '';
             if ($contract->payment_frequency && $contract->payment_frequency < 12 && $contract->price < 10000) {
                 $amount .= ' / mo';
             }
 
-            // Determine type
             $type = 'Sale';
             if ($contract->status === 'draft') {
                 $type = 'Reservation';
@@ -225,7 +219,6 @@ Route::middleware('auth')->group(function () {
                 $type = 'Rental';
             }
 
-            // Map status correctly (Active, Pending, Completed, Expired)
             $status = 'Active';
             if ($contract->status === 'draft') {
                 $status = 'Pending';
@@ -236,35 +229,34 @@ Route::middleware('auth')->group(function () {
             }
 
             return [
-                'id' => (string) $contract->id,
-                'contractNumber' => $contract->contract_number ?: 'CT-'.$contract->id,
-                'clientName' => $contract->client ? $contract->client->full_name : 'Unknown',
-                'clientId' => (string) $contract->client_id,
-                'email' => $contract->client ? $contract->client->email : '',
-                'phone' => $contract->client ? $contract->client->phone : '',
-                'property' => $contract->property ? ($contract->property->name.' — '.($contract->property->bloc->tranche->project->name ?? '')) : '',
-                'propertyId' => (string) $contract->property_id,
-                'blocId' => (string) ($contract->property ? $contract->property->bloc_id : ''),
-                'type' => $type,
-                'startDate' => $startDate,
-                'endDate' => $endDate,
-                'amount' => $amount,
-                'status' => $status,
+                'id'             => (string) $contract->id,
+                'contractNumber' => $contract->contract_number ?: 'CT-' . $contract->id,
+                'clientName'     => $contract->client ? $contract->client->full_name : 'Unknown',
+                'clientId'       => (string) $contract->client_id,
+                'email'          => $contract->client ? $contract->client->email : '',
+                'phone'          => $contract->client ? $contract->client->phone : '',
+                'property'       => $contract->property ? ($contract->property->name . ' — ' . ($contract->property->bloc->tranche->project->name ?? '')) : '',
+                'propertyId'     => (string) $contract->property_id,
+                'blocId'         => (string) ($contract->property ? $contract->property->bloc_id : ''),
+                'type'           => $type,
+                'startDate'      => $startDate,
+                'endDate'        => $endDate,
+                'amount'         => $amount,
+                'status'         => $status,
             ];
         });
 
         return Inertia::render('ClientContracts', [
             'dbContracts' => $dbContracts,
         ]);
-    Route::get('/client-contracts', function () {
-        return Inertia::render('ClientContracts');
-    })->name('client-contracts')->middleware('role:admin,manager');
+    })->name('client-contracts')->middleware('role:admin,manager'); 
 
     Route::get('/contract-create', function () {
         return Inertia::render('ContractCreate');
     })->name('contract-create')->middleware('role:admin,manager');
 
-    Route::get('/contracts/{contract}/edit', [ContractController::class, 'editStandalone'])->name('contracts.edit')->middleware('role:admin,manager');
+    Route::get('/contracts/{contract}/edit', [ContractController::class, 'editStandalone'])
+        ->name('contracts.edit')->middleware('role:admin,manager');
 
     Route::get('/admin-only', function () {
         return response('Admin only access', 200);
@@ -288,4 +280,4 @@ Route::middleware('auth')->group(function () {
         ->name('two-factor.regenerate-recovery-codes');
 });
 
-require __DIR__.'/auth.php';
+require __DIR__ . '/auth.php';
