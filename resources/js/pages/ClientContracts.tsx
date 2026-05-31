@@ -1,4 +1,6 @@
+
 import { useState, useEffect } from "react";
+import { useState } from "react";
 import { router, Link, usePage } from "@inertiajs/react";
 import { Users, Plus, Pencil, Trash2, FileText, Calendar, Euro, Phone, Mail, LayoutGrid, Rows3, Table as TableIcon, Check, ChevronsUpDown } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -30,10 +32,24 @@ interface ClientContract {
   endDate: string;
   amount: string;
   status: "Active" | "Pending" | "Completed" | "Expired";
+
   clientId?: string;
   propertyId?: string;
   blocId?: string;
 }
+
+}
+
+const initialContracts: ClientContract[] = [
+  { id: "1", contractNumber: "CT-2026-001", clientName: "Anna Müller", email: "anna.mueller@email.com", phone: "+49 170 1234567", property: "Unit A1 — Residenz am Englischen Garten", type: "Sale", startDate: "2026-01-15", endDate: "2026-03-15", amount: "€485,000", status: "Active" },
+  { id: "2", contractNumber: "CT-2026-002", clientName: "Thomas Braun", email: "thomas.braun@email.com", phone: "+49 171 2345678", property: "Loft 101 — Spree Lofts", type: "Rental", startDate: "2026-02-01", endDate: "2027-02-01", amount: "€1,450 / mo", status: "Active" },
+  { id: "3", contractNumber: "CT-2026-003", clientName: "Lisa Weber", email: "lisa.weber@email.com", phone: "+49 172 3456789", property: "Unit B1 — Residenz am Englischen Garten", type: "Reservation", startDate: "2026-02-10", endDate: "2026-04-10", amount: "€25,000", status: "Pending" },
+  { id: "4", contractNumber: "CT-2025-098", clientName: "Erik Hoffmann", email: "erik.hoffmann@email.com", phone: "+49 173 4567890", property: "Villa Rosengarten", type: "Sale", startDate: "2025-11-20", endDate: "2026-01-20", amount: "€2,100,000", status: "Completed" },
+  { id: "5", contractNumber: "CT-2026-004", clientName: "Sarah Klein", email: "sarah.klein@email.com", phone: "+49 174 5678901", property: "Sky Penthouse — Spree Lofts", type: "Sale", startDate: "2026-03-01", endDate: "2026-05-01", amount: "€1,450,000", status: "Active" },
+  { id: "6", contractNumber: "CT-2026-005", clientName: "Maximilian Schwarz", email: "max.schwarz@email.com", phone: "+49 175 6789012", property: "Office 101", type: "Rental", startDate: "2026-01-01", endDate: "2028-01-01", amount: "€3,200 / mo", status: "Active" },
+  { id: "7", contractNumber: "CT-2025-076", clientName: "Julia Fischer", email: "julia.fischer@email.com", phone: "+49 176 7890123", property: "Studio 201 — Spree Lofts", type: "Rental", startDate: "2025-06-01", endDate: "2026-01-31", amount: "€890 / mo", status: "Expired" },
+  { id: "8", contractNumber: "CT-2026-006", clientName: "Daniel Krüger", email: "daniel.krueger@email.com", phone: "+49 177 8901234", property: "Plot B-7 — Spree Lofts", type: "Sale", startDate: "2026-02-20", endDate: "2026-04-20", amount: "€480,000", status: "Pending" },
+];
 
 const statusStyles: Record<string, string> = {
   Active: "bg-emerald-500/10 text-emerald-600",
@@ -72,7 +88,15 @@ const emptyForm = {
   status: "Active" as ClientContract["status"],
 };
 
+
 const existingClients: any[] = [];
+
+const existingClients = [
+  { id: "c1", name: "Anna Müller", firstName: "Anna", lastName: "Müller", idNumber: "DE-A123456", birthdate: "1985-04-12", email: "anna.mueller@email.com", phone: "+49 170 1234567", address: "Leopoldstraße 12, München" },
+  { id: "c2", name: "Thomas Braun", firstName: "Thomas", lastName: "Braun", idNumber: "DE-B234567", birthdate: "1979-09-23", email: "thomas.braun@email.com", phone: "+49 171 2345678", address: "Kantstraße 88, Berlin" },
+  { id: "c3", name: "Lisa Weber", firstName: "Lisa", lastName: "Weber", idNumber: "DE-W345678", birthdate: "1990-12-02", email: "lisa.weber@email.com", phone: "+49 172 3456789", address: "Hauptstraße 5, Hamburg" },
+  { id: "c4", name: "Erik Hoffmann", firstName: "Erik", lastName: "Hoffmann", idNumber: "DE-H456789", birthdate: "1972-06-30", email: "erik.hoffmann@email.com", phone: "+49 173 4567890", address: "Marienplatz 3, München" },
+];
 
 const propertiesByType: Record<string, string[]> = {
   Apartment: ["Unit A1 — Residenz am Englischen Garten", "Unit B1 — Residenz am Englischen Garten", "Loft 101 — Spree Lofts", "Studio 201 — Spree Lofts"],
@@ -81,6 +105,7 @@ const propertiesByType: Record<string, string[]> = {
   Office: ["Office 101", "Office 204", "Office Suite 5A"],
   Land: ["Plot B-7 — Spree Lofts", "Plot C-12 — Greenfield"],
 };
+
 
 interface ClientContractsProps {
   dbContracts?: ClientContract[];
@@ -99,6 +124,19 @@ const ClientContracts = ({ dbContracts = [] }: ClientContractsProps) => {
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(5);
+const ClientContracts = () => {
+  const [contracts, setContracts] = useState<ClientContract[]>(initialContracts);
+  const [viewMode, setViewMode] = useState<ViewMode>("list");
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [editing, setEditing] = useState<ClientContract | null>(null);
+  const [deleting, setDeleting] = useState<ClientContract | null>(null);
+  const [form, setForm] = useState(emptyForm);
+  const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(5);
+  const [clientPickerOpen, setClientPickerOpen] = useState(false);
+
 
   const { url } = usePage();
   const location = new URL(url || "/", window.location.origin);
@@ -108,6 +146,10 @@ const ClientContracts = ({ dbContracts = [] }: ClientContractsProps) => {
   const openContract = (c: ClientContract) => {
     const qs = searchParams.toString();
     router.visit(`/blocs/${c.blocId}/contracts/${c.id}${qs ? `?${qs}` : ""}`);
+    const qs = new URLSearchParams(searchParams.toString());
+    qs.set("id", c.id);
+    qs.set("ref", c.contractNumber);
+    router.visit(`/contract-details?${qs.toString()}`);
   };
   const stop = (e: React.MouseEvent) => e.stopPropagation();
 
@@ -117,11 +159,32 @@ const ClientContracts = ({ dbContracts = [] }: ClientContractsProps) => {
   };
 
   const openEdit = (c: ClientContract) => {
+
     const qs = searchParams.toString();
     router.visit(`/contracts/${c.id}/edit${qs ? `?${qs}` : ""}`);
+
+    setEditing(c);
+    const [firstName, ...rest] = c.clientName.split(" ");
+    setForm({
+      ...emptyForm,
+      clientMode: "new",
+      firstName: firstName || "",
+      lastName: rest.join(" "),
+      email: c.email,
+      phone: c.phone,
+      contractNumber: c.contractNumber,
+      property: c.property,
+      type: c.type,
+      startDate: c.startDate,
+      endDate: c.endDate,
+      amount: c.amount,
+      status: c.status,
+    });
+    setDialogOpen(true);
   };
 
   const openDelete = (c: ClientContract) => { setDeleting(c); setDeleteOpen(true); };
+
 
   const handleDelete = () => {
     if (deleting) {
@@ -137,6 +200,44 @@ const ClientContracts = ({ dbContracts = [] }: ClientContractsProps) => {
       });
     }
   };
+
+  const handleSave = () => {
+    let clientName = "";
+    let email = form.email;
+    let phone = form.phone;
+    if (form.clientMode === "existing") {
+      const ex = existingClients.find(c => c.id === form.existingClientId);
+      if (!ex) { toast({ title: "Please select an existing client", variant: "destructive" }); return; }
+      clientName = ex.name; email = ex.email; phone = ex.phone;
+    } else {
+      clientName = `${form.firstName} ${form.lastName}`.trim();
+    }
+    if (!form.contractNumber.trim() || !clientName) {
+      toast({ title: "Contract number and client name are required", variant: "destructive" });
+      return;
+    }
+    const payload: Omit<ClientContract, "id"> = {
+      contractNumber: form.contractNumber, clientName, email, phone,
+      property: form.property, type: form.type, startDate: form.startDate,
+      endDate: form.endDate, amount: form.amount, status: form.status,
+    };
+    if (editing) {
+      setContracts(prev => prev.map(c => c.id === editing.id ? { ...c, ...payload } : c));
+      toast({ title: "Contract updated" });
+    } else {
+      setContracts(prev => [...prev, { ...payload, id: crypto.randomUUID() }]);
+      toast({ title: "Contract created" });
+    }
+    setDialogOpen(false);
+  };
+
+  const handleDelete = () => {
+    if (deleting) { setContracts(prev => prev.filter(c => c.id !== deleting.id)); toast({ title: "Contract deleted" }); }
+    setDeleteOpen(false); setDeleting(null);
+  };
+
+  const updateField = (field: keyof typeof form, value: string) => setForm(prev => ({ ...prev, [field]: value }));
+
 
   const filtered = filterStatus === "all" ? contracts : contracts.filter(c => c.status === filterStatus);
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
@@ -408,6 +509,199 @@ const ClientContracts = ({ dbContracts = [] }: ClientContractsProps) => {
           </main>
         </div>
       </div>
+
+
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="font-display text-2xl">{editing ? "Edit Contract" : "New Contract"}</DialogTitle>
+          </DialogHeader>
+
+          {/* Section 1: Client */}
+          <section className="rounded-xl border border-border bg-muted/30 p-5 space-y-4">
+            <div className="flex items-center justify-between flex-wrap gap-3">
+              <h3 className="font-display text-base font-bold flex items-center gap-2">
+                <Users className="w-4 h-4" /> Client Information
+              </h3>
+              <ToggleGroup
+                type="single"
+                value={form.clientMode}
+                onValueChange={(v) => v && updateField("clientMode", v)}
+                className="bg-background rounded-lg p-0.5 border border-border"
+              >
+                <ToggleGroupItem value="new" className="px-3 py-1.5 text-xs data-[state=on]:bg-accent data-[state=on]:text-accent-foreground rounded-md">New client</ToggleGroupItem>
+                <ToggleGroupItem value="existing" className="px-3 py-1.5 text-xs data-[state=on]:bg-accent data-[state=on]:text-accent-foreground rounded-md">Existing client</ToggleGroupItem>
+              </ToggleGroup>
+            </div>
+
+            {form.clientMode === "existing" ? (
+              <div className="grid gap-2">
+                <Label>Select client</Label>
+                <Popover open={clientPickerOpen} onOpenChange={setClientPickerOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={clientPickerOpen}
+                      className="w-full justify-between font-normal"
+                    >
+                      {form.existingClientId
+                        ? (() => {
+                            const c = existingClients.find(x => x.id === form.existingClientId);
+                            return c ? `${c.name} — ${c.email}` : "Choose a client";
+                          })()
+                        : "Search a client..."}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                    <Command>
+                      <CommandInput placeholder="Search by name, email, ID..." />
+                      <CommandList>
+                        <CommandEmpty>No client found.</CommandEmpty>
+                        <CommandGroup>
+                          {existingClients.map(c => (
+                            <CommandItem
+                              key={c.id}
+                              value={`${c.name} ${c.email} ${c.idNumber} ${c.phone}`}
+                              onSelect={() => {
+                                updateField("existingClientId", c.id);
+                                setClientPickerOpen(false);
+                              }}
+                            >
+                              <Check className={cn("mr-2 h-4 w-4", form.existingClientId === c.id ? "opacity-100" : "opacity-0")} />
+                              <div className="flex flex-col">
+                                <span className="font-medium">{c.name}</span>
+                                <span className="text-xs text-muted-foreground">{c.email} · {c.idNumber}</span>
+                              </div>
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+              </div>
+            ) : (
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="lastName">Last name *</Label>
+                    <Input id="lastName" value={form.lastName} onChange={e => updateField("lastName", e.target.value)} placeholder="Müller" />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="firstName">First name *</Label>
+                    <Input id="firstName" value={form.firstName} onChange={e => updateField("firstName", e.target.value)} placeholder="Anna" />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="idNumber">ID</Label>
+                    <Input id="idNumber" value={form.idNumber} onChange={e => updateField("idNumber", e.target.value)} placeholder="DE-A123456" />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="birthdate">Birthdate</Label>
+                    <Input id="birthdate" type="date" value={form.birthdate} onChange={e => updateField("birthdate", e.target.value)} />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="phone">Phone</Label>
+                    <Input id="phone" value={form.phone} onChange={e => updateField("phone", e.target.value)} placeholder="+49 170 1234567" />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="email">Email</Label>
+                    <Input id="email" type="email" value={form.email} onChange={e => updateField("email", e.target.value)} placeholder="client@email.com" />
+                  </div>
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="address">Address</Label>
+                  <Input id="address" value={form.address} onChange={e => updateField("address", e.target.value)} placeholder="Street, City" />
+                </div>
+              </>
+            )}
+          </section>
+
+          {/* Section 2: Contract */}
+          <section className="rounded-xl border border-border bg-muted/30 p-5 space-y-4">
+            <h3 className="font-display text-base font-bold flex items-center gap-2">
+              <FileText className="w-4 h-4" /> Contract Details
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="contractNumber">Contract # *</Label>
+                <Input id="contractNumber" value={form.contractNumber} onChange={e => updateField("contractNumber", e.target.value)} placeholder="CT-2026-001" />
+              </div>
+              <div className="grid gap-2">
+                <Label>Property type</Label>
+                <Select value={form.propertyType} onValueChange={v => { updateField("propertyType", v); updateField("property", ""); }}>
+                  <SelectTrigger><SelectValue placeholder="Select a property type" /></SelectTrigger>
+                  <SelectContent>
+                    {Object.keys(propertiesByType).map(t => (
+                      <SelectItem key={t} value={t}>{t}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            {form.propertyType && (
+              <div className="grid gap-2">
+                <Label>Property</Label>
+                <Select value={form.property} onValueChange={v => updateField("property", v)}>
+                  <SelectTrigger><SelectValue placeholder="Select a property" /></SelectTrigger>
+                  <SelectContent>
+                    {(propertiesByType[form.propertyType] || []).map(p => (
+                      <SelectItem key={p} value={p}>{p}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label>Type</Label>
+                <Select value={form.type} onValueChange={v => updateField("type", v)}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Sale">Sale</SelectItem>
+                    <SelectItem value="Rental">Rental</SelectItem>
+                    <SelectItem value="Reservation">Reservation</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid gap-2">
+                <Label>Status</Label>
+                <Select value={form.status} onValueChange={v => updateField("status", v)}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Active">Active</SelectItem>
+                    <SelectItem value="Pending">Pending</SelectItem>
+                    <SelectItem value="Completed">Completed</SelectItem>
+                    <SelectItem value="Expired">Expired</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="startDate">Start Date</Label>
+                <Input id="startDate" type="date" value={form.startDate} onChange={e => updateField("startDate", e.target.value)} />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="endDate">End Date</Label>
+                <Input id="endDate" type="date" value={form.endDate} onChange={e => updateField("endDate", e.target.value)} />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="amount">Amount</Label>
+                <Input id="amount" value={form.amount} onChange={e => updateField("amount", e.target.value)} placeholder="€485,000" />
+              </div>
+            </div>
+          </section>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleSave} style={{ background: "hsl(var(--accent))", color: "hsl(var(--accent-foreground))" }}>
+              {editing ? "Save Changes" : "Create Contract"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
 
       <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <AlertDialogContent>

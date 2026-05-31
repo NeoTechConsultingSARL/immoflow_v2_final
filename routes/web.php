@@ -256,6 +256,8 @@ Route::middleware('auth')->group(function () {
         return Inertia::render('ClientContracts', [
             'dbContracts' => $dbContracts,
         ]);
+    Route::get('/client-contracts', function () {
+        return Inertia::render('ClientContracts');
     })->name('client-contracts')->middleware('role:admin,manager');
 
     Route::get('/contract-create', function () {
