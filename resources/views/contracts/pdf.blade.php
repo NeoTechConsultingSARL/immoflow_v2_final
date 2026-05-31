@@ -1,11 +1,11 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="{{ $lang ?? 'fr' }}">
 <head>
-    <meta charset="UTF-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
     <title>Contrat de réservation d'un Local commercial</title>
     <style>
         body { 
-            font-family: 'Helvetica', 'Arial', sans-serif; 
+            font-family: 'DejaVu Sans', sans-serif; 
             color: #000; 
             line-height: 1.6; 
             font-size: 13px; 
@@ -53,10 +53,58 @@
             border-top: 1px solid #000; 
             padding-top: 5px; 
         }
+        
+        .rtl-block {
+            direction: rtl;
+            text-align: right;
+        }
+        .rtl-block ul {
+            direction: rtl;
+            text-align: right;
+            list-style-type: none;
+            padding: 0;
+            margin: 10px 0 0 0;
+        }
+        .rtl-block li {
+            direction: rtl;
+            text-align: right;
+            position: relative;
+            padding-right: 15px;
+            margin-bottom: 5px;
+        }
+        .rtl-block li::before {
+            content: "•";
+            position: absolute;
+            right: 0;
+            top: 0;
+            color: #000;
+        }
+        .rtl-block ul ul {
+            padding-right: 15px;
+            margin-top: 5px;
+        }
     </style>
 </head>
 <body>
     @php
+        $lang = $lang ?? 'fr';
+        
+        $ar = function ($text) use ($lang) {
+            if ($lang === 'ar' && !empty($text)) {
+                $parts = preg_split('/(<[^>]+>)/', $text, -1, PREG_SPLIT_DELIM_CAPTURE);
+                $shapedParts = [];
+                foreach ($parts as $part) {
+                    if (str_starts_with($part, '<') && str_ends_with($part, '>')) {
+                        $shapedParts[] = $part;
+                    } else {
+                        $shapedParts[] = \App\Services\ArabicShaper::shape($part);
+                    }
+                }
+                return implode('', $shapedParts);
+            }
+            return $text;
+        };
+
         $property = $contract->property;
         $bloc = $property ? $property->bloc : null;
         $tranche = $bloc ? $bloc->tranche : null;
@@ -73,37 +121,87 @@
     @endphp
 
     <div class="text-center title bold underline">
-        Contrat de réservation d'un Local commercial
+        @if(isset($lang) && $lang === 'en')
+            Commercial Property Reservation Contract
+        @elseif(isset($lang) && $lang === 'ar')
+            {!! $ar('عقد حجز محل تجاري') !!}
+        @else
+            Contrat de réservation d'un Local commercial
+        @endif
     </div>
 
-    <div class="partie">
-        <span class="bold">PARTIE 1</span> : Société {{ $companyName }} dont le siège se trouve à {{ $companyAddress }}.
+    <div class="partie {{ (isset($lang) && $lang === 'ar') ? 'rtl-block' : '' }}">
+        @if(isset($lang) && $lang === 'en')
+            <span class="bold">PART 1</span> : Company {{ $companyName }} whose head office is at {{ $companyAddress }}.
+        @elseif(isset($lang) && $lang === 'ar')
+            {!! $ar('<span class="bold">الطرف الأول</span> : شركة ' . $companyName . ' الكائن مقرها الاجتماعي بـ ' . $companyAddress . '.') !!}
+        @else
+            <span class="bold">PARTIE 1</span> : Société {{ $companyName }} dont le siège se trouve à {{ $companyAddress }}.
+        @endif
     </div>
 
-    <div class="partie">
-        <span class="bold">PARTIE 2</span> : Mlle/Mme/Mr {{ strtoupper($clientName) }}, Marocain, adulte, portant la CIN N° {{ $clientCIN }}, demeurant à {{ $clientAddress }}.
+    <div class="partie {{ (isset($lang) && $lang === 'ar') ? 'rtl-block' : '' }}">
+        @if(isset($lang) && $lang === 'en')
+            <span class="bold">PART 2</span> : Mlle/Mme/Mr {{ strtoupper($clientName) }}, adult, holding ID No. {{ $clientCIN }}, residing at {{ $clientAddress }}.
+        @elseif(isset($lang) && $lang === 'ar')
+            {!! $ar('<span class="bold">الطرف الثاني</span> : السيد/ة ' . strtoupper($clientName) . '، البالغ سن الرشد، الحامل لبطاقة التعريف الوطنية رقم ' . $clientCIN . '، والقاطن بـ ' . $clientAddress . '.') !!}
+        @else
+            <span class="bold">PARTIE 2</span> : Mlle/Mme/Mr {{ strtoupper($clientName) }}, Marocain, adulte, portant la CIN N° {{ $clientCIN }}, demeurant à {{ $clientAddress }}.
+        @endif
     </div>
 
     <div class="text-center subtitle bold underline">
-        TEXTE DU CONTRAT
+        @if(isset($lang) && $lang === 'en')
+            CONTRACT AGREEMENT TEXT
+        @elseif(isset($lang) && $lang === 'ar')
+            {!! $ar('بنود العقد') !!}
+        @else
+            TEXTE DU CONTRAT
+        @endif
     </div>
 
     @if(isset($clauses))
         @foreach($clauses as $clause)
-            <div class="article">
-                <span class="bold underline">{{ $clause['title'] }}</span> : {!! $clause['description'] !!}
+            <div class="article {{ (isset($lang) && $lang === 'ar') ? 'rtl-block' : '' }}">
+                @if(isset($lang) && $lang === 'ar')
+                    <span class="bold underline">{!! $ar($clause['title']) !!}</span> : {!! $ar($clause['description']) !!}
+                @else
+                    <span class="bold underline">{{ $clause['title'] }}</span> : {!! $clause['description'] !!}
+                @endif
             </div>
         @endforeach
     @endif
 
-    <div style="margin-top: 50px;" class="bold">
-        Nador, le {{ $contract->date ? \Carbon\Carbon::parse($contract->date)->format('d/m/Y') : now()->format('d/m/Y') }}
+    <div style="margin-top: 50px;" class="bold {{ (isset($lang) && $lang === 'ar') ? 'rtl-block' : '' }}">
+        @if(isset($lang) && $lang === 'en')
+            Nador, dated {{ $contract->date ? \Carbon\Carbon::parse($contract->date)->format('d/m/Y') : now()->format('d/m/Y') }}
+        @elseif(isset($lang) && $lang === 'ar')
+            {!! $ar('الناظور، في ' . ($contract->date ? \Carbon\Carbon::parse($contract->date)->format('d/m/Y') : now()->format('d/m/Y'))) !!}
+        @else
+            Nador, le {{ $contract->date ? \Carbon\Carbon::parse($contract->date)->format('d/m/Y') : now()->format('d/m/Y') }}
+        @endif
     </div>
 
-    <table class="signatures">
+    <table class="signatures" style="{{ (isset($lang) && $lang === 'ar') ? 'direction: rtl;' : '' }}">
         <tr>
-            <td class="bold">PARTIE 1</td>
-            <td class="bold text-right">PARTIE 2</td>
+            <td class="bold">
+                @if(isset($lang) && $lang === 'en')
+                    PART 1
+                @elseif(isset($lang) && $lang === 'ar')
+                    {!! $ar('الطرف الأول') !!}
+                @else
+                    PARTIE 1
+                @endif
+            </td>
+            <td class="bold text-right" style="{{ (isset($lang) && $lang === 'ar') ? 'text-align: left;' : '' }}">
+                @if(isset($lang) && $lang === 'en')
+                    PART 2
+                @elseif(isset($lang) && $lang === 'ar')
+                    {!! $ar('الطرف الثاني') !!}
+                @else
+                    PARTIE 2
+                @endif
+            </td>
         </tr>
     </table>
 

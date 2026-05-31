@@ -7,6 +7,9 @@ use App\Models\Bloc;
 use App\Models\Client;
 use App\Models\Company;
 use App\Models\Contract;
+use App\Models\ContractCommission;
+use App\Models\ContractModification;
+use App\Models\PaymentSchedule;
 use App\Models\Project;
 use App\Models\Property;
 use App\Models\Tranche;
@@ -229,6 +232,55 @@ class ContractController extends Controller
         ]);
     }
 
+    public function details(Request $request)
+    {
+        $id = $request->query('id');
+
+        $contract = Contract::with([
+            'client',
+            'property.bloc.tranche.project.company',
+            'paymentSchedules' => function ($q) {
+                $q->orderBy('due_date', 'asc');
+            },
+            'commission',
+            'modification',
+        ])->findOrFail($id);
+
+        // Generate breadcrumb path
+        $path = '';
+        $bloc = null;
+        if ($contract->property) {
+            $property = $contract->property;
+            $bloc = $property->bloc;
+            $tranche = $bloc ? $bloc->tranche : null;
+            $project = $tranche ? $tranche->project : null;
+            $company = $project ? $project->company : null;
+
+            $parts = [];
+            if ($company) {
+                $parts[] = $company->name;
+            }
+            if ($project) {
+                $parts[] = $project->name;
+            }
+            if ($tranche) {
+                $parts[] = $tranche->name;
+            }
+            if ($bloc) {
+                $parts[] = $bloc->name;
+            }
+            $parts[] = $property->name;
+
+            $path = implode(' > ', $parts);
+        }
+
+        return Inertia::render('ContractDetails', [
+            'contract' => $contract,
+            'path' => $path,
+            'bloc' => $bloc ? $bloc->load('tranche.project.company') : null,
+        ]);
+    }
+
     public function edit(Bloc $bloc, Contract $contract)
     {
         $contract->load(['property.bloc.tranche.project.company']);
@@ -258,16 +310,33 @@ class ContractController extends Controller
             'client_name' => 'nullable|string',
             'client_email' => 'nullable|email',
             'client_phone' => 'nullable|string',
+            'client_cin' => 'nullable|string',
+            'client_address' => 'nullable|string',
         ]);
 
         $contract->update($validated);
 
-        if (! empty($validated['client_name']) && $contract->client) {
-            $contract->client->update([
-                'full_name' => $validated['client_name'],
-                'email' => $validated['client_email'] ?? $contract->client->email,
-                'phone' => $validated['client_phone'] ?? $contract->client->phone,
-            ]);
+        if ($contract->client) {
+            $clientData = [];
+            if ($request->has('client_name')) {
+                $clientData['full_name'] = $request->input('client_name');
+            }
+            if ($request->has('client_email')) {
+                $clientData['email'] = $request->input('client_email');
+            }
+            if ($request->has('client_phone')) {
+                $clientData['phone'] = $request->input('client_phone');
+            }
+            if ($request->has('client_cin')) {
+                $clientData['identity_number'] = $request->input('client_cin');
+            }
+            if ($request->has('client_address')) {
+                $clientData['address'] = $request->input('client_address');
+            }
+
+            if (! empty($clientData)) {
+                $contract->client->update($clientData);
+            }
         }
 
         if ($contract->status === 'active') {
@@ -294,16 +363,14 @@ class ContractController extends Controller
         return redirect()->route('client-contracts', ['bloc' => $bloc->id])->with('success', 'Contract deleted successfully.');
     }
 
-    public function generatePdf(Bloc $bloc, Contract $contract, ContractPdfService $pdfService)
+    public function generatePdf(Bloc $bloc, Contract $contract, ContractPdfService $pdfService, Request $request)
     {
         $contract->load(['client', 'property.bloc.tranche.project.company']);
 
-        $clauses = $pdfService->getClauses($contract);
+        $template = $request->query('template', 'summary');
 
-        $pdf = Pdf::loadView('contracts.pdf', compact('contract', 'clauses'));
-
+        // Resolve fileName parameters
         $contractNumber = 'ct'.$contract->id;
-
         $projectName = '';
         if ($contract->property && $contract->property->bloc && $contract->property->bloc->tranche && $contract->property->bloc->tranche->project) {
             $projectName = $contract->property->bloc->tranche->project->name;
@@ -315,10 +382,25 @@ class ContractController extends Controller
             $clientName = $contract->client->full_name;
         }
         $clientName = strtolower(preg_replace('/\s+/', '', $clientName));
-
         $date = $contract->date ? Carbon::parse($contract->date)->format('dmY') : now()->format('dmY');
 
-        $fileName = 'contrat_'.$contractNumber.'_'.$projectName.'_'.$clientName.'_'.$date.'.pdf';
+        if ($template === 'resell') {
+            $pdf = Pdf::loadView('contracts.resell', compact('contract'));
+            $fileName = 'certificat_revente_'.$contractNumber.'_'.$projectName.'_'.$clientName.'_'.$date.'.pdf';
+        } elseif ($template === 'full_payment') {
+            $pdf = Pdf::loadView('contracts.full_payment', compact('contract'));
+            $fileName = 'attestation_paiement_'.$contractNumber.'_'.$projectName.'_'.$clientName.'_'.$date.'.pdf';
+        } else {
+            $lang = 'fr';
+            if ($template === 'ar') {
+                $lang = 'ar';
+            } elseif ($template === 'en') {
+                $lang = 'en';
+            }
+            $clauses = $pdfService->getClauses($contract, $lang);
+            $pdf = Pdf::loadView('contracts.pdf', compact('contract', 'clauses', 'lang'));
+            $fileName = 'contrat_'.$contractNumber.'_'.$projectName.'_'.$clientName.'_'.$date.'.pdf';
+        }
 
         return $pdf->download($fileName);
     }
@@ -371,5 +453,64 @@ class ContractController extends Controller
         } while ($exists);
 
         return response()->json(['contract_number' => $number]);
+    }
+
+    public function storePayment(Request $request, Contract $contract)
+    {
+        $validated = $request->validate([
+            'due_date' => 'required|date',
+            'amount' => 'required|numeric|min:0',
+            'observation' => 'nullable|string',
+        ]);
+
+        $contract->paymentSchedules()->create($validated);
+
+        return back()->with('success', 'Payment schedule entry added successfully.');
+    }
+
+    public function destroyPayment(Contract $contract, PaymentSchedule $paymentSchedule)
+    {
+        $paymentSchedule->delete();
+
+        return back()->with('success', 'Payment schedule entry deleted successfully.');
+    }
+
+    public function storeCommission(Request $request, Contract $contract)
+    {
+        $validated = $request->validate([
+            'broker_name' => 'required|string',
+            'amount' => 'required|numeric|min:0',
+            'description' => 'nullable|string',
+            'status' => 'required|string|in:Pending,Paid,Cancelled',
+        ]);
+
+        $contract->commission()->updateOrCreate([], $validated);
+
+        return back()->with('success', 'Commission saved successfully.');
+    }
+
+    public function destroyCommission(Contract $contract, ContractCommission $contractCommission)
+    {
+        $contractCommission->delete();
+
+        return back()->with('success', 'Commission deleted successfully.');
+    }
+
+    public function storeModification(Request $request, Contract $contract)
+    {
+        $validated = $request->validate([
+            'notes' => 'required|string',
+        ]);
+
+        $contract->modification()->updateOrCreate([], $validated);
+
+        return back()->with('success', 'Observation saved successfully.');
+    }
+
+    public function destroyModification(Contract $contract, ContractModification $contractModification)
+    {
+        $contractModification->delete();
+
+        return back()->with('success', 'Observation deleted successfully.');
     }
 }

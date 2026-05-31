@@ -1,5 +1,5 @@
-import { useMemo } from "react";
-import { usePage, Link } from "@inertiajs/react";
+import { useMemo, useState } from "react";
+import { usePage, Link, router } from "@inertiajs/react";
 import {
     Printer, FileText, User, Building2, Calendar, Mail, Phone, MapPin,
     CreditCard, Plus, Pencil, Trash2, ArrowLeft, BadgeCheck, AlertTriangle, Clock, Languages,
@@ -9,6 +9,12 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/dashboard/AppSidebar";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
 // Mock data — in a real app this would be fetched by contract id
@@ -19,8 +25,7 @@ const buildMockContract = (id: string) => ({
     client: {
         name: "Anna Müller",
         cin: "DE-A123456",
-        phone1: "+49 170 1234567",
-        phone2: "+49 89 555 0234",
+        phone: "+49 170 1234567",
         address: "Leopoldstraße 12, München",
         email: "anna.mueller@email.com",
         observation: "Preferred contact in the morning. VIP client.",
@@ -68,13 +73,171 @@ const buildMockContract = (id: string) => ({
 
 const fmt = (n: number) => new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(n);
 
-const ContractDetails = () => {
+interface ContractDetailsProps {
+    contract?: any;
+    path?: string;
+    bloc?: any;
+}
+
+const ContractDetails = ({ contract, path, bloc }: ContractDetailsProps) => {
     const { url } = usePage();
-    const id = useMemo(() => {
-        const searchParams = new URL(url || "/", window.location.origin).searchParams;
-        return searchParams.get("id") || "1";
+    const searchParams = useMemo(() => {
+        return new URL(url || "/", window.location.origin).searchParams;
     }, [url]);
-    const c = useMemo(() => buildMockContract(id), [id]);
+
+    const id = useMemo(() => {
+        return searchParams.get("id") || "1";
+    }, [searchParams]);
+
+    const c = useMemo(() => {
+        if (!contract) {
+            return buildMockContract(id);
+        }
+
+        // Map client info
+        const clientName = contract.client?.full_name || "Unknown Client";
+        const clientCIN = contract.client?.identity_number || "N/A";
+        const clientPhone = contract.client?.phone || "N/A";
+        const clientAddress = contract.client?.address || "N/A";
+        const clientEmail = contract.client?.email || "N/A";
+        const clientObservation = contract.modification?.notes || "";
+
+        // Map property info
+        const propType = contract.property?.property_type?.name || contract.property?.propertyType?.name || "Apartment";
+        const propCode = contract.property 
+            ? `${contract.property.name} — ${contract.property.bloc?.tranche?.project?.name || ''}`
+            : "Unit A1 — Residenz am Englischen Garten";
+        const surface = contract.property?.surface || 92;
+        const level = contract.property?.level || "3rd floor";
+        const parking = contract.property?.parking || "Sector B — P-14";
+        const parkingPrice = contract.property?.parkingPrice || 18000;
+
+        // Map finance info
+        const salePrice = Number(contract.price || 0);
+        const advance = Number(contract.advance || 0);
+        const paymentDuration = Number(contract.payment_duration || 24);
+        const monthsCount = Number(contract.payment_duration || 24);
+
+        // Map schedule rows
+        const schedules = (contract.payment_schedules || []).map((s: any) => {
+            const dueDate = s.due_date ? s.due_date.slice(0, 10) : "";
+            const todayStr = new Date().toISOString().slice(0, 10);
+            const isPast = dueDate < todayStr;
+            const status = isPast ? ("Paid" as const) : ("Upcoming" as const);
+            return {
+                id: String(s.id),
+                date: dueDate,
+                installment: Number(s.amount || 0),
+                status: status,
+                observation: s.observation || "",
+            };
+        });
+
+        // Installment calculation
+        const installment = schedules.length > 0 
+            ? schedules[0].installment 
+            : (paymentDuration > 0 ? (salePrice - advance) / paymentDuration : 0);
+
+        // Generate payments history:
+        const paymentsList: any[] = [];
+        if (advance > 0) {
+            paymentsList.push({
+                id: "p-adv",
+                opDate: contract.date ? contract.date.slice(0, 10) : (contract.created_at ? contract.created_at.slice(0, 10) : ""),
+                payDate: contract.date ? contract.date.slice(0, 10) : (contract.created_at ? contract.created_at.slice(0, 10) : ""),
+                amount: advance,
+                mode: "Bank transfer",
+                account: "DE89...0532",
+                opNumber: "OP-ADV"
+            });
+        }
+
+        schedules.forEach((s: any) => {
+            if (s.status === "Paid") {
+                paymentsList.push({
+                    id: `p-${s.id}`,
+                    opDate: s.date,
+                    payDate: s.date,
+                    amount: s.installment,
+                    mode: "Bank transfer",
+                    account: "DE89...0532",
+                    opNumber: `OP-${s.id}`
+                });
+            }
+        });
+
+        // Total paid
+        const totalPaid = paymentsList.reduce((acc, curr) => acc + curr.amount, 0);
+
+        // Map commissions
+        const commissionsList = contract.commission ? [
+            {
+                id: String(contract.commission.id),
+                agent: contract.commission.broker_name || "Broker",
+                role: "Broker",
+                amount: Number(contract.commission.amount || 0),
+                status: contract.commission.status || "Pending",
+            }
+        ] : [];
+
+        // Map extraInfo
+        const extraInfoList = contract.modification ? [
+            {
+                id: String(contract.modification.id),
+                date: contract.modification.created_at ? contract.modification.created_at.slice(0, 10) : "",
+                amount: 0,
+                observation: contract.modification.notes || "Modification note",
+                status: "Active"
+            }
+        ] : [];
+
+        // Map status
+        let statusDisplay: "Active" | "Pending" | "Completed" | "Expired" = "Active";
+        if (contract.status === "completed") {
+            statusDisplay = "Completed";
+        } else if (contract.status === "cancelled") {
+            statusDisplay = "Expired";
+        } else if (contract.status === "draft") {
+            statusDisplay = "Pending";
+        }
+
+        return {
+            id: String(contract.id),
+            reference: contract.contract_number || `CT-2026-${String(contract.id).padStart(3, "0")}`,
+            createdAt: contract.date ? contract.date.slice(0, 10) : (contract.created_at ? contract.created_at.slice(0, 10) : ""),
+            client: {
+                name: clientName,
+                cin: clientCIN,
+                phone: clientPhone,
+                address: clientAddress,
+                email: clientEmail,
+                observation: clientObservation,
+            },
+            property: {
+                type: propType,
+                code: propCode,
+                surface: surface,
+                level: level,
+                parking: parking,
+                parkingPrice: parkingPrice,
+            },
+            finance: {
+                salePrice: salePrice,
+                advance: advance,
+                paymentDuration: paymentDuration,
+                monthsCount: monthsCount,
+                installment: installment,
+                paid: totalPaid,
+                note: contract.modification?.notes || "",
+            },
+            status: statusDisplay,
+            resold: false,
+            extraInfo: extraInfoList,
+            scheduledPayments: schedules,
+            payments: paymentsList,
+            commissions: commissionsList,
+        };
+    }, [contract, id]);
 
     const remaining = c.finance.salePrice + c.property.parkingPrice - c.finance.paid;
     const progress = Math.min(100, Math.round((c.finance.paid / (c.finance.salePrice + c.property.parkingPrice)) * 100));
@@ -99,6 +262,252 @@ const ContractDetails = () => {
     };
     const scheduleIcon: Record<string, typeof Clock> = {
         Paid: BadgeCheck, Upcoming: Clock, Overdue: AlertTriangle,
+    };
+
+    const handlePrint = (label: string) => {
+        if (!c.id) return;
+        
+        let template = "summary";
+        if (label === "Contract AR") template = "ar";
+        else if (label === "Contract FR") template = "fr";
+        else if (label === "Contract EN") template = "en";
+        else if (label === "Resell Certificate") template = "resell";
+        else if (label === "Full Payment Certificate") template = "full_payment";
+
+        const blocId = contract?.property?.bloc_id || searchParams.get("bloc") || "1";
+        
+        window.open(`/blocs/${blocId}/contracts/${c.id}/pdf?template=${template}`, '_blank');
+    };
+
+    // Dialog states
+    const [clientDialogOpen, setClientDialogOpen] = useState(false);
+    const [clientForm, setClientForm] = useState({
+        firstName: "",
+        lastName: "",
+        email: "",
+        phone: "",
+        cin: "",
+        address: "",
+    });
+
+    const [contractDialogOpen, setContractDialogOpen] = useState(false);
+    const [contractForm, setContractForm] = useState({
+        contractNumber: "",
+        status: "active",
+        price: "",
+        advance: "",
+        paymentDuration: "",
+        paymentFrequency: "",
+    });
+
+    const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
+    const [paymentForm, setPaymentForm] = useState({
+        dueDate: "",
+        amount: "",
+        observation: "",
+    });
+
+    const [commissionDialogOpen, setCommissionDialogOpen] = useState(false);
+    const [commissionForm, setCommissionForm] = useState({
+        brokerName: "",
+        amount: "",
+        description: "",
+        status: "Pending",
+    });
+
+    const [observationDialogOpen, setObservationDialogOpen] = useState(false);
+    const [observationForm, setObservationForm] = useState({
+        notes: "",
+    });
+
+    // Opening handlers
+    const openEditClient = () => {
+        const nameParts = (c.client.name || "").trim().split(/\s+/);
+        const firstName = nameParts[0] || "";
+        const lastName = nameParts.slice(1).join(" ") || "";
+        setClientForm({
+            firstName: firstName,
+            lastName: lastName,
+            email: c.client.email || "",
+            phone: c.client.phone || "",
+            cin: c.client.cin || "",
+            address: c.client.address || "",
+        });
+        setClientDialogOpen(true);
+    };
+
+    const openEditContract = () => {
+        setContractForm({
+            contractNumber: c.reference || "",
+            status: contract?.status || "active",
+            price: String(c.finance.salePrice || ""),
+            advance: String(c.finance.advance || ""),
+            paymentDuration: String(c.finance.paymentDuration || ""),
+            paymentFrequency: String(contract?.payment_frequency || "1"),
+        });
+        setContractDialogOpen(true);
+    };
+
+    const openAddPayment = () => {
+        setPaymentForm({
+            dueDate: new Date().toISOString().slice(0, 10),
+            amount: "",
+            observation: "",
+        });
+        setPaymentDialogOpen(true);
+    };
+
+    const openAddCommission = () => {
+        setCommissionForm({
+            brokerName: contract?.commission?.broker_name || "",
+            amount: contract?.commission?.amount ? String(contract.commission.amount) : "",
+            description: contract?.commission?.description || "",
+            status: contract?.commission?.status || "Pending",
+        });
+        setCommissionDialogOpen(true);
+    };
+
+    const openEditObservation = () => {
+        setObservationForm({
+            notes: c.finance.note || "",
+        });
+        setObservationDialogOpen(true);
+    };
+
+    // Saving handlers
+    const saveClient = () => {
+        const blocId = contract?.property?.bloc_id || searchParams.get("bloc") || "1";
+        const payload = {
+            client_name: `${clientForm.firstName} ${clientForm.lastName}`.trim(),
+            client_email: clientForm.email,
+            client_phone: clientForm.phone,
+            client_cin: clientForm.cin,
+            client_address: clientForm.address,
+        };
+
+        router.put(`/blocs/${blocId}/contracts/${c.id}`, payload, {
+            onSuccess: () => {
+                toast({ title: "Client information updated successfully" });
+                setClientDialogOpen(false);
+            },
+            onError: () => {
+                toast({ title: "Failed to update client information", variant: "destructive" });
+            }
+        });
+    };
+
+    const saveContract = () => {
+        const blocId = contract?.property?.bloc_id || searchParams.get("bloc") || "1";
+        const payload = {
+            contract_number: contractForm.contractNumber,
+            status: contractForm.status,
+            price: contractForm.price,
+            advance: contractForm.advance,
+            payment_duration: contractForm.paymentDuration,
+            payment_frequency: contractForm.paymentFrequency,
+        };
+
+        router.put(`/blocs/${blocId}/contracts/${c.id}`, payload, {
+            onSuccess: () => {
+                toast({ title: "Contract details updated successfully" });
+                setContractDialogOpen(false);
+            },
+            onError: () => {
+                toast({ title: "Failed to update contract details", variant: "destructive" });
+            }
+        });
+    };
+
+    const savePayment = () => {
+        const payload = {
+            due_date: paymentForm.dueDate,
+            amount: paymentForm.amount,
+            observation: paymentForm.observation,
+        };
+
+        router.post(`/contracts/${c.id}/payments`, payload, {
+            onSuccess: () => {
+                toast({ title: "Payment scheduled successfully" });
+                setPaymentDialogOpen(false);
+            },
+            onError: () => {
+                toast({ title: "Failed to add payment", variant: "destructive" });
+            }
+        });
+    };
+
+    const deletePayment = (paymentId: string) => {
+        const cleanId = paymentId.replace("p-", "");
+        if (cleanId === "adv") {
+            toast({ title: "Advance payment cannot be deleted directly here. Edit contract details instead.", variant: "destructive" });
+            return;
+        }
+
+        router.delete(`/contracts/${c.id}/payments/${cleanId}`, {
+            onSuccess: () => {
+                toast({ title: "Payment entry deleted successfully" });
+            },
+            onError: () => {
+                toast({ title: "Failed to delete payment entry", variant: "destructive" });
+            }
+        });
+    };
+
+    const saveCommission = () => {
+        const payload = {
+            broker_name: commissionForm.brokerName,
+            amount: commissionForm.amount,
+            description: commissionForm.description,
+            status: commissionForm.status,
+        };
+
+        router.post(`/contracts/${c.id}/commissions`, payload, {
+            onSuccess: () => {
+                toast({ title: "Commission saved successfully" });
+                setCommissionDialogOpen(false);
+            },
+            onError: () => {
+                toast({ title: "Failed to save commission", variant: "destructive" });
+            }
+        });
+    };
+
+    const deleteCommission = (commId: string) => {
+        router.delete(`/contracts/${c.id}/commissions/${commId}`, {
+            onSuccess: () => {
+                toast({ title: "Commission deleted successfully" });
+            },
+            onError: () => {
+                toast({ title: "Failed to delete commission", variant: "destructive" });
+            }
+        });
+    };
+
+    const saveObservation = () => {
+        const payload = {
+            notes: observationForm.notes,
+        };
+
+        router.post(`/contracts/${c.id}/modifications`, payload, {
+            onSuccess: () => {
+                toast({ title: "Observation saved successfully" });
+                setObservationDialogOpen(false);
+            },
+            onError: () => {
+                toast({ title: "Failed to save observation", variant: "destructive" });
+            }
+        });
+    };
+
+    const deleteObservation = (modId: string) => {
+        router.delete(`/contracts/${c.id}/modifications/${modId}`, {
+            onSuccess: () => {
+                toast({ title: "Entry deleted successfully" });
+            },
+            onError: () => {
+                toast({ title: "Failed to delete entry", variant: "destructive" });
+            }
+        });
     };
 
     return (
@@ -134,7 +543,13 @@ const ContractDetails = () => {
                             <div className="flex flex-wrap items-center gap-2">
                                 <Printer className="w-4 h-4 text-muted-foreground mr-1" />
                                 {printActions.map((a) => (
-                                    <Button key={a.label} variant={a.variant} size="sm" className={cn("gap-1.5", a.className)}>
+                                    <Button
+                                        key={a.label}
+                                        variant={a.variant}
+                                        size="sm"
+                                        className={cn("gap-1.5", a.className)}
+                                        onClick={() => handlePrint(a.label)}
+                                    >
                                         <a.icon className="w-3.5 h-3.5" /> {a.label}
                                     </Button>
                                 ))}
@@ -183,16 +598,15 @@ const ContractDetails = () => {
                                         <h3 className="font-display font-bold">Client information</h3>
                                     </div>
                                     <div className="flex items-center gap-1">
-                                        <Button variant="outline" size="sm" className="gap-1.5"><Pencil className="w-3.5 h-3.5" /> Edit</Button>
-                                        <Button variant="outline" size="sm" className="gap-1.5"><Plus className="w-3.5 h-3.5" /> Observation</Button>
+                                        <Button variant="outline" size="sm" className="gap-1.5" onClick={openEditClient}><Pencil className="w-3.5 h-3.5" /> Edit</Button>
+                                        <Button variant="outline" size="sm" className="gap-1.5" onClick={openEditObservation}><Plus className="w-3.5 h-3.5" /> Observation</Button>
                                     </div>
                                 </div>
                                 <dl className="divide-y divide-border">
                                     {[
                                         { k: "Full name", v: c.client.name, icon: User },
                                         { k: "ID / CIN", v: c.client.cin, icon: BadgeCheck },
-                                        { k: "Phone 1", v: c.client.phone1, icon: Phone },
-                                        { k: "Phone 2", v: c.client.phone2, icon: Phone },
+                                        { k: "Phone", v: c.client.phone, icon: Phone },
                                         { k: "Address", v: c.client.address, icon: MapPin },
                                         { k: "Email", v: c.client.email, icon: Mail },
                                         { k: "Observation", v: c.client.observation, icon: FileText },
@@ -206,7 +620,7 @@ const ContractDetails = () => {
                                     ))}
                                 </dl>
                             </div>
-
+ 
                             {/* Contract info */}
                             <div className="bg-card border border-border rounded-xl shadow-[var(--shadow-card)] overflow-hidden">
                                 <div className="px-5 py-4 border-b border-border flex items-center justify-between">
@@ -215,8 +629,8 @@ const ContractDetails = () => {
                                         <h3 className="font-display font-bold">Contract information</h3>
                                     </div>
                                     <div className="flex items-center gap-1">
-                                        <Button variant="outline" size="sm" className="gap-1.5"><Plus className="w-3.5 h-3.5" /> Extra info</Button>
-                                        <Button variant="outline" size="sm" className="gap-1.5"><Pencil className="w-3.5 h-3.5" /> Edit</Button>
+                                        <Button variant="outline" size="sm" className="gap-1.5" onClick={openEditObservation}><Plus className="w-3.5 h-3.5" /> Extra info</Button>
+                                        <Button variant="outline" size="sm" className="gap-1.5" onClick={openEditContract}><Pencil className="w-3.5 h-3.5" /> Edit</Button>
                                     </div>
                                 </div>
                                 <dl className="divide-y divide-border">
@@ -250,7 +664,7 @@ const ContractDetails = () => {
                         <div className="bg-card border border-border rounded-xl shadow-[var(--shadow-card)] overflow-hidden mb-6">
                             <div className="px-5 py-4 border-b border-border flex items-center justify-between">
                                 <h3 className="font-display font-bold">Additional information</h3>
-                                <Button size="sm" className="gap-1.5"><Plus className="w-3.5 h-3.5" /> Add entry</Button>
+                                <Button size="sm" className="gap-1.5" onClick={openEditObservation}><Plus className="w-3.5 h-3.5" /> Add entry</Button>
                             </div>
                             <Table>
                                 <TableHeader>
@@ -274,8 +688,8 @@ const ContractDetails = () => {
                                                 </span>
                                             </TableCell>
                                             <TableCell className="text-right">
-                                                <Button variant="ghost" size="icon" className="h-7 w-7"><Pencil className="w-3.5 h-3.5" /></Button>
-                                                <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive"><Trash2 className="w-3.5 h-3.5" /></Button>
+                                                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={openEditObservation}><Pencil className="w-3.5 h-3.5" /></Button>
+                                                <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => deleteObservation(e.id)}><Trash2 className="w-3.5 h-3.5" /></Button>
                                             </TableCell>
                                         </TableRow>
                                     ))}
@@ -302,7 +716,7 @@ const ContractDetails = () => {
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {c.scheduledPayments.map((s) => {
+                                    {c.scheduledPayments.map((s: any) => {
                                         const Icon = scheduleIcon[s.status];
                                         return (
                                             <TableRow key={s.id}>
@@ -327,7 +741,7 @@ const ContractDetails = () => {
                                     <CreditCard className="w-4 h-4 text-muted-foreground" />
                                     <h3 className="font-display font-bold">Payments</h3>
                                 </div>
-                                <Button size="sm" className="gap-1.5"><Plus className="w-3.5 h-3.5" /> New payment</Button>
+                                <Button size="sm" className="gap-1.5" onClick={openAddPayment}><Plus className="w-3.5 h-3.5" /> New payment</Button>
                             </div>
                             <Table>
                                 <TableHeader>
@@ -351,8 +765,7 @@ const ContractDetails = () => {
                                             <TableCell className="font-mono text-xs">{p.account}</TableCell>
                                             <TableCell className="font-mono text-xs">{p.opNumber}</TableCell>
                                             <TableCell className="text-right">
-                                                <Button variant="ghost" size="icon" className="h-7 w-7"><Pencil className="w-3.5 h-3.5" /></Button>
-                                                <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive"><Trash2 className="w-3.5 h-3.5" /></Button>
+                                                <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => deletePayment(p.id)}><Trash2 className="w-3.5 h-3.5" /></Button>
                                             </TableCell>
                                         </TableRow>
                                     ))}
@@ -368,7 +781,7 @@ const ContractDetails = () => {
                         <div className="bg-card border border-border rounded-xl shadow-[var(--shadow-card)] overflow-hidden mb-6">
                             <div className="px-5 py-4 border-b border-border flex items-center justify-between">
                                 <h3 className="font-display font-bold">Commissions</h3>
-                                <Button size="sm" variant="outline" className="gap-1.5"><Plus className="w-3.5 h-3.5" /> Add commission</Button>
+                                <Button size="sm" variant="outline" className="gap-1.5" onClick={openAddCommission}><Plus className="w-3.5 h-3.5" /> Add commission</Button>
                             </div>
                             <Table>
                                 <TableHeader>
@@ -377,6 +790,7 @@ const ContractDetails = () => {
                                         <TableHead>Role</TableHead>
                                         <TableHead>Amount</TableHead>
                                         <TableHead>Status</TableHead>
+                                        <TableHead className="w-[100px] text-right">Actions</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
@@ -391,12 +805,287 @@ const ContractDetails = () => {
                                                     k.status === "Paid" ? "bg-emerald-500/10 text-emerald-600" : "bg-amber-500/10 text-amber-600"
                                                 )}>{k.status}</span>
                                             </TableCell>
+                                            <TableCell className="text-right">
+                                                <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => deleteCommission(k.id)}><Trash2 className="w-3.5 h-3.5" /></Button>
+                                            </TableCell>
                                         </TableRow>
                                     ))}
                                 </TableBody>
                             </Table>
                         </div>
                     </main>
+
+                    {/* Client Edit Dialog */}
+                    <Dialog open={clientDialogOpen} onOpenChange={setClientDialogOpen}>
+                        <DialogContent className="sm:max-w-[425px]">
+                            <DialogHeader>
+                                <DialogTitle>Edit Client Information</DialogTitle>
+                            </DialogHeader>
+                            <div className="grid gap-4 py-4">
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="client-lastName">Last Name *</Label>
+                                        <Input
+                                            id="client-lastName"
+                                            value={clientForm.lastName}
+                                            onChange={(e) => setClientForm({ ...clientForm, lastName: e.target.value })}
+                                        />
+                                    </div>
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="client-firstName">First Name *</Label>
+                                        <Input
+                                            id="client-firstName"
+                                            value={clientForm.firstName}
+                                            onChange={(e) => setClientForm({ ...clientForm, firstName: e.target.value })}
+                                        />
+                                    </div>
+                                </div>
+                                <div className="grid gap-2">
+                                    <Label htmlFor="client-cin">ID / CIN</Label>
+                                    <Input
+                                        id="client-cin"
+                                        value={clientForm.cin}
+                                        onChange={(e) => setClientForm({ ...clientForm, cin: e.target.value })}
+                                    />
+                                </div>
+                                <div className="grid gap-2">
+                                    <Label htmlFor="client-phone">Phone</Label>
+                                    <Input
+                                        id="client-phone"
+                                        value={clientForm.phone}
+                                        onChange={(e) => setClientForm({ ...clientForm, phone: e.target.value })}
+                                    />
+                                </div>
+                                <div className="grid gap-2">
+                                    <Label htmlFor="client-email">Email</Label>
+                                    <Input
+                                        id="client-email"
+                                        type="email"
+                                        value={clientForm.email}
+                                        onChange={(e) => setClientForm({ ...clientForm, email: e.target.value })}
+                                    />
+                                </div>
+                                <div className="grid gap-2">
+                                    <Label htmlFor="client-address">Address</Label>
+                                    <Textarea
+                                        id="client-address"
+                                        value={clientForm.address}
+                                        onChange={(e) => setClientForm({ ...clientForm, address: e.target.value })}
+                                    />
+                                </div>
+                            </div>
+                            <DialogFooter>
+                                <Button variant="outline" onClick={() => setClientDialogOpen(false)}>Cancel</Button>
+                                <Button onClick={saveClient}>Save changes</Button>
+                            </DialogFooter>
+                        </DialogContent>
+                    </Dialog>
+
+                    {/* Contract Edit Dialog */}
+                    <Dialog open={contractDialogOpen} onOpenChange={setContractDialogOpen}>
+                        <DialogContent className="sm:max-w-[425px]">
+                            <DialogHeader>
+                                <DialogTitle>Edit Contract Details</DialogTitle>
+                            </DialogHeader>
+                            <div className="grid gap-4 py-4">
+                                <div className="grid gap-2">
+                                    <Label htmlFor="contract-number">Contract Reference</Label>
+                                    <Input
+                                        id="contract-number"
+                                        value={contractForm.contractNumber}
+                                        onChange={(e) => setContractForm({ ...contractForm, contractNumber: e.target.value })}
+                                    />
+                                </div>
+                                <div className="grid gap-2">
+                                    <Label htmlFor="contract-status">Status</Label>
+                                    <Select
+                                        value={contractForm.status}
+                                        onValueChange={(val) => setContractForm({ ...contractForm, status: val })}
+                                    >
+                                        <SelectTrigger id="contract-status">
+                                            <SelectValue placeholder="Select status" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="active">Active</SelectItem>
+                                            <SelectItem value="draft">Pending / Draft</SelectItem>
+                                            <SelectItem value="completed">Completed</SelectItem>
+                                            <SelectItem value="cancelled">Expired / Cancelled</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="grid gap-2">
+                                    <Label htmlFor="contract-price">Sale Price (€)</Label>
+                                    <Input
+                                        id="contract-price"
+                                        type="number"
+                                        value={contractForm.price}
+                                        onChange={(e) => setContractForm({ ...contractForm, price: e.target.value })}
+                                    />
+                                </div>
+                                <div className="grid gap-2">
+                                    <Label htmlFor="contract-advance">Advance (€)</Label>
+                                    <Input
+                                        id="contract-advance"
+                                        type="number"
+                                        value={contractForm.advance}
+                                        onChange={(e) => setContractForm({ ...contractForm, advance: e.target.value })}
+                                    />
+                                </div>
+                                <div className="grid gap-2">
+                                    <Label htmlFor="contract-duration">Payment Duration (Months)</Label>
+                                    <Input
+                                        id="contract-duration"
+                                        type="number"
+                                        value={contractForm.paymentDuration}
+                                        onChange={(e) => setContractForm({ ...contractForm, paymentDuration: e.target.value })}
+                                    />
+                                </div>
+                                <div className="grid gap-2">
+                                    <Label htmlFor="contract-frequency">Payment Frequency</Label>
+                                    <Select
+                                        value={contractForm.paymentFrequency}
+                                        onValueChange={(val) => setContractForm({ ...contractForm, paymentFrequency: val })}
+                                    >
+                                        <SelectTrigger id="contract-frequency">
+                                            <SelectValue placeholder="Select frequency" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="1">Monthly</SelectItem>
+                                            <SelectItem value="3">Quarterly</SelectItem>
+                                            <SelectItem value="6">Semi-Annual</SelectItem>
+                                            <SelectItem value="12">Annual</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            </div>
+                            <DialogFooter>
+                                <Button variant="outline" onClick={() => setContractDialogOpen(false)}>Cancel</Button>
+                                <Button onClick={saveContract}>Save changes</Button>
+                            </DialogFooter>
+                        </DialogContent>
+                    </Dialog>
+
+                    {/* Payment Add Dialog */}
+                    <Dialog open={paymentDialogOpen} onOpenChange={setPaymentDialogOpen}>
+                        <DialogContent className="sm:max-w-[425px]">
+                            <DialogHeader>
+                                <DialogTitle>Add Payment Entry</DialogTitle>
+                            </DialogHeader>
+                            <div className="grid gap-4 py-4">
+                                <div className="grid gap-2">
+                                    <Label htmlFor="payment-date">Due Date</Label>
+                                    <Input
+                                        id="payment-date"
+                                        type="date"
+                                        value={paymentForm.dueDate}
+                                        onChange={(e) => setPaymentForm({ ...paymentForm, dueDate: e.target.value })}
+                                    />
+                                </div>
+                                <div className="grid gap-2">
+                                    <Label htmlFor="payment-amount">Amount (€)</Label>
+                                    <Input
+                                        id="payment-amount"
+                                        type="number"
+                                        value={paymentForm.amount}
+                                        onChange={(e) => setPaymentForm({ ...paymentForm, amount: e.target.value })}
+                                    />
+                                </div>
+                                <div className="grid gap-2">
+                                    <Label htmlFor="payment-observation">Observation</Label>
+                                    <Textarea
+                                        id="payment-observation"
+                                        value={paymentForm.observation}
+                                        onChange={(e) => setPaymentForm({ ...paymentForm, observation: e.target.value })}
+                                    />
+                                </div>
+                            </div>
+                            <DialogFooter>
+                                <Button variant="outline" onClick={() => setPaymentDialogOpen(false)}>Cancel</Button>
+                                <Button onClick={savePayment}>Add payment</Button>
+                            </DialogFooter>
+                        </DialogContent>
+                    </Dialog>
+
+                    {/* Commission Add/Edit Dialog */}
+                    <Dialog open={commissionDialogOpen} onOpenChange={setCommissionDialogOpen}>
+                        <DialogContent className="sm:max-w-[425px]">
+                            <DialogHeader>
+                                <DialogTitle>Save Commission</DialogTitle>
+                            </DialogHeader>
+                            <div className="grid gap-4 py-4">
+                                <div className="grid gap-2">
+                                    <Label htmlFor="broker-name">Agent / Broker Name</Label>
+                                    <Input
+                                        id="broker-name"
+                                        value={commissionForm.brokerName}
+                                        onChange={(e) => setCommissionForm({ ...commissionForm, brokerName: e.target.value })}
+                                    />
+                                </div>
+                                <div className="grid gap-2">
+                                    <Label htmlFor="commission-amount">Amount (€)</Label>
+                                    <Input
+                                        id="commission-amount"
+                                        type="number"
+                                        value={commissionForm.amount}
+                                        onChange={(e) => setCommissionForm({ ...commissionForm, amount: e.target.value })}
+                                    />
+                                </div>
+                                <div className="grid gap-2">
+                                    <Label htmlFor="commission-status">Status</Label>
+                                    <Select
+                                        value={commissionForm.status}
+                                        onValueChange={(val) => setCommissionForm({ ...commissionForm, status: val })}
+                                    >
+                                        <SelectTrigger id="commission-status">
+                                            <SelectValue placeholder="Select status" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="Pending">Pending</SelectItem>
+                                            <SelectItem value="Paid">Paid</SelectItem>
+                                            <SelectItem value="Cancelled">Cancelled</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="grid gap-2">
+                                    <Label htmlFor="commission-desc">Description</Label>
+                                    <Textarea
+                                        id="commission-desc"
+                                        value={commissionForm.description}
+                                        onChange={(e) => setCommissionForm({ ...commissionForm, description: e.target.value })}
+                                    />
+                                </div>
+                            </div>
+                            <DialogFooter>
+                                <Button variant="outline" onClick={() => setCommissionDialogOpen(false)}>Cancel</Button>
+                                <Button onClick={saveCommission}>Save Commission</Button>
+                            </DialogFooter>
+                        </DialogContent>
+                    </Dialog>
+
+                    {/* Observation/Modification Dialog */}
+                    <Dialog open={observationDialogOpen} onOpenChange={setObservationDialogOpen}>
+                        <DialogContent className="sm:max-w-[425px]">
+                            <DialogHeader>
+                                <DialogTitle>Edit Additional Info / Notes</DialogTitle>
+                            </DialogHeader>
+                            <div className="grid gap-4 py-4">
+                                <div className="grid gap-2">
+                                    <Label htmlFor="observation-notes">Observation / Notes</Label>
+                                    <Textarea
+                                        id="observation-notes"
+                                        value={observationForm.notes}
+                                        onChange={(e) => setObservationForm({ ...observationForm, notes: e.target.value })}
+                                        placeholder="Enter notes or modifications here..."
+                                        rows={5}
+                                    />
+                                </div>
+                            </div>
+                            <DialogFooter>
+                                <Button variant="outline" onClick={() => setObservationDialogOpen(false)}>Cancel</Button>
+                                <Button onClick={saveObservation}>Save notes</Button>
+                            </DialogFooter>
+                        </DialogContent>
+                    </Dialog>
                 </div>
             </div>
         </SidebarProvider>

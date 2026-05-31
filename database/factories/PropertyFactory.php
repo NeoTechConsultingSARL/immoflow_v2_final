@@ -24,7 +24,7 @@ class PropertyFactory extends Factory
     public function definition(): array
     {
         return [
-            'name' => 'Unité ' . $this->faker->unique()->numberBetween(100, 999),
+            'name' => 'Unité '.$this->faker->unique()->numberBetween(100, 999),
             'bloc_id' => Bloc::factory(),
             'property_type_id' => PropertyType::factory(),
             'price' => $this->faker->randomFloat(2, 50000, 500000),

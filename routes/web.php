@@ -41,6 +41,16 @@ Route::middleware('auth')->group(function () {
     // Global Contract Create (not nested under bloc)
     Route::post('/contracts', [ContractController::class, 'storeGlobal'])->name('contracts.store');
 
+    // Contract Sub-Resources (for details view actions)
+    Route::post('/contracts/{contract}/payments', [ContractController::class, 'storePayment'])->name('contracts.payments.store');
+    Route::delete('/contracts/{contract}/payments/{paymentSchedule}', [ContractController::class, 'destroyPayment'])->name('contracts.payments.destroy');
+
+    Route::post('/contracts/{contract}/commissions', [ContractController::class, 'storeCommission'])->name('contracts.commissions.store');
+    Route::delete('/contracts/{contract}/commissions/{contractCommission}', [ContractController::class, 'destroyCommission'])->name('contracts.commissions.destroy');
+
+    Route::post('/contracts/{contract}/modifications', [ContractController::class, 'storeModification'])->name('contracts.modifications.store');
+    Route::delete('/contracts/{contract}/modifications/{contractModification}', [ContractController::class, 'destroyModification'])->name('contracts.modifications.destroy');
+
     // Clients
     Route::resource('clients', ClientController::class)->except(['destroy']);
     Route::middleware('throttle:api')->group(function () {
@@ -259,9 +269,7 @@ Route::middleware('auth')->group(function () {
         return Inertia::render('ContractCreate');
     })->name('contract-create')->middleware('role:admin,manager');
 
-    Route::get('/contract-details', function () {
-        return Inertia::render('ContractDetails');
-    })->name('contract-details')->middleware('role:admin,manager');
+    Route::get('/contract-details', [ContractController::class, 'details'])->name('contract-details')->middleware('role:admin,manager');
 
     Route::get('/admin-only', function () {
         return response('Admin only access', 200);
