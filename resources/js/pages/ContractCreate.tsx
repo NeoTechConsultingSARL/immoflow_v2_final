@@ -18,7 +18,6 @@ import { toast } from "@/hooks/use-toast";
 
 const propertyStates = ["Basic construction works", "Mid-finish", "Ready to move in", "Custom finish"];
 const paymentMethods = ["Cash", "Bank Transfer", "Check", "Card"];
-const subsoilTypes = ["None", "Cellar", "Parking Spot", "Storage Room"];
 
 const today = new Date().toISOString().slice(0, 10);
 
@@ -579,22 +578,6 @@ const ContractCreate = ({ contract: propContract, companies: propCompanies = [],
                   )}
                 </div>
 
-                {/* Subsoil */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-border">
-                  <div className="grid gap-2">
-                    <Label>Subsoil</Label>
-                    <Select onValueChange={v => console.log('subsoil', v)}>
-                      <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                      <SelectContent>
-                        {subsoilTypes.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="grid gap-2">
-                    <Label>Subsoil price</Label>
-                    <Input placeholder="0" />
-                  </div>
-                </div>
               </div>
             </section>
 
