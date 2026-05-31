@@ -9,9 +9,9 @@ use App\Models\Company;
 use App\Models\Contract;
 use App\Models\ContractCommission;
 use App\Models\ContractModification;
+use App\Models\Parking;
 use App\Models\PaymentSchedule;
 use App\Models\Project;
-use App\Models\Parking;
 use App\Models\Property;
 use App\Models\PropertyType;
 use App\Services\ContractPdfService;
@@ -364,7 +364,6 @@ class ContractController extends Controller
             'paymentFrequency' => 'nullable|integer|min:1',
             'date' => 'nullable|date',
 
-
             // Client details for inline update if needed
             'client_name' => 'nullable|string',
             'client_email' => 'nullable|email',
@@ -434,29 +433,28 @@ class ContractController extends Controller
                 }
             }
 
+            if ($contract->client) {
+                $clientData = [];
+                if ($request->has('client_name')) {
+                    $clientData['full_name'] = $request->input('client_name');
+                }
+                if ($request->has('client_email')) {
+                    $clientData['email'] = $request->input('client_email');
+                }
+                if ($request->has('client_phone')) {
+                    $clientData['phone'] = $request->input('client_phone');
+                }
+                if ($request->has('client_cin')) {
+                    $clientData['identity_number'] = $request->input('client_cin');
+                }
+                if ($request->has('client_address')) {
+                    $clientData['address'] = $request->input('client_address');
+                }
 
-        if ($contract->client) {
-            $clientData = [];
-            if ($request->has('client_name')) {
-                $clientData['full_name'] = $request->input('client_name');
+                if (! empty($clientData)) {
+                    $contract->client->update($clientData);
+                }
             }
-            if ($request->has('client_email')) {
-                $clientData['email'] = $request->input('client_email');
-            }
-            if ($request->has('client_phone')) {
-                $clientData['phone'] = $request->input('client_phone');
-            }
-            if ($request->has('client_cin')) {
-                $clientData['identity_number'] = $request->input('client_cin');
-            }
-            if ($request->has('client_address')) {
-                $clientData['address'] = $request->input('client_address');
-            }
-
-            if (! empty($clientData)) {
-                $contract->client->update($clientData);
-            }
-        }
 
             // Parking reservation update
             $oldParkingId = $contract->parking_id;
@@ -488,7 +486,6 @@ class ContractController extends Controller
                 'payment_frequency' => $validated['paymentFrequency'] ?? null,
                 'date' => $validated['date'] ?? now(),
             ]);
-
 
             // Handle file upload for the modification image
             if (! empty($validated['modification'])) {
@@ -792,6 +789,7 @@ class ContractController extends Controller
         $contractModification->delete();
 
         return back()->with('success', 'Observation deleted successfully.');
+    }
 
     public function getAllProperties()
     {
