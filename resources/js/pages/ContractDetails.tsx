@@ -86,8 +86,11 @@ const ContractDetails = ({ contract, path, bloc }: ContractDetailsProps) => {
     }, [url]);
 
     const id = useMemo(() => {
+        if (contract?.id != null) {
+            return String(contract.id);
+        }
         return searchParams.get("id") || "1";
-    }, [searchParams]);
+    }, [searchParams, contract?.id]);
 
     const c = useMemo(() => {
         if (!contract) {

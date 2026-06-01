@@ -206,47 +206,22 @@ class ContractController extends Controller
 
     public function show(Bloc $bloc, Contract $contract)
     {
-        $contract->load(['client', 'property.bloc.tranche.project.company']);
-
-        // Generate breadcrumb path
-        $path = '';
-        if ($contract->property) {
-            $property = $contract->property;
-            $bloc = $property->bloc;
-            $tranche = $bloc ? $bloc->tranche : null;
-            $project = $tranche ? $tranche->project : null;
-            $company = $project ? $project->company : null;
-
-            $parts = [];
-            if ($company) {
-                $parts[] = $company->name;
-            }
-            if ($project) {
-                $parts[] = $project->name;
-            }
-            if ($tranche) {
-                $parts[] = $tranche->name;
-            }
-            if ($bloc) {
-                $parts[] = $bloc->name;
-            }
-            $parts[] = $property->name;
-
-            $path = implode(' > ', $parts);
-        }
-
-        return Inertia::render('Contracts/Show', [
-            'contract' => $contract,
-            'path' => $path,
-            'bloc' => $bloc->load('tranche.project.company'),
-        ]);
+        return $this->renderContractDetails($contract, $bloc);
     }
 
     public function details(Request $request)
     {
         $id = $request->query('id');
 
-        $contract = Contract::with([
+        $contract = Contract::findOrFail($id);
+        $bloc = $contract->property?->bloc;
+
+        return $this->renderContractDetails($contract, $bloc);
+    }
+
+    private function renderContractDetails(Contract $contract, ?Bloc $bloc = null)
+    {
+        $contract->load([
             'client',
             'property.bloc.tranche.project.company',
             'paymentSchedules' => function ($q) {
@@ -254,41 +229,40 @@ class ContractController extends Controller
             },
             'commission',
             'modification',
-        ])->findOrFail($id);
+        ]);
 
-        // Generate breadcrumb path
-        $path = '';
-        $bloc = null;
-        if ($contract->property) {
-            $property = $contract->property;
-            $bloc = $property->bloc;
-            $tranche = $bloc ? $bloc->tranche : null;
-            $project = $tranche ? $tranche->project : null;
-            $company = $project ? $project->company : null;
-
-            $parts = [];
-            if ($company) {
-                $parts[] = $company->name;
-            }
-            if ($project) {
-                $parts[] = $project->name;
-            }
-            if ($tranche) {
-                $parts[] = $tranche->name;
-            }
-            if ($bloc) {
-                $parts[] = $bloc->name;
-            }
-            $parts[] = $property->name;
-
-            $path = implode(' > ', $parts);
+        if ($bloc) {
+            $bloc->load('tranche.project.company');
         }
 
         return Inertia::render('ContractDetails', [
             'contract' => $contract,
-            'path' => $path,
-            'bloc' => $bloc ? $bloc->load('tranche.project.company') : null,
+            'path' => $this->buildContractHierarchyPath($contract),
+            'bloc' => $bloc,
         ]);
+    }
+
+    private function buildContractHierarchyPath(Contract $contract): string
+    {
+        if (! $contract->property) {
+            return '';
+        }
+
+        $property = $contract->property;
+        $bloc = $property->bloc;
+        $tranche = $bloc?->tranche;
+        $project = $tranche?->project;
+        $company = $project?->company;
+
+        $parts = array_filter([
+            $company?->name,
+            $project?->name,
+            $tranche?->name,
+            $bloc?->name,
+            $property->name,
+        ]);
+
+        return implode(' > ', $parts);
     }
 
     public function edit(Bloc $bloc, Contract $contract)
