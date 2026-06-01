@@ -195,6 +195,17 @@ export function AppBreadcrumb({ contractPath, hierarchyData }: AppBreadcrumbProp
     crumbs.push({ label: "Activity History" });
   } else if (path === "/news") {
     crumbs.push({ label: "News" });
+  } else if (path === "/clients") {
+    crumbs.push({ label: "Clients" });
+  } else if (path === "/clients/create") {
+    crumbs.push({ label: "Clients", href: "/clients" });
+    crumbs.push({ label: "New Client" });
+  } else if (path.match(/^\/clients\/\d+$/)) {
+    crumbs.push({ label: "Clients", href: "/clients" });
+    crumbs.push({ label: "Client Details" });
+  } else if (path.match(/^\/clients\/\d+\/edit$/)) {
+    crumbs.push({ label: "Clients", href: "/clients" });
+    crumbs.push({ label: "Edit Client" });
   } else if (path === "/parkings") {
     crumbs.push({ label: "Companies", href: "/companies" });
     if (companyId) {

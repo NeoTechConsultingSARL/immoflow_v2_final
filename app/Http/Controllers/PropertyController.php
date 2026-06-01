@@ -20,7 +20,8 @@ class PropertyController extends Controller
     public function index(Request $request): Response
     {
         $blocId = $request->query('bloc');
-        $projectName = $request->query('project');
+        $projectId = $request->query('project');
+        $projectName = $request->query('name');
         $trancheName = $request->query('tranche');
         $blocName = $request->query('blocName');
         $typeKey = $request->query('type');
@@ -83,7 +84,8 @@ class PropertyController extends Controller
             'propertyTypes' => $propertyTypes,
             'filters' => [
                 'bloc' => $blocId,
-                'project' => $projectName,
+                'project' => $projectId,
+                'projectName' => $projectName,
                 'tranche' => $trancheName,
                 'blocName' => $blocName,
                 'type' => $typeKey,

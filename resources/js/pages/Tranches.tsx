@@ -120,7 +120,7 @@ const Tranches = ({ tranches, projects, filters }: Props) => {
 
   return (
     <SidebarProvider>
-      <div className="min-h-screen flex w-full bg-background/50">
+      <div className="min-h-screen flex w-full">
         <AppSidebar />
         <div className="flex-1 flex flex-col min-w-0">
           <header className="h-16 bg-card border-b border-border flex items-center justify-between px-6 sticky top-0 z-40">
@@ -133,7 +133,7 @@ const Tranches = ({ tranches, projects, filters }: Props) => {
             </Button>
           </header>
 
-          <main className="flex-1 p-6 lg:p-8 max-w-[1400px] mx-auto w-full animate-in fade-in slide-in-from-bottom-1 duration-400">
+          <main className="flex-1 p-6 lg:p-8 max-w-[1400px] animate-in fade-in slide-in-from-bottom-1 duration-400">
             <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8">
               <div>
                 <div className="flex items-center gap-2 mb-1">

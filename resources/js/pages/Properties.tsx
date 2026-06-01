@@ -49,6 +49,7 @@ interface Props {
   filters: {
     bloc?: string;
     project?: string;
+    projectName?: string;
     tranche?: string;
     blocName?: string;
     type?: string;
@@ -115,6 +116,17 @@ const getColorByType = (typeName: string, allTypes: PropertyType[]) => {
 type ViewMode = "card" | "grid" | "table";
 
 const Properties = ({ properties: initialProperties, blocs, propertyTypes, filters }: Props) => {
+  const pageTitle = filters.projectName
+    ? decodeURIComponent(filters.projectName)
+    : filters.blocName
+      ? decodeURIComponent(filters.blocName)
+      : "All Properties";
+  const pageSubtitle = filters.projectName
+    ? `Properties in ${decodeURIComponent(filters.projectName)}`
+    : filters.blocName
+      ? `Properties in ${decodeURIComponent(filters.blocName)}`
+      : "Browse all properties across projects.";
+
   const [viewMode, setViewMode] = useState<ViewMode>("card");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -224,10 +236,10 @@ const Properties = ({ properties: initialProperties, blocs, propertyTypes, filte
             <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-6">
               <div>
                 <h2 className="font-display text-[1.75rem] xl:text-[2rem] font-bold">
-                  {filters.project ? filters.project : filters.blocName ? filters.blocName : "All Properties"}
+                  {pageTitle}
                 </h2>
                 <p className="text-[0.9375rem] text-muted-foreground">
-                  {filters.project ? `Properties in ${filters.project}` : filters.blocName ? `Properties in ${filters.blocName}` : "Browse all properties across projects."}
+                  {pageSubtitle}
                 </p>
               </div>
               <ToggleGroup type="single" value={viewMode} onValueChange={(v) => v && setViewMode(v as ViewMode)} className="bg-muted rounded-lg p-0.5">
