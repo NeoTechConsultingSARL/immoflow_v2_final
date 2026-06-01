@@ -223,7 +223,9 @@ class ContractController extends Controller
     {
         $contract->load([
             'client',
+            'property.propertyType',
             'property.bloc.tranche.project.company',
+            'parking',
             'paymentSchedules' => function ($q) {
                 $q->orderBy('due_date', 'asc');
             },
@@ -239,7 +241,28 @@ class ContractController extends Controller
             'contract' => $contract,
             'path' => $this->buildContractHierarchyPath($contract),
             'bloc' => $bloc,
+            'hierarchyData' => $this->buildContractHierarchyData($contract, $bloc),
         ]);
+    }
+
+    private function buildContractHierarchyData(Contract $contract, ?Bloc $bloc = null): array
+    {
+        $property = $contract->property;
+        $bloc = $bloc ?? $property?->bloc;
+        $tranche = $bloc?->tranche;
+        $project = $tranche?->project;
+        $company = $project?->company;
+
+        return array_filter([
+            'companyId' => $company?->id,
+            'companyName' => $company?->name,
+            'projectId' => $project?->id,
+            'projectName' => $project?->name,
+            'trancheId' => $tranche?->id,
+            'trancheName' => $tranche?->name,
+            'blocId' => $bloc?->id,
+            'blocName' => $bloc?->name,
+        ], fn ($value) => $value !== null && $value !== '');
     }
 
     private function buildContractHierarchyPath(Contract $contract): string
@@ -704,6 +727,60 @@ class ContractController extends Controller
         } while ($exists);
 
         return response()->json(['contract_number' => $number]);
+    }
+
+    public function updateClientFromDetails(Request $request, Contract $contract)
+    {
+        $validated = $request->validate([
+            'client_name' => 'required|string|max:255',
+            'client_email' => 'nullable|email|max:255',
+            'client_phone' => 'nullable|string|max:255',
+            'client_cin' => 'nullable|string|max:255',
+            'client_address' => 'nullable|string|max:255',
+        ]);
+
+        if (! $contract->client) {
+            return back()->withErrors([
+                'client' => 'No client is linked to this contract.',
+            ]);
+        }
+
+        $contract->client->update([
+            'full_name' => $validated['client_name'],
+            'email' => $validated['client_email'] ?? null,
+            'phone' => $validated['client_phone'] ?? null,
+            'identity_number' => $validated['client_cin'] ?? null,
+            'address' => $validated['client_address'] ?? null,
+        ]);
+
+        return back()->with('success', 'Client information updated successfully.');
+    }
+
+    public function updateSummaryFromDetails(Request $request, Contract $contract)
+    {
+        $validated = $request->validate([
+            'contract_number' => 'required|string|unique:contracts,contract_number,'.$contract->id,
+            'status' => 'required|string|in:active,draft,completed,cancelled',
+            'price' => 'required|numeric|min:0',
+            'advance' => 'nullable|numeric|min:0',
+            'payment_duration' => 'nullable|integer|min:1',
+            'payment_frequency' => 'nullable|integer|min:1',
+        ]);
+
+        $contract->update([
+            'contract_number' => $validated['contract_number'],
+            'status' => $validated['status'],
+            'price' => $validated['price'],
+            'advance' => $validated['advance'] ?? null,
+            'payment_duration' => $validated['payment_duration'] ?? null,
+            'payment_frequency' => $validated['payment_frequency'] ?? null,
+        ]);
+
+        if ($contract->property) {
+            $contract->property->update(['price' => $validated['price']]);
+        }
+
+        return back()->with('success', 'Contract details updated successfully.');
     }
 
     public function storePayment(Request $request, Contract $contract)

@@ -51,6 +51,9 @@ Route::middleware('auth')->group(function () {
     Route::post('/contracts/{contract}/modifications', [ContractController::class, 'storeModification'])->name('contracts.modifications.store');
     Route::delete('/contracts/{contract}/modifications/{contractModification}', [ContractController::class, 'destroyModification'])->name('contracts.modifications.destroy');
 
+    Route::put('/contracts/{contract}/client', [ContractController::class, 'updateClientFromDetails'])->name('contracts.client.update');
+    Route::put('/contracts/{contract}/summary', [ContractController::class, 'updateSummaryFromDetails'])->name('contracts.summary.update');
+
     // Clients
     Route::resource('clients', ClientController::class)->except(['destroy']);
     Route::middleware('throttle:api')->group(function () {
@@ -217,7 +220,7 @@ Route::middleware('auth')->group(function () {
                 $endDate = $contract->date->copy()->addMonths($contract->payment_duration)->format('Y-m-d');
             }
 
-            $amount = $contract->price ? '€' . number_format($contract->price) : '';
+            $amount = $contract->price ? '€'.number_format($contract->price) : '';
             if ($contract->payment_frequency && $contract->payment_frequency < 12 && $contract->price < 10000) {
                 $amount .= ' / mo';
             }
@@ -239,38 +242,36 @@ Route::middleware('auth')->group(function () {
             }
 
             return [
-                'id'             => (string) $contract->id,
-                'contractNumber' => $contract->contract_number ?: 'CT-' . $contract->id,
-                'clientName'     => $contract->client ? $contract->client->full_name : 'Unknown',
-                'clientId'       => (string) $contract->client_id,
-                'email'          => $contract->client ? $contract->client->email : '',
-                'phone'          => $contract->client ? $contract->client->phone : '',
-                'property'       => $contract->property ? ($contract->property->name . ' — ' . ($contract->property->bloc->tranche->project->name ?? '')) : '',
-                'propertyId'     => (string) $contract->property_id,
-                'blocId'         => (string) ($contract->property ? $contract->property->bloc_id : ''),
-                'type'           => $type,
-                'startDate'      => $startDate,
-                'endDate'        => $endDate,
-                'amount'         => $amount,
-                'status'         => $status,
+                'id' => (string) $contract->id,
+                'contractNumber' => $contract->contract_number ?: 'CT-'.$contract->id,
+                'clientName' => $contract->client ? $contract->client->full_name : 'Unknown',
+                'clientId' => (string) $contract->client_id,
+                'email' => $contract->client ? $contract->client->email : '',
+                'phone' => $contract->client ? $contract->client->phone : '',
+                'property' => $contract->property ? ($contract->property->name.' — '.($contract->property->bloc->tranche->project->name ?? '')) : '',
+                'propertyId' => (string) $contract->property_id,
+                'blocId' => (string) ($contract->property ? $contract->property->bloc_id : ''),
+                'type' => $type,
+                'startDate' => $startDate,
+                'endDate' => $endDate,
+                'amount' => $amount,
+                'status' => $status,
             ];
         });
 
         return Inertia::render('ClientContracts', [
             'dbContracts' => $dbContracts,
         ]);
-    })->name('client-contracts')->middleware('role:admin,manager'); 
+    })->name('client-contracts')->middleware('role:admin,manager');
 
     Route::get('/contract-create', function () {
         return Inertia::render('ContractCreate');
     })->name('contract-create')->middleware('role:admin,manager');
 
-
     Route::get('/contract-details', [ContractController::class, 'details'])->name('contract-details')->middleware('role:admin,manager');
 
     Route::get('/contracts/{contract}/edit', [ContractController::class, 'editStandalone'])
         ->name('contracts.edit')->middleware('role:admin,manager');
-
 
     Route::get('/admin-only', function () {
         return response('Admin only access', 200);
@@ -294,4 +295,4 @@ Route::middleware('auth')->group(function () {
         ->name('two-factor.regenerate-recovery-codes');
 });
 
-require __DIR__ . '/auth.php';
+require __DIR__.'/auth.php';

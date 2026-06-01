@@ -222,26 +222,36 @@ export function AppBreadcrumb({ contractPath, hierarchyData }: AppBreadcrumbProp
     }
     crumbs.push({ label: "Contracts" });
   } else if (path.match(/^\/blocs\/\d+\/contracts\/\d+$/)) {
-    // Use property hierarchy from contract if available
-    if (propertyPath && data.companyId) {
+    const pathBlocId = path.match(/^\/blocs\/(\d+)\/contracts\/\d+$/)?.[1] || "";
+    const resolvedBlocId = data.blocId?.toString() || blocId || pathBlocId;
+
+    // Use property hierarchy from contract when path + hierarchy ids are available
+    if (propertyPath && (data.companyId || data.projectId || data.blocId || resolvedBlocId)) {
       const hierarchyParts = propertyPath.split(' > ');
-      const { companyId, companyName, projectId, projectName, trancheId, trancheName, blocId, blocName } = data;
+      const crumbCompanyId = data.companyId?.toString() || companyId;
+      const crumbCompanyName = data.companyName || companyName;
+      const crumbProjectId = data.projectId?.toString() || projectId;
+      const crumbProjectName = data.projectName || projectName;
+      const crumbTrancheId = data.trancheId?.toString() || trancheId;
+      const crumbTrancheName = data.trancheName || trancheName;
+      const crumbBlocId = resolvedBlocId;
+      const crumbBlocName = data.blocName || blocName;
 
       // Company
-      if (companyName) {
-        crumbs.push({ label: companyName, href: `/companies` });
+      if (crumbCompanyName) {
+        crumbs.push({ label: crumbCompanyName, href: `/companies` });
       }
       // Project
-      if (projectName && companyId) {
-        crumbs.push({ label: projectName, href: `/projects?company=${companyId}&companyName=${encodeURIComponent(companyName)}` });
+      if (crumbProjectName && crumbCompanyId) {
+        crumbs.push({ label: crumbProjectName, href: `/projects?company=${crumbCompanyId}&companyName=${encodeURIComponent(crumbCompanyName)}` });
       }
       // Tranche
-      if (trancheName && projectId) {
-        crumbs.push({ label: trancheName, href: `/tranches?project=${projectId}&name=${encodeURIComponent(projectName)}&company=${companyId}&companyName=${encodeURIComponent(companyName)}` });
+      if (crumbTrancheName && crumbProjectId) {
+        crumbs.push({ label: crumbTrancheName, href: `/tranches?project=${crumbProjectId}&name=${encodeURIComponent(crumbProjectName)}&company=${crumbCompanyId}&companyName=${encodeURIComponent(crumbCompanyName)}` });
       }
       // Bloc
-      if (blocName && trancheId) {
-        crumbs.push({ label: blocName, href: `/blocs?project=${projectId}&name=${encodeURIComponent(projectName)}&company=${companyId}&companyName=${encodeURIComponent(companyName)}&tranche=${trancheId}&trancheName=${encodeURIComponent(trancheName)}` });
+      if (crumbBlocName && crumbTrancheId) {
+        crumbs.push({ label: crumbBlocName, href: `/blocs?project=${crumbProjectId}&name=${encodeURIComponent(crumbProjectName)}&company=${crumbCompanyId}&companyName=${encodeURIComponent(crumbCompanyName)}&tranche=${crumbTrancheId}&trancheName=${encodeURIComponent(crumbTrancheName)}` });
       }
       // Property (last part of hierarchy before Contracts)
       if (hierarchyParts.length > 4) {
@@ -249,22 +259,23 @@ export function AppBreadcrumb({ contractPath, hierarchyData }: AppBreadcrumbProp
         crumbs.push({ label: propertyName });
       }
       // Contracts link
-      if (blocId) {
+      if (crumbBlocId) {
         const contractsQuery = new URLSearchParams();
-        if (companyId) contractsQuery.set('company', companyId.toString());
-        if (companyName) contractsQuery.set('companyName', companyName);
-        if (projectId) contractsQuery.set('project', projectId.toString());
-        if (projectName) contractsQuery.set('name', projectName);
-        if (trancheId) contractsQuery.set('tranche', trancheId.toString());
-        if (trancheName) contractsQuery.set('trancheName', trancheName);
-        if (blocName) contractsQuery.set('blocName', blocName);
-        crumbs.push({ label: "Contracts", href: `/blocs/${blocId}/contracts${contractsQuery.toString() ? '?' + contractsQuery.toString() : ''}` });
+        if (crumbCompanyId) contractsQuery.set('company', crumbCompanyId.toString());
+        if (crumbCompanyName) contractsQuery.set('companyName', crumbCompanyName);
+        if (crumbProjectId) contractsQuery.set('project', crumbProjectId.toString());
+        if (crumbProjectName) contractsQuery.set('name', crumbProjectName);
+        if (crumbTrancheId) contractsQuery.set('tranche', crumbTrancheId.toString());
+        if (crumbTrancheName) contractsQuery.set('trancheName', crumbTrancheName);
+        if (crumbBlocName) contractsQuery.set('blocName', crumbBlocName);
+        crumbs.push({ label: "Contracts", href: `/blocs/${crumbBlocId}/contracts${contractsQuery.toString() ? '?' + contractsQuery.toString() : ''}` });
       } else {
         crumbs.push({ label: "Contracts" });
       }
       crumbs.push({ label: "Details" });
     } else {
       // Fallback to URL parameters
+      const fallbackBlocId = blocId || resolvedBlocId;
       crumbs.push({ label: "Companies", href: "/companies" });
       if (companyId) {
         crumbs.push({ label: decodeURIComponent(companyName), href: `/projects${companyQuery}` });
@@ -274,9 +285,13 @@ export function AppBreadcrumb({ contractPath, hierarchyData }: AppBreadcrumbProp
       if (projectId) {
         crumbs.push({ label: decodeURIComponent(projectName), href: tranchesHref });
         if (trancheId) crumbs.push({ label: decodeURIComponent(trancheName), href: blocsHref });
-        if (blocId) crumbs.push({ label: decodeURIComponent(blocName), href: `/blocs/${blocId}/contracts${companyQueryAmp ? '&' + companyQueryAmp.slice(1) : ''}${trancheQuery}` });
+        if (fallbackBlocId) crumbs.push({ label: decodeURIComponent(blocName), href: `/blocs/${fallbackBlocId}/contracts${companyQueryAmp ? '&' + companyQueryAmp.slice(1) : ''}${trancheQuery}` });
       }
-      crumbs.push({ label: "Contracts", href: `/blocs/${blocId}/contracts${companyQueryAmp ? '?' + companyQueryAmp.slice(1) : ''}${trancheQuery}${blocQuery}` });
+      if (fallbackBlocId) {
+        crumbs.push({ label: "Contracts", href: `/blocs/${fallbackBlocId}/contracts${companyQueryAmp ? '?' + companyQueryAmp.slice(1) : ''}${trancheQuery}${blocQuery}` });
+      } else {
+        crumbs.push({ label: "Contracts" });
+      }
       crumbs.push({ label: "Details" });
     }
   }

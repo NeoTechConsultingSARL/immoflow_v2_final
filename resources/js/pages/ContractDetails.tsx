@@ -36,7 +36,7 @@ const buildMockContract = (id: string) => ({
         surface: 92,
         level: "3rd floor",
         parking: "Sector B — P-14",
-        parkingPrice: 18000,
+        parkingPrice: 0,
     },
     finance: {
         salePrice: 485000,
@@ -73,13 +73,25 @@ const buildMockContract = (id: string) => ({
 
 const fmt = (n: number) => new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(n);
 
+interface HierarchyData {
+    companyId?: number;
+    companyName?: string;
+    projectId?: number;
+    projectName?: string;
+    trancheId?: number;
+    trancheName?: string;
+    blocId?: number;
+    blocName?: string;
+}
+
 interface ContractDetailsProps {
     contract?: any;
     path?: string;
     bloc?: any;
+    hierarchyData?: HierarchyData;
 }
 
-const ContractDetails = ({ contract, path, bloc }: ContractDetailsProps) => {
+const ContractDetails = ({ contract, path, bloc, hierarchyData: hierarchyDataProp }: ContractDetailsProps) => {
     const { url } = usePage();
     const searchParams = useMemo(() => {
         return new URL(url || "/", window.location.origin).searchParams;
@@ -92,8 +104,58 @@ const ContractDetails = ({ contract, path, bloc }: ContractDetailsProps) => {
         return searchParams.get("id") || "1";
     }, [searchParams, contract?.id]);
 
+    const backToContractsHref = useMemo(() => {
+        const blocId = bloc?.id ?? contract?.property?.bloc_id ?? searchParams.get("bloc");
+        if (!blocId) {
+            return "/client-contracts";
+        }
+
+        const params = new URLSearchParams();
+        const tranche = bloc?.tranche ?? contract?.property?.bloc?.tranche;
+        const project = tranche?.project;
+        const company = project?.company;
+
+        if (company?.id) params.set("company", String(company.id));
+        if (company?.name) params.set("companyName", company.name);
+        if (project?.id) params.set("project", String(project.id));
+        if (project?.name) params.set("name", project.name);
+        if (tranche?.id) params.set("tranche", String(tranche.id));
+        if (tranche?.name) params.set("trancheName", tranche.name);
+        params.set("bloc", String(blocId));
+        if (bloc?.name) params.set("blocName", bloc.name);
+
+        const qs = params.toString();
+        return `${route("blocs.contracts.index", blocId)}${qs ? `?${qs}` : ""}`;
+    }, [bloc, contract, searchParams]);
+
+    const hierarchyData = useMemo((): HierarchyData => {
+        if (hierarchyDataProp && Object.keys(hierarchyDataProp).length > 0) {
+            return hierarchyDataProp;
+        }
+
+        const resolvedBloc = bloc ?? contract?.property?.bloc;
+        const tranche = resolvedBloc?.tranche;
+        const project = tranche?.project;
+        const company = project?.company;
+
+        return {
+            companyId: company?.id,
+            companyName: company?.name,
+            projectId: project?.id,
+            projectName: project?.name,
+            trancheId: tranche?.id,
+            trancheName: tranche?.name,
+            blocId: resolvedBloc?.id,
+            blocName: resolvedBloc?.name,
+        };
+    }, [hierarchyDataProp, bloc, contract]);
+
     const c = useMemo(() => {
         if (!contract) {
+            const pathname = new URL(url || "/", window.location.origin).pathname;
+            if (/^\/blocs\/\d+\/contracts\/\d+$/.test(pathname)) {
+                return null;
+            }
             return buildMockContract(id);
         }
 
@@ -106,71 +168,113 @@ const ContractDetails = ({ contract, path, bloc }: ContractDetailsProps) => {
         const clientObservation = contract.modification?.notes || "";
 
         // Map property info
-        const propType = contract.property?.property_type?.name || contract.property?.propertyType?.name || "Apartment";
+        const propType =
+            contract.property?.property_type?.name
+            || contract.property?.propertyType?.name
+            || "—";
         const propCode = contract.property 
             ? `${contract.property.name} — ${contract.property.bloc?.tranche?.project?.name || ''}`
             : "Unit A1 — Residenz am Englischen Garten";
         const surface = contract.property?.surface || 92;
         const level = contract.property?.level || "3rd floor";
-        const parking = contract.property?.parking || "Sector B — P-14";
-        const parkingPrice = contract.property?.parkingPrice || 18000;
+        const parking = contract.parking?.name || contract.property?.parking || "—";
+        const parkingPrice = Number(contract.parking_price ?? contract.property?.parking_price ?? 0);
 
         // Map finance info
         const salePrice = Number(contract.price || 0);
         const advance = Number(contract.advance || 0);
         const paymentDuration = Number(contract.payment_duration || 24);
         const monthsCount = Number(contract.payment_duration || 24);
+        const todayStr = new Date().toISOString().slice(0, 10);
 
-        // Map schedule rows
-        const schedules = (contract.payment_schedules || []).map((s: any) => {
-            const dueDate = s.due_date ? s.due_date.slice(0, 10) : "";
-            const todayStr = new Date().toISOString().slice(0, 10);
-            const isPast = dueDate < todayStr;
-            const status = isPast ? ("Paid" as const) : ("Upcoming" as const);
+        const isAutoGeneratedSchedule = (s: { observation?: string }) =>
+            (s.observation || "").includes("Auto-generated");
+
+        const scheduleSource = contract.payment_schedules ?? contract.paymentSchedules;
+        const rawSchedules = Array.isArray(scheduleSource) ? scheduleSource : [];
+        const autoSchedules = rawSchedules.filter(isAutoGeneratedSchedule);
+        const manualPayments = rawSchedules.filter((s: { observation?: string }) => !isAutoGeneratedSchedule(s));
+        const schedulesForDisplay = autoSchedules.length > 0 ? autoSchedules : rawSchedules;
+
+        const schedules = schedulesForDisplay.map((s: any) => {
+            const dueDate = s.due_date ? String(s.due_date).slice(0, 10) : "";
+            const amount = Number(s.amount || 0);
+            let status: "Paid" | "Upcoming" | "Overdue" = "Upcoming";
+            if (dueDate && dueDate <= todayStr && amount > 0) {
+                status = "Paid";
+            } else if (dueDate && dueDate < todayStr) {
+                status = "Overdue";
+            }
             return {
                 id: String(s.id),
                 date: dueDate,
-                installment: Number(s.amount || 0),
-                status: status,
+                installment: amount,
+                status,
                 observation: s.observation || "",
             };
         });
 
         // Installment calculation
-        const installment = schedules.length > 0 
-            ? schedules[0].installment 
+        const installment = schedules.length > 0
+            ? schedules[0].installment
             : (paymentDuration > 0 ? (salePrice - advance) / paymentDuration : 0);
 
-        // Generate payments history:
+        const contractDate = contract.date
+            ? String(contract.date).slice(0, 10)
+            : (contract.created_at ? String(contract.created_at).slice(0, 10) : todayStr);
+
         const paymentsList: any[] = [];
         if (advance > 0) {
             paymentsList.push({
                 id: "p-adv",
-                opDate: contract.date ? contract.date.slice(0, 10) : (contract.created_at ? contract.created_at.slice(0, 10) : ""),
-                payDate: contract.date ? contract.date.slice(0, 10) : (contract.created_at ? contract.created_at.slice(0, 10) : ""),
+                opDate: contractDate,
+                payDate: contractDate,
                 amount: advance,
                 mode: "Bank transfer",
-                account: "DE89...0532",
-                opNumber: "OP-ADV"
+                account: "—",
+                opNumber: "OP-ADV",
             });
         }
 
-        schedules.forEach((s: any) => {
-            if (s.status === "Paid") {
+        manualPayments.forEach((s: any) => {
+            const payDate = s.due_date ? String(s.due_date).slice(0, 10) : contractDate;
+            paymentsList.push({
+                id: `p-${s.id}`,
+                opDate: payDate,
+                payDate,
+                amount: Number(s.amount || 0),
+                mode: "Bank transfer",
+                account: "—",
+                opNumber: `OP-${s.id}`,
+            });
+        });
+
+        autoSchedules.forEach((s: any) => {
+            const payDate = s.due_date ? String(s.due_date).slice(0, 10) : "";
+            if (payDate && payDate <= todayStr) {
                 paymentsList.push({
                     id: `p-${s.id}`,
-                    opDate: s.date,
-                    payDate: s.date,
-                    amount: s.installment,
+                    opDate: payDate,
+                    payDate,
+                    amount: Number(s.amount || 0),
                     mode: "Bank transfer",
-                    account: "DE89...0532",
-                    opNumber: `OP-${s.id}`
+                    account: "—",
+                    opNumber: `OP-${s.id}`,
                 });
             }
         });
 
-        // Total paid
-        const totalPaid = paymentsList.reduce((acc, curr) => acc + curr.amount, 0);
+        const totalPaid =
+            advance +
+            manualPayments.reduce((acc: number, s: any) => acc + Number(s.amount || 0), 0) +
+            (autoSchedules.length > 0
+                ? autoSchedules
+                    .filter((s: any) => {
+                        const dueDate = s.due_date ? String(s.due_date).slice(0, 10) : "";
+                        return dueDate && dueDate <= todayStr;
+                    })
+                    .reduce((acc: number, s: any) => acc + Number(s.amount || 0), 0)
+                : 0);
 
         // Map commissions
         const commissionsList = contract.commission ? [
@@ -240,14 +344,40 @@ const ContractDetails = ({ contract, path, bloc }: ContractDetailsProps) => {
             payments: paymentsList,
             commissions: commissionsList,
         };
-    }, [contract, id]);
+    }, [contract, id, url]);
 
-    const remaining = c.finance.salePrice + c.property.parkingPrice - c.finance.paid;
-    const progress = Math.min(100, Math.round((c.finance.paid / (c.finance.salePrice + c.property.parkingPrice)) * 100));
+    if (!c) {
+        return (
+            <SidebarProvider>
+                <div className="min-h-screen flex w-full">
+                    <AppSidebar />
+                    <div className="flex flex-1 flex-col min-h-0 min-w-0 h-svh overflow-hidden">
+                        <header className="h-16 shrink-0 bg-card border-b border-border flex items-center px-6">
+                            <SidebarTrigger className="lg:hidden" />
+                        </header>
+                        <main className="flex-1 flex items-center justify-center p-6 text-muted-foreground">
+                            Contract data could not be loaded.
+                        </main>
+                    </div>
+                </div>
+            </SidebarProvider>
+        );
+    }
+
+    const contractTotal = Math.max(c.finance.salePrice + c.property.parkingPrice, 1);
+    const remaining = Math.max(0, contractTotal - c.finance.paid);
+    const progressRatio = Math.min(1, c.finance.paid / contractTotal);
+    const progressBarWidth = progressRatio === 0 ? 0 : Math.max(progressRatio * 100, 2);
+    const progressLabel =
+        progressRatio === 0
+            ? 0
+            : progressRatio >= 1
+              ? 100
+              : Math.max(0.1, Math.round(progressRatio * 1000) / 10);
     const progressColor =
-        progress < 25 ? "bg-destructive" :
-            progress < 50 ? "bg-amber-500" :
-                progress < 75 ? "bg-blue-500" : "bg-emerald-500";
+        progressLabel < 25 ? "bg-destructive" :
+            progressLabel < 50 ? "bg-amber-500" :
+                progressLabel < 75 ? "bg-blue-500" : "bg-emerald-500";
 
     const printActions = [
         { label: "Contract Summary", icon: FileText, variant: "outline" as const },
@@ -379,7 +509,6 @@ const ContractDetails = ({ contract, path, bloc }: ContractDetailsProps) => {
 
     // Saving handlers
     const saveClient = () => {
-        const blocId = contract?.property?.bloc_id || searchParams.get("bloc") || "1";
         const payload = {
             client_name: `${clientForm.firstName} ${clientForm.lastName}`.trim(),
             client_email: clientForm.email,
@@ -388,36 +517,37 @@ const ContractDetails = ({ contract, path, bloc }: ContractDetailsProps) => {
             client_address: clientForm.address,
         };
 
-        router.put(`/blocs/${blocId}/contracts/${c.id}`, payload, {
+        router.put(route("contracts.client.update", c.id), payload, {
+            preserveScroll: true,
             onSuccess: () => {
                 toast({ title: "Client information updated successfully" });
                 setClientDialogOpen(false);
             },
             onError: () => {
                 toast({ title: "Failed to update client information", variant: "destructive" });
-            }
+            },
         });
     };
 
     const saveContract = () => {
-        const blocId = contract?.property?.bloc_id || searchParams.get("bloc") || "1";
         const payload = {
             contract_number: contractForm.contractNumber,
             status: contractForm.status,
-            price: contractForm.price,
-            advance: contractForm.advance,
-            payment_duration: contractForm.paymentDuration,
-            payment_frequency: contractForm.paymentFrequency,
+            price: Number(contractForm.price),
+            advance: contractForm.advance !== "" ? Number(contractForm.advance) : null,
+            payment_duration: contractForm.paymentDuration !== "" ? Number(contractForm.paymentDuration) : null,
+            payment_frequency: contractForm.paymentFrequency !== "" ? Number(contractForm.paymentFrequency) : null,
         };
 
-        router.put(`/blocs/${blocId}/contracts/${c.id}`, payload, {
+        router.put(route("contracts.summary.update", c.id), payload, {
+            preserveScroll: true,
             onSuccess: () => {
                 toast({ title: "Contract details updated successfully" });
                 setContractDialogOpen(false);
             },
             onError: () => {
                 toast({ title: "Failed to update contract details", variant: "destructive" });
-            }
+            },
         });
     };
 
@@ -517,18 +647,20 @@ const ContractDetails = ({ contract, path, bloc }: ContractDetailsProps) => {
         <SidebarProvider>
             <div className="min-h-screen flex w-full">
                 <AppSidebar />
-                <div className="flex-1 flex flex-col min-w-0">
-                    <header className="h-16 bg-card border-b border-border flex items-center justify-between px-6 sticky top-0 z-40">
-                        <div className="flex items-center gap-4">
-                            <SidebarTrigger className="lg:hidden" />
-                            <AppBreadcrumb />
+                <div className="flex flex-1 flex-col min-h-0 min-w-0 h-svh overflow-hidden">
+                    <header className="h-16 shrink-0 bg-card border-b border-border flex items-center justify-between gap-4 px-6 z-40">
+                        <div className="flex min-w-0 flex-1 items-center gap-4">
+                            <SidebarTrigger className="lg:hidden shrink-0" />
+                            <div className="min-w-0 overflow-x-auto">
+                                <AppBreadcrumb contractPath={path} hierarchyData={hierarchyData} />
+                            </div>
                         </div>
-                        <Button asChild variant="ghost" className="gap-2">
-                            <Link href="/client-contracts"><ArrowLeft className="w-4 h-4" /> Back to contracts</Link>
+                        <Button asChild variant="ghost" className="gap-2 shrink-0">
+                            <Link href={backToContractsHref}><ArrowLeft className="w-4 h-4" /> Back to contracts</Link>
                         </Button>
                     </header>
 
-                    <main className="flex-1 p-6 lg:p-8 max-w-[1400px] mx-auto w-full animate-in fade-in slide-in-from-bottom-1 duration-400">
+                    <main className="flex-1 min-h-0 overflow-y-auto p-6 lg:p-8 max-w-[1400px] mx-auto w-full">
                         {/* Title */}
                         <div className="flex flex-wrap items-end justify-between gap-4 mb-6">
                             <div>
@@ -566,15 +698,15 @@ const ContractDetails = ({ contract, path, bloc }: ContractDetailsProps) => {
                                     <h3 className="font-display text-base font-bold">Contract progress</h3>
                                     <p className="text-xs text-muted-foreground">Payment completion across the contract lifecycle</p>
                                 </div>
-                                <span className="font-display text-2xl font-bold">{progress}%</span>
+                                <span className="font-display text-2xl font-bold">{progressLabel}%</span>
                             </div>
                             <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
-                                <div className={cn("h-full transition-all", progressColor)} style={{ width: `${progress}%` }} />
+                                <div className={cn("h-full transition-all", progressColor)} style={{ width: `${progressBarWidth}%` }} />
                             </div>
                             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-5 pt-5 border-t border-border">
                                 <div>
                                     <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Total</p>
-                                    <p className="font-display font-bold">{fmt(c.finance.salePrice + c.property.parkingPrice)}</p>
+                                    <p className="font-display font-bold">{fmt(contractTotal)}</p>
                                 </div>
                                 <div>
                                     <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Paid</p>
@@ -719,14 +851,20 @@ const ContractDetails = ({ contract, path, bloc }: ContractDetailsProps) => {
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {c.scheduledPayments.map((s: any) => {
-                                        const Icon = scheduleIcon[s.status];
+                                    {c.scheduledPayments.length === 0 ? (
+                                        <TableRow>
+                                            <TableCell colSpan={3} className="text-center text-muted-foreground py-8">
+                                                No scheduled installments yet.
+                                            </TableCell>
+                                        </TableRow>
+                                    ) : c.scheduledPayments.map((s: any) => {
+                                        const Icon = scheduleIcon[s.status] ?? Clock;
                                         return (
                                             <TableRow key={s.id}>
                                                 <TableCell>{s.date}</TableCell>
                                                 <TableCell className="font-semibold">{fmt(s.installment)}</TableCell>
                                                 <TableCell>
-                                                    <span className={cn("inline-flex items-center gap-1 text-[0.625rem] font-semibold px-2 py-0.5 rounded-full", scheduleBadge[s.status])}>
+                                                    <span className={cn("inline-flex items-center gap-1 text-[0.625rem] font-semibold px-2 py-0.5 rounded-full", scheduleBadge[s.status] ?? scheduleBadge.Upcoming)}>
                                                         <Icon className="w-3 h-3" /> {s.status}
                                                     </span>
                                                 </TableCell>
@@ -759,7 +897,13 @@ const ContractDetails = ({ contract, path, bloc }: ContractDetailsProps) => {
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {c.payments.map((p) => (
+                                    {c.payments.length === 0 ? (
+                                        <TableRow>
+                                            <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                                                No payments recorded yet.
+                                            </TableCell>
+                                        </TableRow>
+                                    ) : c.payments.map((p) => (
                                         <TableRow key={p.id}>
                                             <TableCell>{p.opDate}</TableCell>
                                             <TableCell>{p.payDate}</TableCell>
