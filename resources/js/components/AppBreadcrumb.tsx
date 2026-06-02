@@ -106,6 +106,19 @@ export function AppBreadcrumb({ contractPath, hierarchyData }: AppBreadcrumbProp
       crumbs.push({ label: decodeURIComponent(blocName), href: pmHref });
     }
     crumbs.push({ label: "Management" });
+  } else if (path === "/syndic") {
+    crumbs.push({ label: "Companies", href: "/companies" });
+    if (companyId) {
+      crumbs.push({ label: decodeURIComponent(companyName), href: `/projects${companyQuery}` });
+    } else {
+      crumbs.push({ label: "Projects", href: "/projects" });
+    }
+    if (projectId) {
+      crumbs.push({ label: decodeURIComponent(projectName), href: tranchesHref });
+      if (trancheId) crumbs.push({ label: decodeURIComponent(trancheName), href: blocsHref });
+      if (blocId) crumbs.push({ label: decodeURIComponent(blocName), href: pmHref });
+    }
+    crumbs.push({ label: "Syndic" });
   } else if (path === "/property-types") {
     crumbs.push({ label: "Companies", href: "/companies" });
     if (companyId) {

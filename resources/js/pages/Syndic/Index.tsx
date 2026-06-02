@@ -53,6 +53,11 @@ export default function SyndicIndex({
     const [openCharge, setOpenCharge] = useState(false);
     const [openChargeType, setOpenChargeType] = useState(false);
 
+    // Status change modal states
+    const [statusModalOpen, setStatusModalOpen] = useState(false);
+    const [selectedSyndicId, setSelectedSyndicId] = useState<number | null>(null);
+    const [currentStatus, setCurrentStatus] = useState<string>('');
+
     // Form for Paiement
     const paiementForm = useForm({
         client_id: '',
@@ -143,6 +148,26 @@ export default function SyndicIndex({
                 chargeTypeForm.reset();
                 toast({ title: "Type de charge ajouté avec succès" });
             },
+        });
+    };
+
+    const handleStatusClick = (id: number, status: string) => {
+        setSelectedSyndicId(id);
+        setCurrentStatus(status);
+        setStatusModalOpen(true);
+    };
+
+    const confirmStatusChange = () => {
+        if (!selectedSyndicId) return;
+        const newStatus = currentStatus === 'Valide' ? 'Non Valide' : 'Valide';
+        router.patch(route('syndic.update-status', selectedSyndicId), { status: newStatus }, {
+            onSuccess: () => {
+                setStatusModalOpen(false);
+                toast({ title: "Statut mis à jour avec succès" });
+            },
+            onError: () => {
+                toast({ title: "Erreur de mise à jour", description: "Seul un administrateur peut modifier le statut.", variant: "destructive" });
+            }
         });
     };
 
@@ -348,7 +373,11 @@ export default function SyndicIndex({
                                                             <TableCell>{s.date}</TableCell>
                                                             <TableCell>{s.montant} DH</TableCell>
                                                             <TableCell>
-                                                                <Badge variant={s.status === 'Valide' ? 'default' : 'secondary'}>{s.status}</Badge>
+                                                                <button onClick={() => handleStatusClick(s.id, s.status)} className="focus:outline-none hover:opacity-80 transition-opacity">
+                                                                    <Badge variant={s.status === 'Valide' ? 'default' : 'secondary'} className="cursor-pointer">
+                                                                        {s.status}
+                                                                    </Badge>
+                                                                </button>
                                                             </TableCell>
                                                         </TableRow>
                                                     ))
@@ -459,6 +488,22 @@ export default function SyndicIndex({
                                 </Card>
                             </div>
                         )}
+
+                        {/* Status Change Dialog */}
+                        <Dialog open={statusModalOpen} onOpenChange={setStatusModalOpen}>
+                            <DialogContent>
+                                <DialogHeader>
+                                    <DialogTitle>Changer le statut du paiement</DialogTitle>
+                                </DialogHeader>
+                                <div className="py-4">
+                                    <p>Êtes-vous sûr de vouloir passer le statut à <strong>{currentStatus === 'Valide' ? 'Non Valide' : 'Valide'}</strong> ?</p>
+                                </div>
+                                <DialogFooter>
+                                    <Button variant="outline" onClick={() => setStatusModalOpen(false)}>Annuler</Button>
+                                    <Button onClick={confirmStatusChange} className="bg-blue-600 hover:bg-blue-700 text-white">Confirmer</Button>
+                                </DialogFooter>
+                            </DialogContent>
+                        </Dialog>
                     </main>
                 </div>
             </div>
