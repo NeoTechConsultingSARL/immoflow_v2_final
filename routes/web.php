@@ -281,6 +281,23 @@ Route::middleware('auth')->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
+    // Syndic Routes
+    Route::get('/syndic', [\App\Http\Controllers\SyndicController::class, 'index'])->name('syndic.index');
+    Route::get('/api/syndic/clients/search', [\App\Http\Controllers\SyndicController::class, 'searchClients'])->name('syndic.clients.search');
+    Route::post('/syndic', [\App\Http\Controllers\SyndicController::class, 'store'])->name('syndic.store');
+    Route::put('/syndic/{syndic}', [\App\Http\Controllers\SyndicController::class, 'update'])->name('syndic.update');
+    Route::patch('/syndic/{syndic}/status', [\App\Http\Controllers\SyndicController::class, 'updateStatus'])->name('syndic.update-status')->middleware('role:admin');
+    Route::delete('/syndic/{syndic}', [\App\Http\Controllers\SyndicController::class, 'destroy'])->name('syndic.destroy')->middleware('role:admin');
+    Route::get('/syndic/{syndic}/receipt', [\App\Http\Controllers\SyndicController::class, 'printReceipt'])->name('syndic.receipt');
+
+    Route::post('/syndic-charges', [\App\Http\Controllers\SyndicChargeController::class, 'store'])->name('syndic-charges.store');
+    Route::put('/syndic-charges/{syndicCharge}', [\App\Http\Controllers\SyndicChargeController::class, 'update'])->name('syndic-charges.update');
+    Route::delete('/syndic-charges/{syndicCharge}', [\App\Http\Controllers\SyndicChargeController::class, 'destroy'])->name('syndic-charges.destroy')->middleware('role:admin');
+
+    Route::apiResource('syndic-charge-types', \App\Http\Controllers\SyndicChargeTypeController::class);
+    
+    Route::get('/syndic/bilan', [\App\Http\Controllers\SyndicBilanController::class, 'printBilan'])->name('syndic.bilan');
+
     // Two-Factor Authentication routes
     Route::post('/user/two-factor-authentication', [TwoFactorAuthenticationController::class, 'store'])
         ->name('two-factor.enable');
