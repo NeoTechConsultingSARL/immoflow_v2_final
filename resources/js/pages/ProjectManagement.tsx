@@ -50,12 +50,17 @@ const ProjectManagement = () => {
       } else {
         toast({ title: "Please select a bloc first to manage parking", variant: "destructive" });
       }
+
     } else if (tileId === "finance") {
       if (blocId) {
         router.visit(`/blocs/${blocId}/finance?project=${projectId}&name=${encodeURIComponent(projectName)}${companyQuery}${trancheQuery}&bloc=${blocId}&blocName=${encodeURIComponent(blocName)}`);
       } else {
         toast({ title: "Please select a bloc first to access project finance", variant: "destructive" });
       }
+
+    } else if (tileId === "syndicats") {
+      router.visit(`/syndic?project=${projectId}&name=${encodeURIComponent(projectName)}${companyQuery}${trancheQuery}${blocQuery}`);
+
     }
     // Other tiles can be wired up later
   };

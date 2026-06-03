@@ -23,6 +23,16 @@ class Bloc extends Model
         return $this->belongsTo(Tranche::class);
     }
 
+    public function syndics(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(Syndic::class);
+    }
+
+    public function syndicCharges(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(SyndicCharge::class);
+    }
+
     public function properties(): HasMany
     {
         return $this->hasMany(Property::class);
