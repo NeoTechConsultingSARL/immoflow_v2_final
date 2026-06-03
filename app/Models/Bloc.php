@@ -42,4 +42,9 @@ class Bloc extends Model
     {
         return $this->hasMany(Shareholder::class);
     }
+
+    public function projectDocuments(): HasMany
+    {
+        return $this->hasMany(ProjectDocument::class);
+    }
 }

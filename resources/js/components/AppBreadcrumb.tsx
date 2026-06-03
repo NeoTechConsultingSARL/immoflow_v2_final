@@ -274,6 +274,19 @@ export function AppBreadcrumb({ contractPath, hierarchyData }: AppBreadcrumbProp
       if (blocId) crumbs.push({ label: decodeURIComponent(blocName), href: pmHref });
     }
     crumbs.push({ label: "Contracts" });
+  } else if (path.match(/^\/blocs\/\d+\/documents$/)) {
+    crumbs.push({ label: "Companies", href: "/companies" });
+    if (companyId) {
+      crumbs.push({ label: decodeURIComponent(companyName), href: `/projects${companyQuery}` });
+    } else {
+      crumbs.push({ label: "Projects", href: "/projects" });
+    }
+    if (projectId) {
+      crumbs.push({ label: decodeURIComponent(projectName), href: tranchesHref });
+      if (trancheId) crumbs.push({ label: decodeURIComponent(trancheName), href: blocsHref });
+      if (blocId) crumbs.push({ label: decodeURIComponent(blocName), href: pmHref });
+    }
+    crumbs.push({ label: "Documents" });
   } else if (path.match(/^\/blocs\/\d+\/contracts\/\d+$/)) {
     const pathBlocId = path.match(/^\/blocs\/(\d+)\/contracts\/\d+$/)?.[1] || "";
     const resolvedBlocId = data.blocId?.toString() || blocId || pathBlocId;

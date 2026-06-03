@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Models\ProjectDocument;
+use App\Observers\ProjectDocumentObserver;
 use App\Models\Shareholder;
 use App\Observers\ShareholderObserver;
 use Illuminate\Cache\RateLimiting\Limit;
@@ -26,6 +28,7 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Shareholder::observe(ShareholderObserver::class);
+        ProjectDocument::observe(ProjectDocumentObserver::class);
 
         Vite::prefetch(concurrency: 3);
 
