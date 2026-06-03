@@ -232,6 +232,22 @@ export function AppBreadcrumb({ contractPath, hierarchyData }: AppBreadcrumbProp
       if (blocId) crumbs.push({ label: decodeURIComponent(blocName), href: pmHref });
     }
     crumbs.push({ label: "Project Finance" });
+  } else if (path.match(/^\/blocs\/\d+\/business-plan$/)) {
+    const pathBlocId = path.match(/^\/blocs\/(\d+)\/business-plan$/)?.[1] || blocId;
+    const financeHref = `/blocs/${pathBlocId}/finance?${projectQuery}${companyQueryAmp}${trancheQuery}${blocQuery}`;
+    crumbs.push({ label: "Companies", href: "/companies" });
+    if (companyId) {
+      crumbs.push({ label: decodeURIComponent(companyName), href: `/projects${companyQuery}` });
+    } else {
+      crumbs.push({ label: "Projects", href: "/projects" });
+    }
+    if (projectId) {
+      crumbs.push({ label: decodeURIComponent(projectName), href: tranchesHref });
+      if (trancheId) crumbs.push({ label: decodeURIComponent(trancheName), href: blocsHref });
+      if (pathBlocId) crumbs.push({ label: decodeURIComponent(blocName), href: pmHref });
+    }
+    crumbs.push({ label: "Project Finance", href: financeHref });
+    crumbs.push({ label: "Etude Provisoire" });
   } else if (path.match(/^\/blocs\/\d+\/shareholders$/)) {
     const pathBlocId = path.match(/^\/blocs\/(\d+)\/shareholders$/)?.[1] || blocId;
     const financeHref = `/blocs/${pathBlocId}/finance?${projectQuery}${companyQueryAmp}${trancheQuery}${blocQuery}`;

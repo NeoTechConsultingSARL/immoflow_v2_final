@@ -77,6 +77,10 @@ const ProjectFinance = ({ bloc }: Props) => {
       router.visit(`/blocs/${bloc.id}/shareholders?${hierarchyQuery}`);
       return;
     }
+    if (tileId === "estimation") {
+      router.visit(`/blocs/${bloc.id}/business-plan?${hierarchyQuery}`);
+      return;
+    }
     toast({
       title: "Coming soon",
       description: "This financial module is not available yet.",
