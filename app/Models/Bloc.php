@@ -27,4 +27,9 @@ class Bloc extends Model
     {
         return $this->hasMany(Property::class);
     }
+
+    public function shareholders(): HasMany
+    {
+        return $this->hasMany(Shareholder::class);
+    }
 }
