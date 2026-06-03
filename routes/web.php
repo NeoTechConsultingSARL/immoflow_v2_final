@@ -11,6 +11,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\PropertyController;
 use App\Http\Controllers\PropertyTypeController;
+use App\Http\Controllers\ShareholderController;
 use App\Http\Controllers\TrancheController;
 use App\Http\Controllers\UserController;
 use App\Models\Contract;
@@ -117,6 +118,17 @@ Route::middleware('auth')->group(function () {
         ->name('blocs.update')->middleware('role:admin,manager');
     Route::delete('/blocs/{bloc}', [BlocController::class, 'destroy'])
         ->name('blocs.destroy')->middleware('role:admin,manager');
+
+    Route::get('/blocs/{bloc}/finance', [ShareholderController::class, 'finance'])
+        ->name('blocs.finance');
+    Route::get('/blocs/{bloc}/shareholders', [ShareholderController::class, 'index'])
+        ->name('blocs.shareholders.index');
+    Route::post('/blocs/{bloc}/shareholders', [ShareholderController::class, 'store'])
+        ->name('blocs.shareholders.store');
+    Route::put('/shareholders/{shareholder}', [ShareholderController::class, 'update'])
+        ->name('shareholders.update');
+    Route::delete('/shareholders/{shareholder}', [ShareholderController::class, 'destroy'])
+        ->name('shareholders.destroy');
 
     Route::get('/property-types', [PropertyTypeController::class, 'index'])
         ->name('property-types')->middleware('role:admin,manager');

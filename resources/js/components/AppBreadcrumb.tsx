@@ -219,6 +219,35 @@ export function AppBreadcrumb({ contractPath, hierarchyData }: AppBreadcrumbProp
   } else if (path.match(/^\/clients\/\d+\/edit$/)) {
     crumbs.push({ label: "Clients", href: "/clients" });
     crumbs.push({ label: "Edit Client" });
+  } else if (path.match(/^\/blocs\/\d+\/finance$/)) {
+    crumbs.push({ label: "Companies", href: "/companies" });
+    if (companyId) {
+      crumbs.push({ label: decodeURIComponent(companyName), href: `/projects${companyQuery}` });
+    } else {
+      crumbs.push({ label: "Projects", href: "/projects" });
+    }
+    if (projectId) {
+      crumbs.push({ label: decodeURIComponent(projectName), href: tranchesHref });
+      if (trancheId) crumbs.push({ label: decodeURIComponent(trancheName), href: blocsHref });
+      if (blocId) crumbs.push({ label: decodeURIComponent(blocName), href: pmHref });
+    }
+    crumbs.push({ label: "Project Finance" });
+  } else if (path.match(/^\/blocs\/\d+\/shareholders$/)) {
+    const pathBlocId = path.match(/^\/blocs\/(\d+)\/shareholders$/)?.[1] || blocId;
+    const financeHref = `/blocs/${pathBlocId}/finance?${projectQuery}${companyQueryAmp}${trancheQuery}${blocQuery}`;
+    crumbs.push({ label: "Companies", href: "/companies" });
+    if (companyId) {
+      crumbs.push({ label: decodeURIComponent(companyName), href: `/projects${companyQuery}` });
+    } else {
+      crumbs.push({ label: "Projects", href: "/projects" });
+    }
+    if (projectId) {
+      crumbs.push({ label: decodeURIComponent(projectName), href: tranchesHref });
+      if (trancheId) crumbs.push({ label: decodeURIComponent(trancheName), href: blocsHref });
+      if (pathBlocId) crumbs.push({ label: decodeURIComponent(blocName), href: pmHref });
+    }
+    crumbs.push({ label: "Project Finance", href: financeHref });
+    crumbs.push({ label: "Shareholders" });
   } else if (path === "/parkings") {
     crumbs.push({ label: "Companies", href: "/companies" });
     if (companyId) {

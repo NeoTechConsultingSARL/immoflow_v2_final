@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Models\Shareholder;
+use App\Observers\ShareholderObserver;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
@@ -23,6 +25,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        Shareholder::observe(ShareholderObserver::class);
+
         Vite::prefetch(concurrency: 3);
 
         RateLimiter::for('global', function (Request $request) {
