@@ -1,5 +1,88 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Head, useForm, router } from '@inertiajs/react';
+
+function getHierarchyFromUrl() {
+    const searchParams = new URLSearchParams(window.location.search);
+    return {
+        companyId: searchParams.get('company') || '',
+        companyName: searchParams.get('companyName') || '',
+        projectId: searchParams.get('project') || '',
+        projectName: searchParams.get('name') || '',
+        trancheId: searchParams.get('tranche') || '',
+        trancheName: searchParams.get('trancheName') || '',
+        blocId: searchParams.get('bloc_id') || searchParams.get('bloc') || '',
+        blocName: searchParams.get('blocName') || '',
+        blocParam: searchParams.get('bloc') || '',
+    };
+}
+
+function findHierarchyForBloc(projects: any[], blocId: string) {
+    for (const project of projects) {
+        for (const tranche of project.tranches || []) {
+            for (const bloc of tranche.blocs || []) {
+                if (bloc.id.toString() === blocId) {
+                    return {
+                        projectId: project.id.toString(),
+                        projectName: project.name,
+                        trancheId: tranche.id.toString(),
+                        trancheName: tranche.name,
+                        blocId: bloc.id.toString(),
+                        blocName: bloc.name,
+                    };
+                }
+            }
+        }
+    }
+    return null;
+}
+
+function buildSyndicQueryParams(params: {
+    companyId?: string;
+    companyName?: string;
+    projectId?: string;
+    projectName?: string;
+    trancheId?: string;
+    trancheName?: string;
+    blocId?: string;
+    blocName?: string;
+}) {
+    const query: Record<string, string> = {};
+    if (params.companyId) {
+        query.company = params.companyId;
+        query.companyName = params.companyName || '';
+    }
+    if (params.projectId) {
+        query.project = params.projectId;
+        query.name = params.projectName || '';
+    }
+    if (params.trancheId) {
+        query.tranche = params.trancheId;
+        query.trancheName = params.trancheName || '';
+    }
+    if (params.blocId) {
+        query.bloc = params.blocId;
+        query.blocName = params.blocName || '';
+        query.bloc_id = params.blocId;
+    }
+    return query;
+}
+
+function resolveInitialSelection(projects: any[], selectedBlocId: string) {
+    const urlHierarchy = getHierarchyFromUrl();
+    let projectId = urlHierarchy.projectId;
+    let trancheId = urlHierarchy.trancheId;
+    let blocId = urlHierarchy.blocId || selectedBlocId;
+
+    if (blocId && (!projectId || !trancheId)) {
+        const resolved = findHierarchyForBloc(projects, blocId);
+        if (resolved) {
+            projectId = resolved.projectId;
+            trancheId = resolved.trancheId;
+        }
+    }
+
+    return { projectId, trancheId, blocId };
+}
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
@@ -42,9 +125,10 @@ export default function SyndicIndex({
     const totalChargesValue = Number(total_charges || 0);
     const soldeValue = Number(solde || 0);
 
-    const [selectedProject, setSelectedProject] = useState<string>('');
-    const [selectedTranche, setSelectedTranche] = useState<string>('');
-    const [selectedBloc, setSelectedBloc] = useState<string>(normalizedSelectedBlocId);
+    const initialSelection = resolveInitialSelection(projects, normalizedSelectedBlocId);
+    const [selectedProject, setSelectedProject] = useState<string>(initialSelection.projectId);
+    const [selectedTranche, setSelectedTranche] = useState<string>(initialSelection.trancheId);
+    const [selectedBloc, setSelectedBloc] = useState<string>(initialSelection.blocId);
     const [clientQuery, setClientQuery] = useState('');
     const [clientOptions, setClientOptions] = useState<any[]>(clients);
 
@@ -94,25 +178,75 @@ export default function SyndicIndex({
     }, [selectedTranche, tranches]);
 
     const handleProjectChange = (val: string) => {
+        const project = projects.find(p => p.id.toString() === val);
+        const urlHierarchy = getHierarchyFromUrl();
+
         setSelectedProject(val);
         setSelectedTranche('');
         setSelectedBloc('');
         paiementForm.setData('bloc_id', '');
         chargeForm.setData('bloc_id', '');
+
+        router.get(
+            route('syndic.index'),
+            buildSyndicQueryParams({
+                companyId: urlHierarchy.companyId,
+                companyName: urlHierarchy.companyName,
+                projectId: val,
+                projectName: project?.name || '',
+            }),
+            { preserveState: true, replace: true },
+        );
     };
 
     const handleTrancheChange = (val: string) => {
+        const project = projects.find(p => p.id.toString() === selectedProject);
+        const tranche = project?.tranches?.find((t: any) => t.id.toString() === val);
+        const urlHierarchy = getHierarchyFromUrl();
+
         setSelectedTranche(val);
         setSelectedBloc('');
         paiementForm.setData('bloc_id', '');
         chargeForm.setData('bloc_id', '');
+
+        router.get(
+            route('syndic.index'),
+            buildSyndicQueryParams({
+                companyId: urlHierarchy.companyId,
+                companyName: urlHierarchy.companyName,
+                projectId: selectedProject,
+                projectName: project?.name || urlHierarchy.projectName,
+                trancheId: val,
+                trancheName: tranche?.name || '',
+            }),
+            { preserveState: true, replace: true },
+        );
     };
 
     const handleBlocChange = (val: string) => {
+        const project = projects.find(p => p.id.toString() === selectedProject);
+        const tranche = project?.tranches?.find((t: any) => t.id.toString() === selectedTranche);
+        const bloc = tranche?.blocs?.find((b: any) => b.id.toString() === val);
+        const urlHierarchy = getHierarchyFromUrl();
+
         setSelectedBloc(val);
         paiementForm.setData('bloc_id', val);
         chargeForm.setData('bloc_id', val);
-        router.get(route('syndic.index', { bloc_id: val }), {}, { preserveState: true });
+
+        router.get(
+            route('syndic.index'),
+            buildSyndicQueryParams({
+                companyId: urlHierarchy.companyId,
+                companyName: urlHierarchy.companyName,
+                projectId: selectedProject,
+                projectName: project?.name || urlHierarchy.projectName,
+                trancheId: selectedTranche,
+                trancheName: tranche?.name || urlHierarchy.trancheName,
+                blocId: val,
+                blocName: bloc?.name || '',
+            }),
+            { preserveState: true },
+        );
     };
 
     const submitPaiement = (e: React.FormEvent) => {
@@ -210,6 +344,40 @@ export default function SyndicIndex({
         paiementForm.setData('bloc_id', normalizedSelectedBlocId);
         chargeForm.setData('bloc_id', normalizedSelectedBlocId);
     }, [normalizedSelectedBlocId]);
+
+    useEffect(() => {
+        const urlHierarchy = getHierarchyFromUrl();
+        const blocId = urlHierarchy.blocId || normalizedSelectedBlocId;
+
+        if (!blocId) {
+            return;
+        }
+
+        const needsUrlSync =
+            !urlHierarchy.projectId ||
+            !urlHierarchy.trancheId ||
+            !urlHierarchy.blocParam ||
+            urlHierarchy.blocId !== blocId;
+
+        if (!needsUrlSync) {
+            return;
+        }
+
+        const resolved = findHierarchyForBloc(projects, blocId);
+        if (!resolved) {
+            return;
+        }
+
+        router.get(
+            route('syndic.index'),
+            buildSyndicQueryParams({
+                companyId: urlHierarchy.companyId,
+                companyName: urlHierarchy.companyName,
+                ...resolved,
+            }),
+            { preserveState: true, replace: true },
+        );
+    }, [normalizedSelectedBlocId, projects]);
 
     return (
         <SidebarProvider>

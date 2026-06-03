@@ -20,7 +20,7 @@ class SyndicController extends Controller
 {
     public function index(Request $request)
     {
-        $blocId = $request->query('bloc_id');
+        $blocId = $request->query('bloc_id') ?? $request->query('bloc');
 
         $syndics = [];
         $charges = [];
