@@ -124,6 +124,22 @@ Route::middleware('auth')->group(function () {
     Route::delete('/blocs/{bloc}', [BlocController::class, 'destroy'])
         ->name('blocs.destroy')->middleware('role:admin,manager');
 
+    // Project Documents
+    Route::get('/blocs/{bloc}/documents', [\App\Http\Controllers\ProjectDocumentController::class, 'index'])
+        ->name('blocs.documents.index')->middleware('role:admin,manager');
+    Route::post('/blocs/{bloc}/documents', [\App\Http\Controllers\ProjectDocumentController::class, 'store'])
+        ->name('blocs.documents.store')->middleware('role:admin,manager');
+    Route::delete('/documents/{document}', [\App\Http\Controllers\ProjectDocumentController::class, 'destroy'])
+        ->name('documents.destroy')->middleware('role:admin,manager');
+    Route::get('/documents/{document}/download', [\App\Http\Controllers\ProjectDocumentController::class, 'download'])
+        ->name('documents.download')->middleware('role:admin,manager');
+
+    // Document Categories
+    Route::post('/document-categories', [\App\Http\Controllers\DocumentCategoryController::class, 'store'])
+        ->name('document-categories.store')->middleware('role:admin,manager');
+    Route::delete('/document-categories/{documentCategory}', [\App\Http\Controllers\DocumentCategoryController::class, 'destroy'])
+        ->name('document-categories.destroy')->middleware('role:admin,manager');
+
     Route::get('/blocs/{bloc}/finance', [ShareholderController::class, 'finance'])
         ->name('blocs.finance');
     Route::get('/blocs/{bloc}/shareholders', [ShareholderController::class, 'index'])

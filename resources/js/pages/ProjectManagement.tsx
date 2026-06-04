@@ -61,6 +61,12 @@ const ProjectManagement = () => {
     } else if (tileId === "syndicats") {
       router.visit(`/syndic?project=${projectId}&name=${encodeURIComponent(projectName)}${companyQuery}${trancheQuery}${blocQuery}`);
 
+    } else if (tileId === "documents") {
+      if (blocId) {
+        router.visit(`/blocs/${blocId}/documents?project=${projectId}&name=${encodeURIComponent(projectName)}${companyQuery}${trancheQuery}&bloc=${blocId}&blocName=${encodeURIComponent(blocName)}`);
+      } else {
+        toast({ title: "Veuillez d'abord sélectionner un bloc pour gérer les documents.", variant: "destructive" });
+      }
     }
     // Other tiles can be wired up later
   };

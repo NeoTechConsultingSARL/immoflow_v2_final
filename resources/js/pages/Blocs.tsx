@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useForm, router } from "@inertiajs/react";
-import { Box, Plus, Pencil, Trash2, ChevronRight, LayoutGrid, Rows3, Table as TableIcon } from "lucide-react";
+import { Box, Plus, Pencil, Trash2, ChevronRight, LayoutGrid, Rows3, Table as TableIcon, FileText } from "lucide-react";
 import { AppBreadcrumb } from "@/components/AppBreadcrumb";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/dashboard/AppSidebar";
@@ -220,6 +220,9 @@ const Blocs = ({ blocs, projects, tranches, filters }: Props) => {
                       {bloc.unitsCount} Units
                     </div>
                     <div className="flex items-center gap-1 shrink-0">
+                      <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-indigo-600" onClick={(e) => { e.stopPropagation(); router.visit(route('blocs.documents.index', bloc.id)); }} title="Documents">
+                        <FileText className="w-3.5 h-3.5" />
+                      </Button>
                       <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" onClick={(e) => openEdit(bloc, e)}>
                         <Pencil className="w-3.5 h-3.5" />
                       </Button>
@@ -245,6 +248,9 @@ const Blocs = ({ blocs, projects, tranches, filters }: Props) => {
                           <Box className="w-5 h-5 text-accent-foreground" />
                         </div>
                         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                          <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-indigo-600" onClick={(e) => { e.stopPropagation(); router.visit(route('blocs.documents.index', bloc.id)); }} title="Documents">
+                            <FileText className="w-3.5 h-3.5" />
+                          </Button>
                           <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" onClick={(e) => openEdit(bloc, e)}>
                             <Pencil className="w-3.5 h-3.5" />
                           </Button>
@@ -325,6 +331,9 @@ const Blocs = ({ blocs, projects, tranches, filters }: Props) => {
                         <TableCell>{bloc.unitsCount}</TableCell>
                         <TableCell>
                           <div className="flex items-center gap-1">
+                            <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-indigo-600" onClick={(e) => { e.stopPropagation(); router.visit(route('blocs.documents.index', bloc.id)); }} title="Documents">
+                              <FileText className="w-3.5 h-3.5" />
+                            </Button>
                             <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" onClick={(e) => openEdit(bloc, e)}>
                               <Pencil className="w-3.5 h-3.5" />
                             </Button>

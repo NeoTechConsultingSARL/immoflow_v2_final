@@ -43,6 +43,11 @@ class Bloc extends Model
         return $this->hasMany(Shareholder::class);
     }
 
+
+    public function projectDocuments(): HasMany
+    {
+        return $this->hasMany(ProjectDocument::class);
+
     public function businessPlanCosts(): HasMany
     {
         return $this->hasMany(BusinessPlanCost::class);
@@ -51,5 +56,6 @@ class Bloc extends Model
     public function businessPlanProducts(): HasMany
     {
         return $this->hasMany(BusinessPlanProduct::class);
+
     }
 }

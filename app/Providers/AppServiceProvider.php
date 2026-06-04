@@ -2,6 +2,9 @@
 
 namespace App\Providers;
 
+
+use App\Models\ProjectDocument;
+use App\Observers\ProjectDocumentObserver;
 use App\Models\BusinessPlanCost;
 use App\Models\BusinessPlanProduct;
 use App\Models\Shareholder;
@@ -32,11 +35,15 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Shareholder::observe(ShareholderObserver::class);
+
+        ProjectDocument::observe(ProjectDocumentObserver::class);
+
         BusinessPlanCost::observe(BusinessPlanCostObserver::class);
         BusinessPlanProduct::observe(BusinessPlanProductObserver::class);
 
         Gate::policy(BusinessPlanCost::class, BusinessPlanPolicy::class);
         Gate::policy(BusinessPlanProduct::class, BusinessPlanPolicy::class);
+
 
         Vite::prefetch(concurrency: 3);
 
