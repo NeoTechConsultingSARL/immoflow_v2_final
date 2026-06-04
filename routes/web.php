@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Auth\TwoFactorAuthenticationController;
 use App\Http\Controllers\BlocController;
+use App\Http\Controllers\BusinessPlanController;
 use App\Http\Controllers\ClientController;
 use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\ContractArticleController;
@@ -12,6 +13,10 @@ use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\PropertyController;
 use App\Http\Controllers\PropertyTypeController;
 use App\Http\Controllers\ShareholderController;
+use App\Http\Controllers\SyndicBilanController;
+use App\Http\Controllers\SyndicChargeController;
+use App\Http\Controllers\SyndicChargeTypeController;
+use App\Http\Controllers\SyndicController;
 use App\Http\Controllers\TrancheController;
 use App\Http\Controllers\UserController;
 use App\Models\Contract;
@@ -145,6 +150,21 @@ Route::middleware('auth')->group(function () {
         ->name('shareholders.update');
     Route::delete('/shareholders/{shareholder}', [ShareholderController::class, 'destroy'])
         ->name('shareholders.destroy');
+
+    Route::get('/blocs/{bloc}/business-plan', [BusinessPlanController::class, 'show'])
+        ->name('blocs.business-plan.show');
+    Route::post('/blocs/{bloc}/business-plan/products', [BusinessPlanController::class, 'storeProduct'])
+        ->name('blocs.business-plan.products.store');
+    Route::put('/business-plan/products/{product}', [BusinessPlanController::class, 'updateProduct'])
+        ->name('business-plan.products.update');
+    Route::delete('/business-plan/products/{product}', [BusinessPlanController::class, 'destroyProduct'])
+        ->name('business-plan.products.destroy');
+    Route::post('/blocs/{bloc}/business-plan/costs', [BusinessPlanController::class, 'storeCost'])
+        ->name('blocs.business-plan.costs.store');
+    Route::put('/business-plan/costs/{cost}', [BusinessPlanController::class, 'updateCost'])
+        ->name('business-plan.costs.update');
+    Route::delete('/business-plan/costs/{cost}', [BusinessPlanController::class, 'destroyCost'])
+        ->name('business-plan.costs.destroy');
 
     Route::get('/property-types', [PropertyTypeController::class, 'index'])
         ->name('property-types')->middleware('role:admin,manager');
@@ -310,21 +330,21 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
     // Syndic Routes
-    Route::get('/syndic', [\App\Http\Controllers\SyndicController::class, 'index'])->name('syndic.index');
-    Route::get('/api/syndic/clients/search', [\App\Http\Controllers\SyndicController::class, 'searchClients'])->name('syndic.clients.search');
-    Route::post('/syndic', [\App\Http\Controllers\SyndicController::class, 'store'])->name('syndic.store');
-    Route::put('/syndic/{syndic}', [\App\Http\Controllers\SyndicController::class, 'update'])->name('syndic.update');
-    Route::patch('/syndic/{syndic}/status', [\App\Http\Controllers\SyndicController::class, 'updateStatus'])->name('syndic.update-status')->middleware('role:admin');
-    Route::delete('/syndic/{syndic}', [\App\Http\Controllers\SyndicController::class, 'destroy'])->name('syndic.destroy')->middleware('role:admin');
-    Route::get('/syndic/{syndic}/receipt', [\App\Http\Controllers\SyndicController::class, 'printReceipt'])->name('syndic.receipt');
+    Route::get('/syndic', [SyndicController::class, 'index'])->name('syndic.index');
+    Route::get('/api/syndic/clients/search', [SyndicController::class, 'searchClients'])->name('syndic.clients.search');
+    Route::post('/syndic', [SyndicController::class, 'store'])->name('syndic.store');
+    Route::put('/syndic/{syndic}', [SyndicController::class, 'update'])->name('syndic.update');
+    Route::patch('/syndic/{syndic}/status', [SyndicController::class, 'updateStatus'])->name('syndic.update-status')->middleware('role:admin');
+    Route::delete('/syndic/{syndic}', [SyndicController::class, 'destroy'])->name('syndic.destroy')->middleware('role:admin');
+    Route::get('/syndic/{syndic}/receipt', [SyndicController::class, 'printReceipt'])->name('syndic.receipt');
 
-    Route::post('/syndic-charges', [\App\Http\Controllers\SyndicChargeController::class, 'store'])->name('syndic-charges.store');
-    Route::put('/syndic-charges/{syndicCharge}', [\App\Http\Controllers\SyndicChargeController::class, 'update'])->name('syndic-charges.update');
-    Route::delete('/syndic-charges/{syndicCharge}', [\App\Http\Controllers\SyndicChargeController::class, 'destroy'])->name('syndic-charges.destroy')->middleware('role:admin');
+    Route::post('/syndic-charges', [SyndicChargeController::class, 'store'])->name('syndic-charges.store');
+    Route::put('/syndic-charges/{syndicCharge}', [SyndicChargeController::class, 'update'])->name('syndic-charges.update');
+    Route::delete('/syndic-charges/{syndicCharge}', [SyndicChargeController::class, 'destroy'])->name('syndic-charges.destroy')->middleware('role:admin');
 
-    Route::apiResource('syndic-charge-types', \App\Http\Controllers\SyndicChargeTypeController::class);
-    
-    Route::get('/syndic/bilan', [\App\Http\Controllers\SyndicBilanController::class, 'printBilan'])->name('syndic.bilan');
+    Route::apiResource('syndic-charge-types', SyndicChargeTypeController::class);
+
+    Route::get('/syndic/bilan', [SyndicBilanController::class, 'printBilan'])->name('syndic.bilan');
 
     // Two-Factor Authentication routes
     Route::post('/user/two-factor-authentication', [TwoFactorAuthenticationController::class, 'store'])

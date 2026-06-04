@@ -46,6 +46,7 @@ class DatabaseSeeder extends Seeder
         );
 
         $this->call([
+            BusinessPlanTypeSeeder::class,
             PropertyTypeSeeder::class,
             CompanySeeder::class,
             ProjectSeeder::class,

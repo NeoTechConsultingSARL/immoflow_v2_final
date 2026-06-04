@@ -23,12 +23,12 @@ class Bloc extends Model
         return $this->belongsTo(Tranche::class);
     }
 
-    public function syndics(): \Illuminate\Database\Eloquent\Relations\HasMany
+    public function syndics(): HasMany
     {
         return $this->hasMany(Syndic::class);
     }
 
-    public function syndicCharges(): \Illuminate\Database\Eloquent\Relations\HasMany
+    public function syndicCharges(): HasMany
     {
         return $this->hasMany(SyndicCharge::class);
     }
@@ -43,8 +43,19 @@ class Bloc extends Model
         return $this->hasMany(Shareholder::class);
     }
 
+
     public function projectDocuments(): HasMany
     {
         return $this->hasMany(ProjectDocument::class);
+
+    public function businessPlanCosts(): HasMany
+    {
+        return $this->hasMany(BusinessPlanCost::class);
+    }
+
+    public function businessPlanProducts(): HasMany
+    {
+        return $this->hasMany(BusinessPlanProduct::class);
+
     }
 }
