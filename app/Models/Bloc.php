@@ -47,6 +47,7 @@ class Bloc extends Model
     public function projectDocuments(): HasMany
     {
         return $this->hasMany(ProjectDocument::class);
+    }
 
     public function businessPlanCosts(): HasMany
     {
