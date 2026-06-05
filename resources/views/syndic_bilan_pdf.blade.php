@@ -76,7 +76,7 @@
 
     <div class="header">
         <h3>Bilan Syndique Projet {{ $bloc->tranche->project->name }} "{{ $bloc->name }}"</h3>
-        <p>Imprimé le {{ \Carbon\Carbon::now()->format('d-m-Y | H:i') }}</p>
+        <p>Imprimé le {{ \Carbon\Carbon::now()->timezone('Africa/Casablanca')->format('d-m-Y | H:i') }}</p>
     </div>
 
     <table class="table-summary">

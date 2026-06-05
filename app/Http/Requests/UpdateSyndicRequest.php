@@ -19,8 +19,15 @@ class UpdateSyndicRequest extends FormRequest
     {
         return [
             'date' => ['required', 'date'],
-            'montant' => ['required', 'numeric', 'min:0'],
+            'montant' => ['required', 'numeric', 'min:0', 'max:9999999999.99'],
             'client_id' => ['required', 'exists:clients,id'],
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'montant.max' => 'Le montant ne peut pas dépasser 9 999 999 999,99 DH.',
         ];
     }
 }

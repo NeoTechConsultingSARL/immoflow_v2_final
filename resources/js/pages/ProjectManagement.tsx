@@ -58,6 +58,9 @@ const ProjectManagement = () => {
         toast({ title: "Please select a bloc first to access project finance", variant: "destructive" });
       }
 
+    } else if (tileId === "statistics") {
+      router.visit(`/dashboard`);
+
     } else if (tileId === "syndicats") {
       router.visit(`/syndic?project=${projectId}&name=${encodeURIComponent(projectName)}${companyQuery}${trancheQuery}${blocQuery}`);
 

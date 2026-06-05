@@ -37,6 +37,8 @@ class HandleInertiaRequests extends Middleware
             ],
             'flash' => [
                 'status' => fn () => $request->session()->get('status'),
+                'success' => fn () => $request->session()->get('success'),
+                'error' => fn () => $request->session()->get('error'),
                 'two_factor_secret' => fn () => $request->session()->get('two_factor_secret'),
                 'two_factor_qr_url' => fn () => $request->session()->get('two_factor_qr_url'),
                 'two_factor_recovery_codes' => fn () => $request->session()->get('two_factor_recovery_codes'),

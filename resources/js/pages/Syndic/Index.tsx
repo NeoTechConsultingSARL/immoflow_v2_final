@@ -95,7 +95,7 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/dashboard/AppSidebar";
 import { AppBreadcrumb } from "@/components/AppBreadcrumb";
 import { toast } from "@/hooks/use-toast";
-import { Plus, Printer } from "lucide-react";
+import { Plus, Printer, Edit2, Trash2 } from "lucide-react";
 
 interface SyndicPageProps {
     projects: any[];
@@ -141,6 +141,9 @@ export default function SyndicIndex({
     const [statusModalOpen, setStatusModalOpen] = useState(false);
     const [selectedSyndicId, setSelectedSyndicId] = useState<number | null>(null);
     const [currentStatus, setCurrentStatus] = useState<string>('');
+    
+    const [editingSyndicId, setEditingSyndicId] = useState<number | null>(null);
+    const [editingChargeId, setEditingChargeId] = useState<number | null>(null);
 
     // Form for Paiement
     const paiementForm = useForm({
@@ -251,27 +254,116 @@ export default function SyndicIndex({
 
     const submitPaiement = (e: React.FormEvent) => {
         e.preventDefault();
-        paiementForm.post(route('syndic.store'), {
-            onSuccess: () => {
-                setOpenPaiement(false);
-                paiementForm.reset();
-                paiementForm.setData('bloc_id', selectedBloc);
-                setClientQuery('');
-                toast({ title: "Paiement ajouté avec succès" });
-            },
-        });
+        if (editingSyndicId) {
+            paiementForm.put(route('syndic.update', editingSyndicId), {
+                onSuccess: () => {
+                    setOpenPaiement(false);
+                    setEditingSyndicId(null);
+                    paiementForm.reset();
+                    paiementForm.setData('bloc_id', selectedBloc);
+                    setClientQuery('');
+                    toast({ title: "Paiement mis à jour avec succès" });
+                },
+            });
+        } else {
+            paiementForm.post(route('syndic.store'), {
+                onSuccess: () => {
+                    setOpenPaiement(false);
+                    paiementForm.reset();
+                    paiementForm.setData('bloc_id', selectedBloc);
+                    setClientQuery('');
+                    toast({ title: "Paiement ajouté avec succès" });
+                },
+            });
+        }
     };
 
     const submitCharge = (e: React.FormEvent) => {
         e.preventDefault();
-        chargeForm.post(route('syndic-charges.store'), {
-            onSuccess: () => {
-                setOpenCharge(false);
-                chargeForm.reset();
-                chargeForm.setData('bloc_id', selectedBloc);
-                toast({ title: "Charge ajoutée avec succès" });
-            },
+        if (editingChargeId) {
+            chargeForm.put(route('syndic-charges.update', editingChargeId), {
+                onSuccess: () => {
+                    setOpenCharge(false);
+                    setEditingChargeId(null);
+                    chargeForm.reset();
+                    chargeForm.setData('bloc_id', selectedBloc);
+                    toast({ title: "Charge mise à jour avec succès" });
+                },
+            });
+        } else {
+            chargeForm.post(route('syndic-charges.store'), {
+                onSuccess: () => {
+                    setOpenCharge(false);
+                    chargeForm.reset();
+                    chargeForm.setData('bloc_id', selectedBloc);
+                    toast({ title: "Charge ajoutée avec succès" });
+                },
+            });
+        }
+    };
+
+    const handleOpenPaiementChange = (open: boolean) => {
+        setOpenPaiement(open);
+        if (!open) {
+            setEditingSyndicId(null);
+            paiementForm.reset();
+            paiementForm.setData('bloc_id', selectedBloc);
+            setClientQuery('');
+            paiementForm.clearErrors();
+        }
+    };
+
+    const handleOpenChargeChange = (open: boolean) => {
+        setOpenCharge(open);
+        if (!open) {
+            setEditingChargeId(null);
+            chargeForm.reset();
+            chargeForm.setData('bloc_id', selectedBloc);
+            chargeForm.clearErrors();
+        }
+    };
+
+    const openEditPaiement = (s: any) => {
+        setEditingSyndicId(s.id);
+        paiementForm.setData({
+            date: s.date,
+            montant: s.montant,
+            client_id: s.client_id,
+            bloc_id: s.bloc_id
         });
+        setClientQuery(s.client?.full_name || '');
+        setOpenPaiement(true);
+    };
+
+    const handleDeletePaiement = (id: number) => {
+        if (confirm("Êtes-vous sûr de vouloir supprimer ce paiement ?")) {
+            router.delete(route('syndic.destroy', id), {
+                preserveScroll: true,
+                onSuccess: () => toast({ title: "Succès", description: "Paiement supprimé." })
+            });
+        }
+    };
+
+    const openEditCharge = (c: any) => {
+        setEditingChargeId(c.id);
+        chargeForm.setData({
+            syndic_charge_type_id: c.syndic_charge_type_id.toString(),
+            date_operation: c.date_operation,
+            montant: c.montant,
+            designation: c.designation || '',
+            societe: c.societe || '',
+            bloc_id: c.bloc_id
+        });
+        setOpenCharge(true);
+    };
+
+    const handleDeleteCharge = (id: number) => {
+        if (confirm("Êtes-vous sûr de vouloir supprimer cette charge ?")) {
+            router.delete(route('syndic-charges.destroy', id), {
+                preserveScroll: true,
+                onSuccess: () => toast({ title: "Succès", description: "Charge supprimée." })
+            });
+        }
     };
 
     const submitChargeType = (e: React.FormEvent) => {
@@ -397,10 +489,10 @@ export default function SyndicIndex({
                         <div className="flex justify-between items-center mb-6">
                             <div>
                                 <h2 className="font-display text-[1.75rem] xl:text-[2rem] font-bold">Gestion Syndique</h2>
-                                <p className="text-[0.9375rem] text-muted-foreground">Manage syndic operations, payments, and charges.</p>
+                                <p className="text-[0.9375rem] text-muted-foreground">Gérez les opérations, paiements et charges de syndic.</p>
                             </div>
                             {selectedBloc && (
-                                <Button variant="outline" onClick={handlePrintBilan} className="gap-2 border-green-600 text-green-600 hover:bg-green-50">
+                                <Button variant="outline" onClick={handlePrintBilan} className="gap-2 bg-card border-border hover:bg-accent/10">
                                     <Printer className="w-4 h-4" /> Bilan de syndique
                                 </Button>
                             )}
@@ -454,31 +546,32 @@ export default function SyndicIndex({
                             <div className="space-y-6">
                                 {/* KPI Cards */}
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                    <Card>
-                                        <CardHeader className="pb-2"><CardTitle className="text-sm text-gray-500">Total Paiements Clients</CardTitle></CardHeader>
-                                        <CardContent><p className="text-2xl font-bold text-green-600">{totalPaymentsValue.toFixed(2)} DH</p></CardContent>
+                                    <Card className="shadow-[var(--shadow-card)] border-border">
+                                        <CardHeader className="pb-2"><CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Total Paiements Clients</CardTitle></CardHeader>
+                                        <CardContent><p className="text-2xl font-bold font-display text-foreground">{totalPaymentsValue.toFixed(2)} DH</p></CardContent>
                                     </Card>
-                                    <Card>
-                                        <CardHeader className="pb-2"><CardTitle className="text-sm text-gray-500">Total Charges Syndique</CardTitle></CardHeader>
-                                        <CardContent><p className="text-2xl font-bold text-red-600">{totalChargesValue.toFixed(2)} DH</p></CardContent>
+                                    <Card className="shadow-[var(--shadow-card)] border-border">
+                                        <CardHeader className="pb-2"><CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Total Charges Syndique</CardTitle></CardHeader>
+                                        <CardContent><p className="text-2xl font-bold font-display text-foreground">{totalChargesValue.toFixed(2)} DH</p></CardContent>
                                     </Card>
-                                    <Card>
-                                        <CardHeader className="pb-2"><CardTitle className="text-sm text-gray-500">Solde (Paiements Syndique - Charges)</CardTitle></CardHeader>
-                                        <CardContent><p className={`text-2xl font-bold ${soldeValue >= 0 ? 'text-blue-600' : 'text-red-600'}`}>{soldeValue.toFixed(2)} DH</p></CardContent>
+                                    <Card className="shadow-[var(--shadow-card)] border-border">
+                                        <CardHeader className="pb-2"><CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Solde (Paiements - Charges)</CardTitle></CardHeader>
+                                        <CardContent><p className={`text-2xl font-bold font-display ${soldeValue >= 0 ? 'text-foreground' : 'text-destructive'}`}>{soldeValue.toFixed(2)} DH</p></CardContent>
                                     </Card>
                                 </div>
 
                                 {/* Paiements Table */}
-                                <Card>
-                                    <CardHeader className="flex flex-row items-center justify-between">
-                                        <CardTitle>Gestion Syndique (Paiements)</CardTitle>
-                                        <Dialog open={openPaiement} onOpenChange={setOpenPaiement}>
-                                            <DialogTrigger asChild>
-                                                <Button className="gap-2 bg-blue-600 hover:bg-blue-700 text-white"><Plus className="w-4 h-4" /> Syndique</Button>
-                                            </DialogTrigger>
+                                <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mt-8 mb-4">
+                                    <div>
+                                        <h3 className="font-display text-xl font-bold">Gestion Syndique (Paiements)</h3>
+                                    </div>
+                                    <Dialog open={openPaiement} onOpenChange={handleOpenPaiementChange}>
+                                        <DialogTrigger asChild>
+                                            <Button className="gap-2 shadow-sm font-semibold border-0" style={{ backgroundColor: "#f59e0b", color: "#1e1e1e" }}><Plus className="w-4 h-4" /> Syndique</Button>
+                                        </DialogTrigger>
                                             <DialogContent>
                                                 <DialogHeader>
-                                                    <DialogTitle>Ajouter Nouveau Paiement Syndique</DialogTitle>
+                                                    <DialogTitle>{editingSyndicId ? "Modifier le paiement" : "Ajouter Nouveau Paiement"}</DialogTitle>
                                                 </DialogHeader>
                                                 <form onSubmit={submitPaiement} className="space-y-4">
                                                     <div>
@@ -520,8 +613,8 @@ export default function SyndicIndex({
                                                 </form>
                                             </DialogContent>
                                         </Dialog>
-                                    </CardHeader>
-                                    <CardContent>
+                                </div>
+                                <div className="bg-card border border-border rounded-xl shadow-[var(--shadow-card)] overflow-hidden">
                                         <Table>
                                             <TableHeader>
                                                 <TableRow>
@@ -529,11 +622,12 @@ export default function SyndicIndex({
                                                     <TableHead>Date Paiement</TableHead>
                                                     <TableHead>Montant</TableHead>
                                                     <TableHead>Status</TableHead>
+                                                    <TableHead className="text-right">Actions</TableHead>
                                                 </TableRow>
                                             </TableHeader>
                                             <TableBody>
                                                 {syndics.length === 0 ? (
-                                                    <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground">No data available in table</TableCell></TableRow>
+                                                    <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground">No data available in table</TableCell></TableRow>
                                                 ) : (
                                                     syndics.map(s => (
                                                         <TableRow key={s.id}>
@@ -547,23 +641,33 @@ export default function SyndicIndex({
                                                                     </Badge>
                                                                 </button>
                                                             </TableCell>
+                                                            <TableCell className="text-right">
+                                                                <div className="flex justify-end gap-2">
+                                                                    <Button variant="ghost" size="icon" onClick={() => openEditPaiement(s)}>
+                                                                        <Edit2 className="w-4 h-4 text-muted-foreground" />
+                                                                    </Button>
+                                                                    <Button variant="ghost" size="icon" onClick={() => handleDeletePaiement(s.id)}>
+                                                                        <Trash2 className="w-4 h-4 text-destructive" />
+                                                                    </Button>
+                                                                </div>
+                                                            </TableCell>
                                                         </TableRow>
                                                     ))
                                                 )}
                                             </TableBody>
                                         </Table>
-                                    </CardContent>
-                                </Card>
+                                </div>
 
                                 {/* Charges Table */}
-                                <Card>
-                                    <CardHeader className="flex flex-row items-center justify-between">
-                                        <CardTitle>Gestion des charges syndique</CardTitle>
-                                        <div className="flex gap-2">
-                                            <Dialog open={openChargeType} onOpenChange={setOpenChargeType}>
-                                                <DialogTrigger asChild>
-                                                    <Button variant="outline" className="gap-2 bg-blue-600 hover:bg-blue-700 text-white"><Plus className="w-4 h-4" /> Type Charge</Button>
-                                                </DialogTrigger>
+                                <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mt-8 mb-4">
+                                    <div>
+                                        <h3 className="font-display text-xl font-bold">Gestion des charges syndique</h3>
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <Dialog open={openChargeType} onOpenChange={setOpenChargeType}>
+                                            <DialogTrigger asChild>
+                                                <Button variant="outline" className="gap-2 bg-card border-border hover:bg-accent/10"><Plus className="w-4 h-4" /> Type Charge</Button>
+                                            </DialogTrigger>
                                                 <DialogContent>
                                                     <DialogHeader>
                                                         <DialogTitle>Ajouter Nouveau Type Charge</DialogTitle>
@@ -582,13 +686,13 @@ export default function SyndicIndex({
                                                 </DialogContent>
                                             </Dialog>
 
-                                            <Dialog open={openCharge} onOpenChange={setOpenCharge}>
+                                            <Dialog open={openCharge} onOpenChange={handleOpenChargeChange}>
                                                 <DialogTrigger asChild>
-                                                    <Button className="gap-2 bg-green-600 hover:bg-green-700 text-white"><Plus className="w-4 h-4" /> Charge</Button>
+                                                    <Button className="gap-2 shadow-sm font-semibold border-0" style={{ backgroundColor: "#f59e0b", color: "#1e1e1e" }}><Plus className="w-4 h-4" /> Charge</Button>
                                                 </DialogTrigger>
                                                 <DialogContent>
                                                     <DialogHeader>
-                                                        <DialogTitle>Ajouter une nouvelle charge</DialogTitle>
+                                                        <DialogTitle>{editingChargeId ? "Modifier la charge" : "Ajouter une nouvelle charge"}</DialogTitle>
                                                     </DialogHeader>
                                                     <form onSubmit={submitCharge} className="space-y-4">
                                                         <div>
@@ -626,8 +730,8 @@ export default function SyndicIndex({
                                                 </DialogContent>
                                             </Dialog>
                                         </div>
-                                    </CardHeader>
-                                    <CardContent>
+                                </div>
+                                <div className="bg-card border border-border rounded-xl shadow-[var(--shadow-card)] overflow-hidden">
                                         <Table>
                                             <TableHeader>
                                                 <TableRow>
@@ -635,25 +739,35 @@ export default function SyndicIndex({
                                                     <TableHead>DateOp</TableHead>
                                                     <TableHead>Désignation</TableHead>
                                                     <TableHead>Montant</TableHead>
+                                                    <TableHead className="text-right">Actions</TableHead>
                                                 </TableRow>
                                             </TableHeader>
                                             <TableBody>
                                                 {charges.length === 0 ? (
-                                                    <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground">No data available in table</TableCell></TableRow>
+                                                    <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground">No data available in table</TableCell></TableRow>
                                                 ) : (
                                                     charges.map(c => (
                                                         <TableRow key={c.id}>
                                                             <TableCell className="font-medium">{c.syndic_charge_type?.nom}</TableCell>
                                                             <TableCell>{c.date_operation}</TableCell>
-                                                            <TableCell>{c.designation}</TableCell>
+                                                            <TableCell>{c.designation || '-'}</TableCell>
                                                             <TableCell>{c.montant} DH</TableCell>
+                                                            <TableCell className="text-right">
+                                                                <div className="flex justify-end gap-2">
+                                                                    <Button variant="ghost" size="icon" onClick={() => openEditCharge(c)}>
+                                                                        <Edit2 className="w-4 h-4 text-muted-foreground" />
+                                                                    </Button>
+                                                                    <Button variant="ghost" size="icon" onClick={() => handleDeleteCharge(c.id)}>
+                                                                        <Trash2 className="w-4 h-4 text-destructive" />
+                                                                    </Button>
+                                                                </div>
+                                                            </TableCell>
                                                         </TableRow>
                                                     ))
                                                 )}
                                             </TableBody>
                                         </Table>
-                                    </CardContent>
-                                </Card>
+                                </div>
                             </div>
                         )}
 
@@ -668,7 +782,7 @@ export default function SyndicIndex({
                                 </div>
                                 <DialogFooter>
                                     <Button variant="outline" onClick={() => setStatusModalOpen(false)}>Annuler</Button>
-                                    <Button onClick={confirmStatusChange} className="bg-blue-600 hover:bg-blue-700 text-white">Confirmer</Button>
+                                    <Button onClick={confirmStatusChange} className="shadow-sm font-semibold border-0" style={{ backgroundColor: "#f59e0b", color: "#1e1e1e" }}>Confirmer</Button>
                                 </DialogFooter>
                             </DialogContent>
                         </Dialog>

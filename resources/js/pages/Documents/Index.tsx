@@ -38,6 +38,12 @@ export default function Index({ bloc, documents, categories }: any) {
 
     const handleUploadSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+
+        if (data.file && data.file.size > 10 * 1024 * 1024) {
+            toast({ title: "Erreur", description: "Le fichier est trop volumineux. La taille maximale autorisée est de 10 Mo.", variant: "destructive" });
+            return;
+        }
+
         post(route('blocs.documents.store', bloc.id), {
             preserveScroll: true,
             onSuccess: () => {

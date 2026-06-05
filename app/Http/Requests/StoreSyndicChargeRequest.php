@@ -20,10 +20,17 @@ class StoreSyndicChargeRequest extends FormRequest
         return [
             'syndic_charge_type_id' => ['required', 'exists:syndic_charge_types,id'],
             'date_operation' => ['required', 'date'],
-            'montant' => ['required', 'numeric', 'min:0'],
+            'montant' => ['required', 'numeric', 'min:0', 'max:9999999999.99'],
             'designation' => ['nullable', 'string', 'max:255'],
             'societe' => ['nullable', 'string', 'max:255'],
             'bloc_id' => ['required', 'exists:blocs,id'],
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'montant.max' => 'Le montant ne peut pas dépasser 9 999 999 999,99 DH.',
         ];
     }
 }
