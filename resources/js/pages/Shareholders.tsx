@@ -210,7 +210,7 @@ const Shareholders = ({ bloc, shareholders, totalCapital }: Props) => {
                     {errors.amount && <p className="text-sm text-destructive">{errors.amount}</p>}
                   </div>
                   <div className="md:col-span-2 flex gap-2">
-                    <Button type="submit" disabled={processing}>
+                    <Button type="submit" disabled={processing} className="gap-2 shadow-sm font-semibold border-0" style={{ backgroundColor: "#f59e0b", color: "#1e1e1e" }}>
                       <Plus className="w-4 h-4 mr-1" />
                       Add
                     </Button>
@@ -229,14 +229,16 @@ const Shareholders = ({ bloc, shareholders, totalCapital }: Props) => {
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle className="text-base">Associate contributions</CardTitle>
-                <p className="text-sm text-muted-foreground">
-                  Total bloc capital: <span className="font-semibold text-foreground">{formatAmount(totalCapital)}</span>
-                </p>
-              </CardHeader>
-              <CardContent>
+            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mt-8 mb-4">
+                <div>
+                    <h3 className="font-display text-xl font-bold">Associate contributions</h3>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Total bloc capital: <span className="font-semibold text-foreground">{formatAmount(totalCapital)}</span>
+                    </p>
+                </div>
+            </div>
+            
+            <div className="bg-card border border-border rounded-xl shadow-[var(--shadow-card)] overflow-hidden">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -283,8 +285,7 @@ const Shareholders = ({ bloc, shareholders, totalCapital }: Props) => {
                     )}
                   </TableBody>
                 </Table>
-              </CardContent>
-            </Card>
+            </div>
           </main>
         </div>
       </div>
@@ -321,7 +322,7 @@ const Shareholders = ({ bloc, shareholders, totalCapital }: Props) => {
             <Button variant="outline" onClick={() => setEditOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleEdit} disabled={editProcessing}>
+            <Button onClick={handleEdit} disabled={editProcessing} className="shadow-sm font-semibold border-0" style={{ backgroundColor: "#f59e0b", color: "#1e1e1e" }}>
               Save
             </Button>
           </DialogFooter>

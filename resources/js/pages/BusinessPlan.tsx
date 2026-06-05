@@ -108,22 +108,19 @@ function KpiStrip({ summary }: { summary: Summary }) {
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-      <div className="rounded-xl bg-red-600 text-white px-6 py-5 shadow-md">
-        <p className="text-sm font-medium uppercase tracking-wide opacity-90">Total Charges</p>
-        <p className="text-2xl font-bold mt-1">{formatCurrency(summary.totalCosts)}</p>
+      <div className="rounded-xl bg-card border border-border px-6 py-5 shadow-sm">
+        <p className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Total Charges</p>
+        <p className="text-2xl font-bold mt-1 text-foreground">{formatCurrency(summary.totalCosts)}</p>
       </div>
-      <div className="rounded-xl bg-amber-500 text-white px-6 py-5 shadow-md">
-        <p className="text-sm font-medium uppercase tracking-wide opacity-90">Total Produits</p>
-        <p className="text-2xl font-bold mt-1">{formatCurrency(summary.totalProducts)}</p>
+      <div className="rounded-xl bg-card border border-border px-6 py-5 shadow-sm">
+        <p className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Total Produits</p>
+        <p className="text-2xl font-bold mt-1 text-foreground">{formatCurrency(summary.totalProducts)}</p>
       </div>
-      <div
-        className={cn(
-          "rounded-xl px-6 py-5 shadow-md text-white",
-          profitPositive ? "bg-emerald-600" : "bg-rose-700",
-        )}
-      >
-        <p className="text-sm font-medium uppercase tracking-wide opacity-90">Profit</p>
-        <p className="text-2xl font-bold mt-1">{formatCurrency(summary.estimatedProfit)}</p>
+      <div className="rounded-xl bg-card border border-border px-6 py-5 shadow-sm">
+        <p className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Profit</p>
+        <p className={cn("text-2xl font-bold mt-1", profitPositive ? "text-emerald-500" : "text-rose-500")}>
+          {formatCurrency(summary.estimatedProfit)}
+        </p>
       </div>
     </div>
   );
@@ -255,12 +252,13 @@ function LineSection({
   };
 
   return (
-    <Card>
-      <CardHeader className={cn("rounded-t-lg text-white", accentClass)}>
-        <CardTitle className="text-base">{title}</CardTitle>
-      </CardHeader>
-      <CardContent className="pt-6 space-y-6">
-        <form onSubmit={handleCreate} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+    <div className="mt-8 space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">{title}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleCreate} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           <div className="space-y-2 md:col-span-2 lg:col-span-1">
             <Label>{typeLabel}</Label>
             <Select
@@ -328,7 +326,7 @@ function LineSection({
             />
           </div>
           <div className="md:col-span-2 lg:col-span-3 flex gap-2">
-            <Button type="submit" disabled={form.processing}>
+            <Button type="submit" disabled={form.processing} className="shadow-sm font-semibold border-0 gap-2" style={{ backgroundColor: "#f59e0b", color: "#1e1e1e" }}>
               <Plus className="w-4 h-4 mr-1" />
               Add
             </Button>
@@ -345,8 +343,17 @@ function LineSection({
             </Button>
           </div>
         </form>
+        </CardContent>
+      </Card>
 
-        <Table>
+      <div>
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-4">
+          <div>
+            <h3 className="font-display text-xl font-bold">{typeLabel}s</h3>
+          </div>
+        </div>
+        <div className="bg-card border border-border rounded-xl shadow-[var(--shadow-card)] overflow-hidden">
+          <Table>
           <TableHeader>
             <TableRow>
               <TableHead>{typeLabel}</TableHead>
@@ -395,7 +402,8 @@ function LineSection({
             )}
           </TableBody>
         </Table>
-      </CardContent>
+        </div>
+      </div>
 
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
         <DialogContent className="max-w-lg">
@@ -471,7 +479,7 @@ function LineSection({
             <Button variant="outline" onClick={() => setEditOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleEdit} disabled={editForm.processing}>
+            <Button onClick={handleEdit} disabled={editForm.processing} className="shadow-sm font-semibold border-0" style={{ backgroundColor: "#f59e0b", color: "#1e1e1e" }}>
               Save
             </Button>
           </DialogFooter>
@@ -492,7 +500,7 @@ function LineSection({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </Card>
+    </div>
   );
 }
 
@@ -553,11 +561,13 @@ const BusinessPlan = ({ bloc, products, costs, productTypes, costTypes, summary 
               accentClass="bg-red-600"
             />
 
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Les apports des associés — Répartition du bénéfice</CardTitle>
-              </CardHeader>
-              <CardContent>
+            <div className="mt-8">
+              <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-4">
+                <div>
+                  <h3 className="font-display text-xl font-bold">Les apports des associés — Répartition du bénéfice</h3>
+                </div>
+              </div>
+              <div className="bg-card border border-border rounded-xl shadow-[var(--shadow-card)] overflow-hidden">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -586,8 +596,8 @@ const BusinessPlan = ({ bloc, products, costs, productTypes, costTypes, summary 
                     )}
                   </TableBody>
                 </Table>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           </main>
         </div>
       </div>
